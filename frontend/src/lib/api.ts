@@ -258,6 +258,8 @@ export interface InboxItem {
   findings: Finding[]
   agent_text: string
   tripwires: Tripwire[]
+  /** Set when the run is a demo replay of a recorded run. */
+  replay_of?: string | null
   options: DecisionKind[]
   created: number
 }

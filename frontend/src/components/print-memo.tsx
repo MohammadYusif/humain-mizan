@@ -17,7 +17,11 @@ export function PrintMemo({ runId, contracts }: { runId: string; contracts: Cont
   const title = contract ? contractTitle(contract.title).primary : (r?.doc_id ?? runId)
 
   useEffect(() => {
+    const previous = document.title
     document.title = `Memo · ${r?.doc_id ?? runId}`
+    return () => {
+      document.title = previous
+    }
   }, [r?.doc_id, runId])
 
   return (

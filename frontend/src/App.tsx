@@ -109,6 +109,30 @@ export default function App() {
     }
   }, [demo, playScene, refreshInbox])
 
+  const exitDemo = useCallback(async () => {
+    setDemo(null)
+    // Leave a replay for the start screen (or the last real run) before its files disappear.
+    const real = lastRun && !lastRun.startsWith("demo-") ? lastRun : null
+    if (loc.area === "review" && loc.runId?.startsWith("demo-")) go({ area: "review", runId: real })
+    if (lastRun?.startsWith("demo-")) setLastRun(real)
+    try {
+      const { deleted } = await api.demoReset()
+      toast.success(`Demo closed: ${deleted} replayed run${deleted === 1 ? "" : "s"} removed`)
+    } catch (e) {
+      toast.error("Could not clean up the demo", { description: errorMessage(e) })
+    } finally {
+      refreshRuns()
+      refreshInbox()
+    }
+  }, [lastRun, loc, refreshInbox, refreshRuns])
+
+  // Tab title per area (the print memo view sets its own and restores this on unmount).
+  useEffect(() => {
+    if (printRun) return
+    const names: Record<Area, string> = { review: "Review", queue: "Queue", inbox: "Inbox", insights: "Insights", proof: "Proof" }
+    document.title = `Mizan · ${names[loc.area]}`
+  }, [loc.area, printRun])
+
   useEffect(() => {
     if (!demo) return
     const onKey = (e: KeyboardEvent) => {
@@ -181,7 +205,7 @@ export default function App() {
           finished={demoFinished}
           onNext={nextScene}
           onRestart={() => void restartDemo()}
-          onExit={() => setDemo(null)}
+          onExit={() => void exitDemo()}
         />
       ) : null}
     </Tabs>

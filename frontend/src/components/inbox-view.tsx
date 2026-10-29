@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, CircleCheck, Gavel, Info, LoaderCircle, PenLine, Send, Trash2, X } from "lucide-react"
+import { ArrowUpRight, Check, CircleCheck, Clapperboard, Gavel, Info, LoaderCircle, PenLine, Send, Trash2, X } from "lucide-react"
 import { cn } from "cn"
 import { useId, useState } from "react"
 import { toast } from "sonner"
@@ -34,6 +34,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { api, errorMessage, type ContractSummary, type DecisionKind, type InboxItem, type RunSummary } from "@/lib/api"
 import { composedFromRedlines, contractTitle, DECISION_LABEL, isEvalRun, langOf, relativeTime } from "@/lib/format"
 import { go } from "@/lib/route"
+
+function ReplayBadge() {
+  return (
+    <Badge variant="outline" className="gap-1 rounded-md border-dashed border-brass/60 font-normal text-brass-ink">
+      <Clapperboard data-icon="inline-start" aria-hidden />
+      Replay
+    </Badge>
+  )
+}
 
 interface OptionSpec {
   label: string
@@ -155,12 +164,16 @@ function DecisionControl({
         <AlertDialog open={open} onOpenChange={setOpen}>
           <AlertDialogContent className="sm:max-w-md">
             <AlertDialogHeader>
-              <AlertDialogTitle className="font-heading text-lg font-semibold">{spec.title}</AlertDialogTitle>
+              <AlertDialogTitle className="flex flex-wrap items-center gap-2 font-heading text-lg font-semibold">
+                {spec.title}
+                {item.replay_of ? <ReplayBadge /> : null}
+              </AlertDialogTitle>
               <AlertDialogDescription>
                 <span dir="auto" className="font-medium text-foreground">
                   {docTitle}
                 </span>
                 . {spec.body}
+                {item.replay_of ? " This is a replay: the decision is for demonstration and is not used by Insights." : ""}
               </AlertDialogDescription>
             </AlertDialogHeader>
             {noteField}
@@ -190,8 +203,14 @@ function DecisionControl({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[92dvh] gap-4 overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle className="font-heading text-lg font-semibold">{spec.title}</DialogTitle>
-            <DialogDescription>{spec.body}</DialogDescription>
+            <DialogTitle className="flex flex-wrap items-center gap-2 font-heading text-lg font-semibold">
+              {spec.title}
+              {item.replay_of ? <ReplayBadge /> : null}
+            </DialogTitle>
+            <DialogDescription>
+              {spec.body}
+              {item.replay_of ? " This is a replay: the decision is for demonstration and is not used by Insights." : ""}
+            </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`${id}-msg`}>Message to the counterparty</Label>
@@ -243,6 +262,7 @@ function InboxCard({
             {unrouted ? "Full lawyer review" : legal ? "Lawyer review" : "Approve send"}
           </Badge>
           {item.route ? <RouteBadge route={item.route} /> : null}
+          {item.replay_of ? <ReplayBadge /> : null}
           <span className="font-mono text-xs text-muted-foreground">{item.doc_id}</span>
           {item.risk_score != null ? (
             <span className="text-xs text-muted-foreground tabular">· risk {item.risk_score}/100</span>
@@ -335,6 +355,11 @@ function InboxCard({
         </div>
       </div>
 
+      {item.replay_of ? (
+        <p className="border-t px-4 py-2 text-xs text-muted-foreground sm:px-5">
+          Replay of a recorded run: decisions here are for demonstration and are not used by Insights.
+        </p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-2 border-t bg-muted/40 px-4 py-3 sm:px-5">
         <span className="me-1 text-xs font-medium text-muted-foreground">Your decision</span>
         {item.options.map((o) => (
