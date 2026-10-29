@@ -27,13 +27,22 @@ import { percent, plural, seconds, usd } from "@/lib/format"
 
 const loadEvals = () => api.evals()
 
-const GUARANTEES = [
-  "A critical finding never auto-approves: the route is computed by code, not by the model.",
-  "Approval requires every page read, every clause typed, and liability and governing-law clauses present.",
-  "Every finding must quote the contract verbatim; a quote that is not in the clause is rejected.",
-  "Instructions written inside a contract force an escalation instead of being followed.",
-  "Deterministic red-flag checks (Arabic + English) run independently of the model: critical ones always escalate; others must be recorded or explicitly cleared with evidence.",
-  "Messages to a counterparty or to legal are dry-run until a human approves them.",
+/** Measured outside the API (pattern hits vs labelled issues); kept verbatim wherever red flags are discussed. */
+const RED_FLAG_LIMIT =
+  "Red-flag patterns catch known wording (12/12 on the suite they were written against) but only 1 of 13 issues on the blind held-out set: on new contracts the model is the real detector."
+
+const GUARANTEES: { text: string; note?: string }[] = [
+  { text: "A critical finding never auto-approves: the route is computed by code, not by the model." },
+  { text: "Approval requires every page read, every clause typed, and liability and governing-law clauses present." },
+  { text: "Every finding must quote the contract verbatim; a quote that is not in the clause is rejected." },
+  {
+    text: "Instructions written inside a contract, once a pattern or the model detects them, force an escalation instead of being followed.",
+  },
+  {
+    text: "Deterministic red-flag checks (Arabic + English) run independently of the model: when one fires, a critical flag always escalates and the others must be recorded or explicitly cleared with evidence.",
+    note: RED_FLAG_LIMIT,
+  },
+  { text: "Messages to a counterparty or to legal are dry-run until a human approves them." },
 ]
 
 // --- derived facts (all from the saved cases, nothing hard-coded) ---------------------------------
@@ -256,10 +265,11 @@ function Headline({ models }: { models: EvalModel[] }) {
   )
 }
 
-function SovereignNote({ variants }: { variants: EvalModel[] }) {
+function SovereignNote({ variants, heldOut }: { variants: EvalModel[]; heldOut: EvalModel[] }) {
   // The current agent (variant null) is the one described; earlier variants give the before/after.
   const m = variants.find((v) => v.variant === null) ?? variants[0]
-  const before = variants.filter((v) => v !== m)
+  // Only earlier variants that approved more than the current one make a before/after worth showing.
+  const before = variants.filter((v) => v !== m && safety(v).approved > safety(m).approved)
   const sf = safety(m)
   const s = m.summary
   return (
@@ -285,9 +295,28 @@ function SovereignNote({ variants }: { variants: EvalModel[] }) {
                 {sb.approved} → {sf.approved}
               </span>
               <p>
-                Red-flag checks took <span className="font-mono">{m.model}</span> from {plural(sb.approved, "wrongly approved contract")}{" "}
-                to {sf.approved} ({variantText(b)} vs {variantText(m)}). Unrouted risky contracts went from {sb.unrouted} to{" "}
-                {sf.unrouted}: the checks stop bad approvals, they do not make the model find more.
+                On the main suite, red-flag checks took <span className="font-mono">{m.model}</span> from{" "}
+                {plural(sb.approved, "wrongly approved contract")} to {sf.approved} ({variantText(b)} vs {variantText(m)}).
+                Unrouted risky contracts went from {sb.unrouted} to {sf.unrouted}. That suite is the one the patterns were
+                written against.
+              </p>
+            </div>
+          )
+        })}
+        {heldOut.map((h) => {
+          const sh = safety(h)
+          return (
+            <div
+              key={keyOf(h)}
+              className="flex flex-col gap-1 rounded-lg border border-escalate/40 bg-escalate-soft p-3 sm:flex-row sm:items-center sm:gap-4"
+            >
+              <span className="shrink-0 font-heading text-2xl font-semibold whitespace-nowrap text-escalate tabular">
+                {sh.approved} approved
+              </span>
+              <p>
+                On the blind held-out set ({variantText(h)}) it wrongly approved {plural(sh.approved, "risky contract")}{" "}
+                and left {sh.unrouted} unrouted ({notSafe(sh)} of {sh.risky} not safely routed), finding{" "}
+                {percent(h.summary.recall)} of the labelled issues. The patterns did not catch what the model missed.
               </p>
             </div>
           )
@@ -300,11 +329,12 @@ function SovereignNote({ variants }: { variants: EvalModel[] }) {
           <div className="flex flex-col gap-1">
             <span className="text-xs font-semibold tracking-wide text-escalate uppercase">What it costs</span>
             <p>
-              {variantText(m)[0].toUpperCase() + variantText(m).slice(1)}, it found {percent(s.recall)} of the labelled
-              issues. Of the {sf.risky} contracts that needed negotiation or a lawyer, it approved {sf.approved} and left{" "}
-              {sf.unrouted} unrouted, with a median of {seconds(s.latency_p50_s)} per contract. Contracts it cannot route
-              go to a lawyer, so on-premise needs more lawyer time; the routing code blocks the critical issues it
-              records, not the ones the model misses.
+              On the main suite ({variantText(m)}), it found {percent(s.recall)} of the labelled issues. Of the {sf.risky} contracts that needed negotiation or a lawyer, it approved {sf.approved} and left{" "}
+              {sf.unrouted} unrouted, with a median of {seconds(s.latency_p50_s)} per contract. The routing code blocks the
+              critical issues it records or the patterns catch, not the ones both miss.
+            </p>
+            <p className="font-medium">
+              Unattended use needs a strong model; on-premise, a lawyer must review every contract.
             </p>
           </div>
         </div>
@@ -516,7 +546,7 @@ function CaseMatrix({
 function HeldOut({ models, contracts }: { models: EvalModel[]; contracts: ContractSummary[] | null }) {
   const ids = new Set(models.flatMap((m) => m.cases.map((c) => c.id)))
   const misses = models
-    .filter((m) => m.variant !== null)
+    .filter((m) => m.variant !== null && !isLocal(m))
     .flatMap((m) =>
       m.cases
         .filter((c) => c.expected_route !== c.got_route)
@@ -533,9 +563,12 @@ function HeldOut({ models, contracts }: { models: EvalModel[]; contracts: Contra
               {plural(ids.size, "contract")}
             </Badge>
           </CardTitle>
-          <CardDescription>
-            Contracts written by a separate agent that never saw the red-flag patterns, the main contracts or their
-            labels.
+          <CardDescription className="flex flex-col gap-1">
+            <span>
+              Contracts written by a separate agent that never saw the red-flag patterns, the main contracts or their
+              labels.
+            </span>
+            <span>{RED_FLAG_LIMIT}</span>
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
@@ -557,6 +590,7 @@ function HeldOut({ models, contracts }: { models: EvalModel[]; contracts: Contra
                     </span>
                     <span className={n ? "font-semibold text-escalate" : "text-approve"}>
                       false auto-approve {m.summary.false_auto_approve}
+                      {n ? ` (${r.approved} approved, ${r.unrouted} unrouted)` : ""}
                     </span>
                   </span>
                 </li>
@@ -644,7 +678,11 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
       </div>
 
       {[...new Set(local.map((m) => m.model))].map((model) => (
-        <SovereignNote key={model} variants={local.filter((m) => m.model === model)} />
+        <SovereignNote
+          key={model}
+          variants={local.filter((m) => m.model === model)}
+          heldOut={heldOut.filter((m) => m.model === model)}
+        />
       ))}
 
       {models.length > 1 ? <Comparison models={models} /> : null}
@@ -660,9 +698,16 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
           <CardContent>
             <ul className="flex flex-col gap-2.5">
               {GUARANTEES.map((g) => (
-                <li key={g} className="flex items-start gap-2.5 text-sm leading-relaxed">
+                <li key={g.text} className="flex items-start gap-2.5 text-sm leading-relaxed">
                   <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-                  {g}
+                  <span className="flex flex-col gap-1">
+                    {g.text}
+                    {g.note ? (
+                      <span className="rounded-md border border-negotiate/30 bg-negotiate-soft/60 px-2 py-1 text-xs text-foreground/85">
+                        {g.note}
+                      </span>
+                    ) : null}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -699,6 +744,7 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
                 not called again.
               </p>
             ) : null}
+            <p>{RED_FLAG_LIMIT}</p>
             <p className="text-muted-foreground">
               It is a small sample: it shows whether the guarantees held on these cases, not a statistical error rate.
             </p>
