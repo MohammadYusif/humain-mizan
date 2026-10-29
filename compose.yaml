@@ -1,0 +1,40 @@
+# docker compose up --build                       -> app on http://localhost:8000
+# docker compose run --rm app hack eval           -> run the eval inside the container
+# docker compose --profile local up --build       -> also start Ollama (local model for compute/cost work)
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HACK_RUNS_DIR: /app/runs
+      # Reach Ollama from inside compose; harmless when the local profile is off.
+      HACK_OPENAI_BASE_URL: ${HACK_OPENAI_BASE_URL_COMPOSE:-http://ollama:11434/v1}
+    volumes:
+      - ./runs:/app/runs
+      - ./evals:/app/evals
+      # Uploaded contracts (confidential: git- and docker-ignored, kept on the host).
+      - ./data/uploads:/app/data/uploads
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["local"]
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama:/root/.ollama
+    # GPU: uncomment on a machine with the NVIDIA container toolkit.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+volumes:
+  ollama:

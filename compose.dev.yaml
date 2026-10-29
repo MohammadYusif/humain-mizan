@@ -1,0 +1,10 @@
+# Live-reload dev:  docker compose -f compose.yaml -f compose.dev.yaml up --build
+# src/ is bind-mounted ahead of the installed package, so edits reload the server.
+services:
+  app:
+    environment:
+      PYTHONPATH: /app/src
+    volumes:
+      - ./src:/app/src
+      - ./web:/app/web
+    command: ["uvicorn", "hack.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/src"]
