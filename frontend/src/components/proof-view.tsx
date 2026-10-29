@@ -12,6 +12,7 @@ import {
 import { cn } from "cn"
 import type { ReactNode } from "react"
 
+import { RoiCalculator } from "@/components/roi-calculator"
 import { RouteBadge } from "@/components/tone-badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -547,6 +548,11 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
   return (
     <div className="flex flex-col gap-6">
       <Headline models={models} />
+      <RoiCalculator
+        model={models[0]}
+        name={`${modelName(models[0].model)} ${variantText(models[0])}`}
+        local={isLocal(models[0])}
+      />
 
       <div className={cn("grid gap-5", models.length > 1 && "xl:grid-cols-2", models.length > 2 && "2xl:grid-cols-3")}>
         {models.map((m) => (
