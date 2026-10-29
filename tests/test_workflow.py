@@ -538,3 +538,28 @@ def test_arabic_redline_is_right_to_left():
     }  # fmt: skip
     body = zipfile.ZipFile(io.BytesIO(X.redline_docx(s, view))).read("word/document.xml").decode()
     assert "<w:bidi/>" in body and "<w:rtl/>" in body and quote in body
+
+
+def test_demo_replays_are_marked_in_the_inbox_and_never_teach_the_learning_loop(tmp_path):
+    import time as _t
+
+    from hack import learning as L
+
+    s = settings(tmp_path, demo_dir=Settings().demo_dir)
+    client = TestClient(create_app(s))
+    rids = [
+        client.post("/demo/replay", json={"scene_id": "negotiate-arabic", "speed": 50}).json()[
+            "run_id"
+        ]
+        for _ in range(2)
+    ]
+    for rid in rids:
+        for _ in range(200):
+            if client.get(f"/runs/{rid}/review").json().get("status") == "done":
+                break
+            _t.sleep(0.05)
+    items = {i["run_id"]: i for i in client.get("/inbox").json()}
+    assert all(items[r]["replay_of"] for r in rids)
+    for rid in rids:
+        W.decide(s, rid, "discard")
+    assert L.signals(s) == {} and L.insights(s)["proposals"] == []

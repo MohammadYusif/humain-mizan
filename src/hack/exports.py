@@ -29,8 +29,9 @@ def _now() -> str:
 
 
 class _Ids:
+    # Revision ids start high so they never coincide with comment ids (which count from 0).
     def __init__(self) -> None:
-        self.n = 0
+        self.n = 1000
 
     def next(self) -> str:
         self.n += 1

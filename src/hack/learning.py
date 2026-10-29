@@ -52,7 +52,8 @@ def signals(settings: Settings) -> dict[str, dict[str, Any]]:
     if not base.is_dir():
         return out
     for d in sorted(base.iterdir()):
-        if not (d / "decision.json").is_file() or d.name.startswith("eval-"):
+        # eval runs are measurements and demo runs are replays: neither is real legal evidence
+        if not (d / "decision.json").is_file() or d.name.startswith(("eval-", "demo-")):
             continue
         decision = read_decision(settings, d.name) or {}
         kind = (

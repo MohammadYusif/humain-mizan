@@ -145,6 +145,7 @@ def inbox(settings: Settings) -> list[dict[str, Any]]:
                 "reasons": v["reasons"] or ([UNROUTED_REASON] if kind == "unrouted" else []),
                 "findings": v["findings"],
                 "tripwires": v["tripwires"],
+                "replay_of": read_trace(settings.runs_dir, d.name)[0].get("replay_of"),
                 "agent_text": agent_text,
                 "options": list(DECISIONS[kind]),
                 "created": (d / "trace.jsonl").stat().st_mtime,
