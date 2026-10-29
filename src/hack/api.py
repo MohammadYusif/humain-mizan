@@ -5,10 +5,11 @@ from collections.abc import Callable
 from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
 
 from . import demo as D
+from . import exports as X
 from . import learning as L
 from . import workflow as W
 from .challenge import contracts as C
@@ -191,6 +192,29 @@ def create_app(
                 (e["text"] for e in reversed(tr) if e["type"] == "llm_call" and e["text"]), ""
             ),
         }
+
+    @app.get("/runs/{run_id}/export/{kind}")
+    def export(run_id: str, kind: str) -> Response:
+        """Word exports: redline.docx (tracked changes + comments) or memo.docx."""
+        st = W.run_state(cfg, checked(run_id))
+        if st["status"] in ("queued", "running") or not st["view"] or not st["view"]["doc_id"]:
+            raise HTTPException(404, "no finished review for this run")
+        view = {**st["view"], "decision": W.read_decision(cfg, run_id)}
+        try:
+            if kind == "redline.docx":
+                data = X.redline_docx(cfg, view)
+            elif kind == "memo.docx":
+                data = X.memo_docx(cfg, view, run_id)
+            else:
+                raise HTTPException(404, "export must be redline.docx or memo.docx")
+        except FileNotFoundError:
+            raise HTTPException(404, "contract not found") from None
+        name = f"{view['doc_id']}-{kind}"
+        return Response(
+            data,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f'attachment; filename="{name}"'},
+        )
 
     @app.post("/runs/{run_id}/decision")
     def decision(run_id: str, req: DecisionRequest) -> dict[str, Any]:
