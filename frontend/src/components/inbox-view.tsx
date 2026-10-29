@@ -1,4 +1,4 @@
-import { ArrowUpRight, Check, CircleCheck, Clapperboard, Gavel, Info, LoaderCircle, PenLine, Send, Trash2, X } from "lucide-react"
+import { ArrowUpRight, Check, Clapperboard, Gavel, Info, LoaderCircle, PenLine, Send, Trash2, X } from "lucide-react"
 import { cn } from "cn"
 import { useId, useState } from "react"
 import { toast } from "sonner"
@@ -428,11 +428,8 @@ export function InboxView({
           </div>
         )
       ) : visible.length === 0 ? (
-        <div className="flex flex-col gap-1 rounded-lg border bg-card px-6 py-8">
-          <p className="flex items-center gap-2 text-lg font-semibold">
-            <CircleCheck className="size-5 text-approve" aria-hidden />
-            Nothing is waiting for a decision.
-          </p>
+        <div className="flex flex-col gap-1 rounded-lg border bg-card px-6 py-6">
+          <p className="text-lg font-semibold">Nothing is waiting for a decision.</p>
           <p className="text-sm text-muted-foreground">
             {finished > 0
               ? `${finished} recent review${finished === 1 ? "" : "s"} finished without needing anyone.`

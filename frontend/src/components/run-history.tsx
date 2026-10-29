@@ -61,9 +61,9 @@ export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
     <Card className={cn("min-h-0 gap-3", className)}>
       <CardHeader>
         <CardTitle className="font-heading text-lg font-semibold">History</CardTitle>
-        <CardAction className="flex items-center gap-2">
-          <Switch id={switchId} size="sm" checked={showEval} onCheckedChange={toggleEval} />
-          <Label htmlFor={switchId} className="text-xs font-normal text-muted-foreground">
+        <CardAction>
+          <Label htmlFor={switchId} className="flex min-h-9 cursor-pointer items-center gap-2 px-1 text-xs font-normal text-muted-foreground">
+            <Switch id={switchId} checked={showEval} onCheckedChange={toggleEval} />
             Show eval runs
           </Label>
         </CardAction>
@@ -104,7 +104,7 @@ export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
                           {r.doc_id ?? "starting…"}
                         </span>
                         {r.replay_of ? (
-                          <Badge variant="outline" className="rounded-md border-dashed text-[0.65rem] font-normal text-brass-ink">
+                          <Badge variant="outline" className="rounded-sm border-dashed text-[0.7rem] font-normal text-brass-ink">
                             Replay
                           </Badge>
                         ) : null}

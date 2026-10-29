@@ -157,7 +157,7 @@ export default function App() {
         nav={<AreaNav inboxCount={inboxItems?.length ?? null} />}
         onDemo={demo ? undefined : () => void startDemo()}
       />
-      <main className={demo ? "mx-auto w-full max-w-[1440px] px-4 pt-6 pb-72 sm:px-6 lg:pt-8" : "mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:py-8"}>
+      <main className={demo ? "mx-auto w-full max-w-[1440px] px-4 pt-6 pb-40 sm:px-6 sm:pb-72 lg:pt-8" : "mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:py-8"}>
         {contracts.error && !contracts.data ? (
           <Alert className="mb-6 border-escalate/40 bg-escalate-soft text-escalate">
             <AlertTitle>Cannot reach the review API</AlertTitle>
@@ -193,7 +193,7 @@ export default function App() {
           />
         </TabsContent>
         <TabsContent value="insights">
-          <InsightsView rules={playbook.data} onChanged={playbook.refresh} />
+          <InsightsView rules={playbook.data} onChanged={playbook.refresh} onDemo={demo ? undefined : () => void startDemo()} />
         </TabsContent>
         <TabsContent value="proof">
           <ProofView contracts={contracts.data} />

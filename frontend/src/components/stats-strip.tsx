@@ -10,7 +10,7 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
       <dt className="flex items-center gap-1.5 text-[0.7rem] font-medium text-muted-foreground">
         {label}
       </dt>
-      <dd className="truncate font-mono text-sm font-medium tabular">{value}</dd>
+      <dd className="font-mono text-sm font-medium break-words tabular">{value}</dd>
     </div>
   )
   if (!hint) return body
@@ -42,9 +42,16 @@ export function StatsStrip({ review, trace }: { review: ReviewView | null; trace
   const latency = s ? s.latency_s : (last?.t ?? 0)
   const live = !s
 
+  const model = start?.type === "run_start" ? start.model : "–"
   return (
-    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3 lg:grid-cols-5 [&>*]:bg-card max-lg:[&>*:last-child]:col-span-2">
-      <Stat label="Model" value={start?.type === "run_start" ? start.model : "–"} />
+    <>
+    <p className="text-xs leading-relaxed text-muted-foreground tabular sm:hidden">
+      <span className="font-mono text-foreground">{model}</span> · {s?.turns ?? calls.length} turns ·{" "}
+      {tokens(inTotal)} / {tokens(usage.output_tokens)} tokens · {s?.priced === false ? "unpriced" : usd(cost)} ·{" "}
+      {seconds(latency)}
+    </p>
+    <dl className="hidden grid-cols-2 gap-px sm:grid overflow-hidden rounded-lg border bg-border sm:grid-cols-3 lg:grid-cols-5 [&>*]:bg-card max-lg:[&>*:last-child]:col-span-2">
+      <Stat label="Model" value={model} />
       <Stat label={live ? "Turns so far" : "Turns"} value={String(s?.turns ?? calls.length)} />
       <Stat
         label="Tokens"
@@ -58,5 +65,6 @@ export function StatsStrip({ review, trace }: { review: ReviewView | null; trace
       />
       <Stat label={live ? "Elapsed" : "Latency"} value={seconds(latency)} />
     </dl>
+    </>
   )
 }

@@ -102,7 +102,7 @@ export function AreaNav({ inboxCount }: { inboxCount: number | null }) {
         {inboxCount ? (
           <Badge
             aria-label={`${inboxCount} waiting`}
-            className="h-4.5 min-w-4.5 rounded-sm bg-escalate px-1 font-mono text-[0.65rem] text-paper tabular"
+            className="h-4.5 min-w-4.5 rounded-sm bg-escalate px-1 font-mono text-[0.7rem] text-paper tabular"
           >
             {inboxCount}
           </Badge>
@@ -156,7 +156,7 @@ export function AppHeader({
         <nav className="order-last basis-full lg:order-none lg:ms-4 lg:basis-auto">{nav}</nav>
         <div className="ms-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
           {onDemo ? (
-            <Button variant="outline" size="sm" onClick={onDemo} className="gap-1.5" aria-label="Start the guided demo">
+            <Button variant="outline" onClick={onDemo} className="h-9 min-w-9 gap-1.5" aria-label="Start the guided demo">
               <Clapperboard aria-hidden />
               <span className="hidden sm:inline">Guided demo</span>
             </Button>

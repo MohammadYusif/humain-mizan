@@ -24,7 +24,7 @@ export function LangChips({ languages }: { languages: Lang[] }) {
         <Badge
           key={l}
           variant="outline"
-          className="h-4.5 rounded px-1.5 font-mono text-[0.625rem] font-medium text-muted-foreground"
+          className="h-4.5 rounded px-1.5 font-mono text-[0.7rem] font-medium text-muted-foreground"
         >
           {l.toUpperCase()}
         </Badge>

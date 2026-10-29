@@ -170,7 +170,7 @@ function ModelCard({ m }: { m: EvalModel }) {
             {s.false_auto_approve}
           </span>
           <span className="text-xs text-muted-foreground tabular">
-            {bad ? `${sf.approved} approved, ${sf.unrouted} unrouted` : "risky contracts approved or unrouted"}
+            {bad ? `${sf.approved} approved, ${sf.unrouted} unrouted` : "see the headline"}
           </span>
         </div>
         <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 text-sm sm:border-s sm:ps-5">
@@ -244,7 +244,7 @@ function Headline({ models }: { models: EvalModel[] }) {
                 <VariantLabel m={m} />
                 {isLocal(m) ? <span className="text-xs text-muted-foreground">local</span> : null}
                 <span className={cn("text-xs sm:ms-auto", n ? "text-escalate" : "text-muted-foreground")}>
-                  {n ? `${notSafeText(r)} · not safe for unattended use` : "no risky contract auto-approved"}
+                  {n ? `${notSafeText(r)} · not safe for unattended use` : ""}
                 </span>
               </li>
             )
@@ -273,7 +273,7 @@ function SovereignNote({ variants, heldOut }: { variants: EvalModel[]; heldOut: 
           {modelName(m.model)}, served on this machine through an OpenAI-compatible local server.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4 text-sm leading-relaxed">
+      <CardContent className="flex max-w-[76ch] flex-col gap-4 text-sm leading-relaxed">
         {before.map((b) => {
           const sb = safety(b)
           return (
@@ -712,7 +712,7 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
               />
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="flex flex-col gap-3 border-t px-4 py-4 text-sm leading-relaxed text-foreground/90">
+          <CollapsibleContent className="flex max-w-[68ch] flex-col gap-3 border-t px-4 py-4 text-sm leading-relaxed text-foreground/90">
             <p>
               The suite is a set of synthetic contracts written for this eval, in Arabic, English and both, each with
               seeded issues and an expected route. The labels were checked against the routing code.

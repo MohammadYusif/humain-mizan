@@ -148,10 +148,8 @@ function BatchComposer({ contracts, onStarted }: { contracts: ContractSummary[] 
             </Label>
           </div>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            {autoSend
-              ? "Contracts routed to negotiate get their redlines sent without waiting. "
-              : "Drafted redlines wait in the Inbox until someone approves them. "}
-            Escalations always wait for a lawyer.
+            Escalations always wait for a lawyer.{" "}
+            {autoSend ? "Turn off to approve each redline before it is sent." : "Each redline waits in the Inbox for approval."}
           </p>
         </div>
 
@@ -545,21 +543,19 @@ export function QueueView({
         {shown ? (
           <BatchDetail key={shown} batchId={shown} />
         ) : batches ? (
-          <Empty className="border bg-card py-16">
-            <EmptyHeader>
-              <EmptyTitle>No batches yet</EmptyTitle>
-              <EmptyDescription>
-                Select contracts and run the queue. The agent reviews them in parallel, sends what it may send, and
-                puts the rest in the Inbox.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
+          <div className="flex flex-col gap-1 rounded-lg border bg-card px-6 py-6">
+            <p className="text-lg font-semibold">No batches yet.</p>
+            <p className="max-w-[68ch] text-sm text-muted-foreground">
+              Select contracts and run the queue: the agent reviews them in parallel and puts what needs a person in
+              the Inbox.
+            </p>
+          </div>
         ) : (
           <Skeleton className="h-96 w-full rounded-lg" />
         )}
       </section>
       <div className="min-w-0 lg:col-start-1 lg:row-start-2">
-        <BatchList batches={batches} selected={shown} />
+        {batches && batches.length === 0 ? null : <BatchList batches={batches} selected={shown} />}
       </div>
     </div>
   )

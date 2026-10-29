@@ -73,16 +73,19 @@ export function PrintMemo({ runId, contracts }: { runId: string; contracts: Cont
                     <p className="text-sm font-semibold">
                       {f.severity.toUpperCase()} · {f.rule_id} · clause {f.clause_id}
                     </p>
-                    <p dir="auto" lang={langOf(f.quote)} className="italic">
+                    <p dir="auto" lang={langOf(f.quote)} className="font-medium">
                       “{f.quote}”
                     </p>
                     <p dir="auto" lang={langOf(f.issue)}>
                       {f.issue}
                     </p>
                     {f.redline ? (
-                      <p dir="auto" lang={langOf(f.redline)}>
-                        <strong>Redline:</strong> {f.redline}
-                      </p>
+                      <div>
+                        <p className="text-sm font-semibold">Redline</p>
+                        <p dir="auto" lang={langOf(f.redline)}>
+                          {f.redline}
+                        </p>
+                      </div>
                     ) : null}
                   </div>
                 ))}

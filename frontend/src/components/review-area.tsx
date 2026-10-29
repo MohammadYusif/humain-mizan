@@ -1,4 +1,5 @@
-import { BookMarked, FileText, ListTree, ScrollText } from "lucide-react"
+import { BookMarked, ChevronDown, FileText, ListTree, ScrollText } from "lucide-react"
+import { cn } from "cn"
 import { useCallback, useMemo, useState } from "react"
 import { toast } from "sonner"
 
@@ -12,6 +13,8 @@ import { RunHistory } from "@/components/run-history"
 import { StatsStrip } from "@/components/stats-strip"
 import { TraceTab } from "@/components/trace-tab"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UploadContractDialog } from "@/components/upload-contract-dialog"
@@ -46,6 +49,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
   const [focus, setFocus] = useState<ClauseFocus | null>(null)
   const [liveDoc, setLiveDoc] = useState<string | null>(null)
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(false)
 
   const live = posting && runId !== null && runId === liveRunId
   const { review, trace, phase, error: runError } = useRunData(runId, live)
@@ -116,7 +120,23 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
 
   return (
     <div className="grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)] xl:grid-cols-[22rem_minmax(0,1fr)]">
-      <aside className="flex min-w-0 flex-col gap-6 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7.5rem)] lg:self-start">
+      <Collapsible
+        open={panelOpen || !runId}
+        onOpenChange={setPanelOpen}
+        className={cn(
+          "flex min-w-0 flex-col gap-3 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7.5rem)] lg:gap-6 lg:self-start",
+          runId && "max-lg:order-last"
+        )}
+      >
+        {runId ? (
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="group h-10 w-full justify-between bg-card lg:hidden">
+              New review and history
+              <ChevronDown className="transition-transform group-data-[state=open]:rotate-180" aria-hidden />
+            </Button>
+          </CollapsibleTrigger>
+        ) : null}
+        <CollapsibleContent forceMount className="flex min-h-0 flex-col gap-6 data-[state=closed]:max-lg:hidden lg:flex-1">
         <NewReviewPanel
           contracts={contracts}
           docId={docId}
@@ -129,7 +149,8 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
           busy={posting}
         />
         <RunHistory runs={runs} selectedId={runId} onSelect={selectRun} className="lg:flex-1" />
-      </aside>
+        </CollapsibleContent>
+      </Collapsible>
 
       <UploadContractDialog
         open={uploadOpen}
@@ -155,7 +176,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
           <TabsList className="grid h-10! w-full grid-cols-4 sm:inline-flex sm:w-fit">
             <TabsTrigger value="review" className="px-3">
               <ScrollText aria-hidden className="hidden sm:block" />
-              Review
+              Findings
             </TabsTrigger>
             <TabsTrigger value="contract" className="px-3">
               <FileText aria-hidden className="hidden sm:block" />
@@ -165,7 +186,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
               <ListTree aria-hidden className="hidden sm:block" />
               Trace
               {traceCount > 0 ? (
-                <Badge variant="secondary" className="hidden h-4.5 rounded px-1.5 font-mono text-[0.65rem] tabular sm:inline-flex">
+                <Badge variant="secondary" className="hidden h-4.5 rounded-sm px-1.5 font-mono text-[0.7rem] tabular sm:inline-flex">
                   {traceCount}
                 </Badge>
               ) : null}

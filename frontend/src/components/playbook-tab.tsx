@@ -9,7 +9,7 @@ function Amendments({ items }: { items?: string[] }) {
   if (!items?.length) return null
   return (
     <div className="mt-2 flex flex-col gap-1 rounded-md border border-brass/40 bg-brass-soft/60 p-2 text-foreground">
-      <span className="text-[0.65rem] font-semibold text-brass-ink">Accepted by legal</span>
+      <span className="text-xs font-semibold text-brass-ink">Accepted by legal</span>
       {items.map((t) => (
         <p key={t} dir="auto" lang={langOf(t)} className="text-[0.8rem]">
           {t}

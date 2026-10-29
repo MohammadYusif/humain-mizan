@@ -217,7 +217,7 @@ export function ContractTab({ contract, loading, error, findings, clauseMap, foc
                   </Badge>
                 ))}
               </div>
-              <p dir="auto" lang={cl.lang} className="font-heading text-[1.05rem] leading-relaxed text-foreground">
+              <p dir="auto" lang={cl.lang} className="max-w-[68ch] font-heading text-[1.05rem] leading-relaxed text-foreground">
                 {withQuotes(
                   cl.text,
                   fs.map((f) => f.quote)

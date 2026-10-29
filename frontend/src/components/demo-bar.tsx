@@ -1,8 +1,9 @@
-import { ArrowRight, Inbox, LoaderCircle, RotateCcw, X } from "lucide-react"
+import { ArrowRight, ChevronDown, Inbox, LoaderCircle, RotateCcw, X } from "lucide-react"
 
 import { RouteBadge } from "@/components/tone-badges"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { DemoScene } from "@/lib/api"
 import { go } from "@/lib/route"
 
@@ -25,56 +26,62 @@ interface Props {
 export function DemoBar({ demo, finished, onNext, onRestart, onExit }: Props) {
   const scene = demo.scenes[demo.index]
   const last = demo.index === demo.scenes.length - 1
+  const playing = demo.busy || !finished
   return (
+    // The wrapper spans the viewport but must not swallow clicks outside the card.
     <div
       role="region"
       aria-label="Guided demo"
-      className="fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-6 sm:pb-5 print:hidden"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-2 pb-2 sm:px-6 sm:pb-5 print:hidden"
     >
-      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-lg border bg-popover p-4 shadow-md sm:p-5">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-medium text-muted-foreground">
-            Guided demo, scene {demo.index + 1} of {demo.scenes.length}
+      <Collapsible className="pointer-events-auto mx-auto flex max-w-3xl flex-col gap-2 rounded-lg border bg-popover p-3 shadow-md sm:gap-3 sm:p-5">
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-xs text-muted-foreground tabular">
+            {demo.index + 1}/{demo.scenes.length}
           </span>
-          <RouteBadge route={scene.route} />
-          <Badge variant="outline" className="rounded-md border-dashed font-normal text-muted-foreground">
-            Replay of a recorded <span className="font-mono">{scene.model}</span> run
+          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold sm:text-lg">{scene.title}</h2>
+          <span className="hidden sm:inline-flex">
+            <RouteBadge route={scene.route} />
+          </span>
+          <Badge variant="outline" className="shrink-0 rounded-sm border-dashed font-normal text-muted-foreground">
+            Replay<span className="hidden sm:inline">&nbsp;of a recorded {scene.model} run</span>
           </Badge>
-          <Button variant="ghost" size="icon-sm" className="ms-auto" onClick={onExit} aria-label="Exit the demo">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="icon" className="group size-9 sm:hidden" aria-label="Show the narration">
+              <ChevronDown className="transition-transform group-data-[state=open]:rotate-180" aria-hidden />
+            </Button>
+          </CollapsibleTrigger>
+          <Button variant="ghost" size="icon" className="size-9" onClick={onExit} aria-label="Exit the demo">
             <X aria-hidden />
           </Button>
         </div>
-        <div className="flex flex-col gap-1">
-          <h2 className="text-lg leading-snug font-semibold">{scene.title}</h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">{scene.narration}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="me-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-            {demo.busy || !finished ? (
-              <>
-                <LoaderCircle className="size-3.5 animate-spin" aria-hidden /> Replaying: findings and red flags fill in live
-              </>
-            ) : (
-              "Replay finished"
-            )}
+        {/* Narration: always shown from sm up; on phones it sits behind the chevron to keep the bar short. */}
+        <CollapsibleContent forceMount className="data-[state=closed]:max-sm:hidden">
+          <p className="max-w-[68ch] text-sm leading-relaxed text-muted-foreground">{scene.narration}</p>
+        </CollapsibleContent>
+        <div className="flex items-center gap-2">
+          <span className="me-auto inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+            {playing ? <LoaderCircle className="size-3.5 shrink-0 animate-spin" aria-hidden /> : null}
+            <span className="truncate">{playing ? "Replaying" : "Replay finished"}</span>
           </span>
-          <Button variant="ghost" size="sm" onClick={onRestart} disabled={demo.busy}>
+          <Button variant="ghost" className="h-9" onClick={onRestart} disabled={demo.busy} aria-label="Restart demo">
             <RotateCcw aria-hidden />
-            Restart demo
+            <span className="hidden sm:inline">Restart demo</span>
           </Button>
           {scene.route === "escalate" && finished ? (
-            <Button variant="outline" size="sm" onClick={() => go({ area: "inbox" })}>
+            <Button variant="outline" className="h-9" onClick={() => go({ area: "inbox" })}>
               <Inbox aria-hidden />
-              Open the Inbox
+              <span className="hidden sm:inline">Open the Inbox</span>
+              <span className="sm:hidden">Inbox</span>
             </Button>
           ) : null}
-          <Button size="sm" onClick={onNext} disabled={demo.busy}>
+          <Button className="h-9" onClick={onNext} disabled={demo.busy}>
             {last ? "Finish" : "Next scene"}
             <ArrowRight data-icon="inline-end" aria-hidden />
-            <kbd className="ms-1 hidden rounded border border-primary-foreground/30 px-1 font-mono text-[0.65rem] sm:inline">→</kbd>
+            <kbd className="ms-1 hidden rounded-sm border border-primary-foreground/30 px-1 font-mono text-[0.7rem] sm:inline">→</kbd>
           </Button>
         </div>
-      </div>
+      </Collapsible>
     </div>
   )
 }

@@ -123,7 +123,8 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
           <DialogTitle className="font-heading text-xl font-semibold">Review your own contract</DialogTitle>
           <DialogDescription>
             Mizan splits it into clauses and reviews it against the same playbook as the samples. Arabic, English and
-            bilingual contracts all work.
+            bilingual contracts all work. The text is stored on this server under data/uploads and sent to the
+            configured model provider when you review it.
           </DialogDescription>
         </DialogHeader>
 
@@ -174,7 +175,7 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
               }}
               className="gap-4"
             >
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid h-10! w-full grid-cols-2">
                 <TabsTrigger value="file">Upload file</TabsTrigger>
                 <TabsTrigger value="text">Paste text</TabsTrigger>
               </TabsList>

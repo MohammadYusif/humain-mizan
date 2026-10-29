@@ -1,4 +1,4 @@
-import { BookCheck, Check, Info, LoaderCircle, ShieldAlert, X } from "lucide-react"
+import { BookCheck, Check, LoaderCircle, ShieldAlert, X } from "lucide-react"
 import { cn } from "cn"
 import { useId, useState } from "react"
 import { toast } from "sonner"
@@ -167,7 +167,16 @@ function SignalBars({ signals, rules }: { signals: Record<string, { accepted: nu
   )
 }
 
-export function InsightsView({ rules, onChanged }: { rules: PlaybookRule[] | null; onChanged: () => void }) {
+export function InsightsView({
+  rules,
+  onChanged,
+  onDemo,
+}: {
+  rules: PlaybookRule[] | null
+  onChanged: () => void
+  /** Starts the guided demo; undefined while one is running. */
+  onDemo?: () => void
+}) {
   const { data, error, refresh } = usePolled("insights", loadInsights, () => null)
 
   return (
@@ -197,16 +206,24 @@ export function InsightsView({ rules, onChanged }: { rules: PlaybookRule[] | nul
       ) : (
         <>
           {data.proposals.length === 0 && data.notes.length === 0 && data.amendments.length === 0 ? (
-            <Empty className="border bg-card py-12">
-              <EmptyHeader className="max-w-lg">
-                <EmptyTitle className="text-lg font-semibold">Nothing to learn yet</EmptyTitle>
-                <EmptyDescription className="text-[0.95rem]">
-                  Every decision in the Inbox is evidence. When legal accepts the same kind of deviation at least{" "}
-                  {plural(data.min_accepted, "time")}, more often than it upholds the rule, a proposed amendment appears
-                  here with the quotes behind it.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
+            <div className="flex flex-col gap-3 rounded-lg border bg-card px-6 py-6">
+              <p className="text-lg font-semibold">Nothing to learn from yet.</p>
+              <p className="max-w-[68ch] text-sm text-muted-foreground">
+                This fills up from decisions in the Inbox. When legal accepts the same deviation at least{" "}
+                {plural(data.min_accepted, "time")}, more often than it upholds the rule, a proposed amendment appears
+                here with the quotes behind it. Decisions on demo replays do not count.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" className="h-9" onClick={() => go({ area: "queue" })}>
+                  Run a batch in the Queue
+                </Button>
+                {onDemo ? (
+                  <Button variant="ghost" className="h-9" onClick={onDemo}>
+                    Watch the guided demo
+                  </Button>
+                ) : null}
+              </div>
+            </div>
           ) : null}
 
           {data.proposals.length ? (
@@ -276,6 +293,7 @@ export function InsightsView({ rules, onChanged }: { rules: PlaybookRule[] | nul
 
           {Object.keys(data.signals).length ? <SignalBars signals={data.signals} rules={rules} /> : null}
 
+          {data.amendments.length ? (
           <Card className="gap-4">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
@@ -302,13 +320,10 @@ export function InsightsView({ rules, onChanged }: { rules: PlaybookRule[] | nul
                     </li>
                   ))}
                 </ul>
-              ) : (
-                <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Info className="size-4" aria-hidden /> No amendments yet.
-                </p>
-              )}
+              ) : null}
             </CardContent>
           </Card>
+          ) : null}
         </>
       )}
     </div>

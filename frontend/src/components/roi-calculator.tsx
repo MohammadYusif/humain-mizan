@@ -42,7 +42,7 @@ function Field({ label, hint, value, onChange, min, max, step, unit, tag }: Fiel
         </Label>
         <Badge
           variant="outline"
-          className={cn("rounded-md text-[0.65rem] font-normal", tag === "assumption" && "border-dashed text-muted-foreground")}
+          className={cn("rounded-sm text-[0.7rem] font-normal", tag === "assumption" && "border-dashed text-muted-foreground")}
         >
           {tag}
         </Badge>
