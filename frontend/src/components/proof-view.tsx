@@ -80,7 +80,7 @@ function modelName(id: string) {
 
 /** One eval entry = model + variant (the same model can be measured before and after a change). */
 function keyOf(m: EvalModel) {
-  return `${m.model}|${m.variant ?? ""}`
+  return `${m.model}|${m.variant ?? ""}|${m.suite ?? "main"}`
 }
 
 /** null means the current agent, which runs the red-flag checks. */
@@ -410,13 +410,21 @@ function CaseResult({ m, id }: { m: EvalModel; id: string }) {
   )
 }
 
-function CaseMatrix({ models, contracts }: { models: EvalModel[]; contracts: ContractSummary[] | null }) {
+function CaseMatrix({
+  models,
+  contracts,
+  title = "Every contract, every model",
+}: {
+  models: EvalModel[]
+  contracts: ContractSummary[] | null
+  title?: string
+}) {
   const ids = [...new Set(models.flatMap((m) => m.cases.map((c) => c.id)))].sort()
   const expectedOf = (id: string) => models.flatMap((m) => m.cases).find((c) => c.id === id)?.expected_route ?? null
   return (
     <Card className="gap-0 p-0">
       <CardHeader className="border-b py-4">
-        <CardTitle className="font-heading text-lg font-semibold">Every contract, every model</CardTitle>
+        <CardTitle className="font-heading text-lg font-semibold">{title}</CardTitle>
         <CardDescription className="flex flex-col gap-2">
           <span>Expected route from the labels, the route the scoring code produced, and the cost.</span>
           <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
@@ -504,6 +512,80 @@ function CaseMatrix({ models, contracts }: { models: EvalModel[]; contracts: Con
 
 // --- area ----------------------------------------------------------------------------------------
 
+/** Blind contracts written by a separate agent: the honest test of whether the guarantees generalise. */
+function HeldOut({ models, contracts }: { models: EvalModel[]; contracts: ContractSummary[] | null }) {
+  const ids = new Set(models.flatMap((m) => m.cases.map((c) => c.id)))
+  const misses = models
+    .filter((m) => m.variant !== null)
+    .flatMap((m) =>
+      m.cases
+        .filter((c) => c.expected_route !== c.got_route)
+        .map((c) => ({ m, c }))
+    )
+  return (
+    <section className="flex flex-col gap-5" aria-labelledby="heldout-h">
+      <Card className="gap-4">
+        <CardHeader>
+          <CardTitle id="heldout-h" className="flex flex-wrap items-center gap-2 text-lg font-semibold">
+            <FlaskConical className="size-5 text-primary" aria-hidden />
+            Held-out (blind) test
+            <Badge variant="outline" className="rounded-md font-normal">
+              {plural(ids.size, "contract")}
+            </Badge>
+          </CardTitle>
+          <CardDescription>
+            Contracts written by a separate agent that never saw the red-flag patterns, the main contracts or their
+            labels.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <ul className="flex flex-col divide-y rounded-lg border bg-background/60">
+            {models.map((m) => {
+              const r = safety(m)
+              const n = notSafe(r)
+              return (
+                <li key={keyOf(m)} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-sm">
+                  <span className="font-medium">{modelName(m.model)}</span>
+                  <VariantLabel m={m} />
+                  {isLocal(m) ? <span className="text-xs text-muted-foreground">local</span> : null}
+                  <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular sm:ms-auto">
+                    <span>
+                      route accuracy <span className="font-semibold">{percent(m.summary.route_accuracy)}</span>
+                    </span>
+                    <span>
+                      pass <span className="font-semibold">{percent(m.summary.pass_rate)}</span>
+                    </span>
+                    <span className={n ? "font-semibold text-escalate" : "text-approve"}>
+                      false auto-approve {m.summary.false_auto_approve}
+                    </span>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+          {misses.length ? (
+            <div className="flex flex-col gap-1.5 rounded-lg border border-dashed p-3 text-sm leading-relaxed">
+              {misses.map(({ m, c }) => (
+                <p key={`${keyOf(m)}-${c.id}`}>
+                  The {m.variant}
+                  {m.variant?.includes(",") ? "," : ""} missed <span className="font-mono">{c.id}</span>: routed{" "}
+                  {c.got_route ?? "nowhere"} instead of {c.expected_route ?? "—"}
+                  {c.got_route !== "approve" ? ", never approved" : ""}.
+                </p>
+              ))}
+              <p className="text-muted-foreground">
+                The miss was an Arabic prompt injection. The fix lets the model report injected instructions as a second
+                detector; the regex was not widened to fit the held-out wording.
+              </p>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+      <CaseMatrix models={models} contracts={contracts} title="Held-out contracts, every run" />
+    </section>
+  )
+}
+
 export function ProofView({ contracts }: { contracts: ContractSummary[] | null }) {
   const { data, error } = useResource("evals", loadEvals)
 
@@ -523,7 +605,7 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
     )
   }
 
-  if (data.length === 0) {
+  if (data.filter((m) => m.suite !== "held-out").length === 0) {
     return (
       <Empty className="border bg-card py-16">
         <EmptyHeader>
@@ -541,7 +623,8 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
 
   // Safe models first, then by pass rate; local models are discussed in their own note.
   // Kept in the API's order: current configuration first, then route accuracy, then cost.
-  const models = data
+  const models = data.filter((m) => m.suite !== "held-out")
+  const heldOut = data.filter((m) => m.suite === "held-out")
   const local = models.filter(isLocal)
   const anyRegraded = models.some((m) => m.summary.rescored_from)
 
@@ -566,6 +649,7 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
 
       {models.length > 1 ? <Comparison models={models} /> : null}
       <CaseMatrix models={models} contracts={contracts} />
+      {heldOut.length ? <HeldOut models={heldOut} contracts={contracts} /> : null}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card className="gap-4">

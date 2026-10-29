@@ -295,6 +295,8 @@ export interface EvalModel {
   model: string
   /** null = the current agent (with red-flag checks); otherwise e.g. "before red-flag tripwires". */
   variant: string | null
+  /** main: the suite the patterns were developed on; held-out: blind contracts written separately. */
+  suite?: "main" | "held-out"
   file: string
   date: number
   summary: EvalSummary
