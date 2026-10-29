@@ -410,3 +410,12 @@ def test_red_flag_excerpt_uses_the_contracts_own_words():
     ar = C.load_contract(s.contracts_dir, "ar-data-01")
     flag = next(t for t in scan(ar) if t.rule_id == "INTEREST")
     assert "فائدة" in flag.match  # original teh marbuta, not the normalised heh
+
+
+def test_runs_without_a_contract_never_reach_the_inbox(tmp_path):
+    s = settings(tmp_path)
+    from hack.service import run_task
+
+    r = run_task("hello", s, provider=FakeProvider([text("hi")]), run_id="ui-smoke-1")
+    assert W.pending_kind(W.run_state(s, r.run_id), None) is None
+    assert W.inbox(s) == []

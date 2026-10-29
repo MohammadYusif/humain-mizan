@@ -94,7 +94,8 @@ def pending_kind(state: dict[str, Any], decision: dict[str, Any] | None) -> str 
     if state["status"] != "done" or decision is not None or state["view"] is None:
         return None
     if state["route"] is None:
-        return "unrouted"
+        # only contract reviews need a lawyer; a run with no contract at all is not a review
+        return "unrouted" if state["view"]["doc_id"] else None
     if state["route"] == "escalate":
         return "legal_review"
     # The process is owned by the route, not by whether the model remembered the follow-up:
