@@ -93,3 +93,17 @@ def test_api(tmp_path):
     assert c.get(f"/runs/{body['run_id']}/trace").status_code == 200
     assert c.get("/runs/..%2F..%2Fetc/trace").status_code in (400, 404)
     assert c.get("/runs/does-not-exist/trace").status_code == 404
+
+
+def test_loop_guard_skips_identical_calls_and_stops_a_stuck_model(tmp_path):
+    s = settings(tmp_path, max_turns=20)
+    same = call_tools(("t", "calculator", {"expression": "1+1"}))
+    r = run("x", s, FakeProvider([same]))  # the model repeats one identical call forever
+    assert r.stop_reason == "loop" and r.turns == 4  # 2 real calls, then 2 fully-guarded turns
+    tr = [
+        json.loads(x)
+        for x in (tmp_path / "runs" / r.run_id / "trace.jsonl").read_text().splitlines()
+    ]
+    assert sum(e["type"] == "loop_guard" for e in tr) == 2
+    calls = [e for e in tr if e["type"] == "tool_call"]
+    assert [c["is_error"] for c in calls] == [False, False, True, True]

@@ -481,3 +481,9 @@ def test_clearing_a_major_red_flag_needs_a_verbatim_quote(tmp_path):
     assert (
         route(reg, "c") == "approve"
     )  # cleared with evidence: the model owns that call, on record
+
+
+def test_rejected_quote_shows_the_clause_text(tmp_path):
+    reg, _, _ = reviewed(tmp_path, "saas-en-01")
+    res = finding(reg, "saas-en-01", "c9", "LIAB-CAP", "words that are not there at all")
+    assert res.is_error and "Customer's aggregate liability" in res.content

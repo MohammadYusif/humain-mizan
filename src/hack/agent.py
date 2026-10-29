@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass, field
 from typing import Any
@@ -15,7 +16,7 @@ from .tracing import Tracer
 class AgentResult:
     run_id: str
     final_text: str
-    # end_turn | max_turns | budget_exceeded | max_tokens | refusal | other
+    # end_turn | max_turns | budget_exceeded | max_tokens | refusal | loop | other
     stop_reason: str
     turns: int
     tool_names: list[str] = field(default_factory=list)
@@ -26,6 +27,7 @@ class AgentResult:
 
 
 MAX_NUDGES = 2
+MAX_IDENTICAL_CALLS = 2  # the 3rd identical call (same tool, same arguments) is not executed
 
 
 def run_agent(
@@ -48,6 +50,8 @@ def run_agent(
     stop = "max_turns"
     turns = 0
     nudges = 0
+    seen: dict[str, int] = {}  # tool-call signature -> times called
+    stuck_turns = 0
     t0 = time.perf_counter()
     tracer.event("run_start", task=task, model=provider.model, provider=provider.name)
 
@@ -103,10 +107,27 @@ def run_agent(
 
         if comp.stop_reason == "tool_use" and comp.tool_calls:
             results: list[ToolResult] = []
+            guarded = 0
             for call in comp.tool_calls:
                 tool_names.append(call.name)
                 s = time.perf_counter()
-                res = registry.execute(call)
+                sig = call.name + json.dumps(call.input, sort_keys=True, default=str)
+                seen[sig] = seen.get(sig, 0) + 1
+                if seen[sig] > MAX_IDENTICAL_CALLS:
+                    # Loop guard: an identical call gives an identical result; don't run it again.
+                    guarded += 1
+                    hint = registry.finish_check() if registry.finish_check else None
+                    res = ToolResult(
+                        call.id,
+                        f"Repeated call: {call.name} already ran {seen[sig] - 1} times with these "
+                        "exact arguments, so repeating it changes nothing. Change the arguments "
+                        "(for a rejected quote, copy the exact words from the clause) or move on."
+                        + (f" {hint}" if hint else ""),
+                        True,
+                    )
+                    tracer.event("loop_guard", turn=turns, name=call.name, repeats=seen[sig] - 1)
+                else:
+                    res = registry.execute(call)
                 tracer.event(
                     "tool_call",
                     turn=turns,
@@ -118,6 +139,12 @@ def run_agent(
                 )
                 results.append(res)
             messages.extend(provider.tool_result_messages(results))
+            # Two turns in a row made of nothing but repeats: the model is stuck. Stop and let the
+            # workflow route the run to a human instead of burning the remaining turns.
+            stuck_turns = stuck_turns + 1 if guarded == len(comp.tool_calls) else 0
+            if stuck_turns >= 2:
+                stop = "loop"
+                break
             continue
 
         # The model wants to stop. If the task's own completion check says work is left, tell it
