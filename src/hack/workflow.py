@@ -352,8 +352,15 @@ def eval_results(settings: Settings) -> list[dict[str, Any]]:
         if model not in best or key > best[model][:2]:
             best[model] = (*key, data, p)
     out = []
+    # Current configuration first (no variant label), then best route accuracy, then cheapest.
     order = sorted(
-        best.items(), key=lambda kv: (-kv[1][2]["summary"].get("route_accuracy", 0), kv[0])
+        best.items(),
+        key=lambda kv: (
+            bool(kv[0][1]),
+            -kv[1][2]["summary"].get("route_accuracy", 0),
+            kv[1][2]["summary"].get("cost_usd") or 0,
+            kv[0],
+        ),
     )
     for (model, variant), (_, mtime, data, p) in order:
         out.append(
