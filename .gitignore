@@ -7,6 +7,9 @@ __pycache__/
 .env.*
 !.env.example
 
+# Local agent instructions: kept on this machine only.
+CLAUDE.md
+
 # Challenge briefs/datasets are HUMAIN Confidential Information: never commit them.
 data/
 private/
