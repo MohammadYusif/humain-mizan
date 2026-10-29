@@ -176,7 +176,7 @@ def build_registry(settings: Settings, run_dir: Path | None = None) -> ToolRegis
     )
     def load_contract(a: DocArgs) -> dict:
         if a.doc_id not in reviews:
-            contract = C.load_contract([settings.contracts_dir, settings.uploads_dir], a.doc_id)
+            contract = C.load_contract(settings.contract_dirs(), a.doc_id)
             reviews[a.doc_id] = Review.start(contract)
         return page_payload(reviews[a.doc_id], 1)
 

@@ -71,7 +71,7 @@ def _span(clause_text: str, quote: str) -> tuple[int, int] | None:
 
 
 def redline_docx(settings: Settings, view: dict[str, Any]) -> bytes:
-    contract = C.load_contract([settings.contracts_dir, settings.uploads_dir], view["doc_id"])
+    contract = C.load_contract(settings.contract_dirs(), view["doc_id"])
     by_clause: dict[str, list[dict[str, Any]]] = {}
     for f in view["findings"]:
         by_clause.setdefault(f["clause_id"], []).append(f)

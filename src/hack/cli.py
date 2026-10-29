@@ -29,7 +29,8 @@ def _cmd_eval(args: argparse.Namespace) -> int:
     for model in args.model or [s.model]:
         provider = build_provider(s, model)
         rep = run_eval(load_cases(Path(args.cases)), s, provider=provider, workers=args.workers)
-        path = save_report(rep, Path(args.out))
+        extra = {"suite": args.suite} if args.suite else None
+        path = save_report(rep, Path(args.out), extra)
         print(f"{model}: saved {path}", file=sys.stderr)
         for c in rep.cases:
             if not c.passed:
@@ -83,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
     e.add_argument("--model", action="append")
     e.add_argument("--workers", type=int, default=4)
     e.add_argument("--out", default="evals/results")
+    e.add_argument("--suite", help="label stored with the results, e.g. held-out")
     e.set_defaults(fn=_cmd_eval)
 
     rs = sub.add_parser(

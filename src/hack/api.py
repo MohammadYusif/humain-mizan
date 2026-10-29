@@ -72,7 +72,7 @@ def create_app(
     app = FastAPI(title="Mizan: contract review agent")
     cfg = settings or get_settings()
     batches = W.BatchRunner(cfg, provider_factory)
-    contract_dirs = [cfg.contracts_dir, cfg.uploads_dir]
+    contract_dirs = cfg.contract_dirs()
     # Runs accepted but not yet traced: polling them answers "starting" instead of 404.
     inflight: set[str] = set()
 
@@ -254,7 +254,12 @@ def create_app(
     @app.get("/contracts")
     def contracts() -> list[dict[str, Any]]:
         out = []
-        for source, d in (("sample", cfg.contracts_dir), ("upload", cfg.uploads_dir)):
+        sources = (
+            ("sample", cfg.contracts_dir),
+            ("held-out", cfg.heldout_dir),
+            ("upload", cfg.uploads_dir),
+        )
+        for source, d in sources:
             if not d.is_dir():
                 continue
             for p in sorted([*d.glob("*.md"), *d.glob("*.txt")]):

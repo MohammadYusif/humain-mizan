@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     runs_dir: Path = Path("runs")
     web_dir: Path = Path("web")
     contracts_dir: Path = Path("evals/contracts")
+    # Blind held-out suite: contracts the patterns and prompts were never tuned on.
+    heldout_dir: Path = Path("evals/heldout/contracts")
     # User uploads may be confidential: kept under data/ (git- and docker-ignored).
     uploads_dir: Path = Path("data/uploads")
     results_dir: Path = Path("evals/results")
@@ -37,6 +39,10 @@ class Settings(BaseSettings):
 
     # Not HACK_-prefixed: the standard variable, but read from .env too (the SDK only sees os.environ).
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
+
+    def contract_dirs(self) -> list[Path]:
+        """Where contracts are looked up, in order: samples, held-out suite, user uploads."""
+        return [self.contracts_dir, self.heldout_dir, self.uploads_dir]
 
 
 @lru_cache

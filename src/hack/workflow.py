@@ -63,7 +63,7 @@ def run_state(settings: Settings, run_id: str) -> dict[str, Any]:
 def _tripwires_without_score(settings: Settings, view: dict[str, Any]) -> list[dict[str, Any]]:
     """Red flags for a run the model never scored, so a lawyer still sees them."""
     try:
-        contract = C.load_contract([settings.contracts_dir, settings.uploads_dir], view["doc_id"])
+        contract = C.load_contract(settings.contract_dirs(), view["doc_id"])
     except (FileNotFoundError, ValueError):
         return []
     recorded = {f["rule_id"] for f in view["findings"]}
@@ -238,7 +238,7 @@ class BatchRunner:
             raise ValueError("no contracts selected")
         if len(doc_ids) > 50:
             raise ValueError("max 50 contracts per batch")
-        dirs = [self.settings.contracts_dir, self.settings.uploads_dir]
+        dirs = self.settings.contract_dirs()
         for d in doc_ids:
             C.load_contract(dirs, d)  # raises for unknown/unsafe ids before anything starts
         batch_id = "b" + time.strftime("%m%d%H%M%S") + uuid.uuid4().hex[:4]
@@ -379,7 +379,7 @@ def eval_results(settings: Settings) -> list[dict[str, Any]]:
     files = sorted(settings.proof_dir.glob("*.json")) if settings.proof_dir.is_dir() else []
     if not files and settings.results_dir.is_dir():
         files = sorted(settings.results_dir.glob("*.json"))
-    known = {p.stem for p in settings.contracts_dir.glob("*.md")}
+    known = {p.stem for d in settings.contract_dirs() for p in d.glob("*.md")}
     best: dict[tuple[str, str], tuple[int, float, dict[str, Any], Path]] = {}
     for p in files:
         try:
@@ -393,7 +393,11 @@ def eval_results(settings: Settings) -> list[dict[str, Any]]:
             or "route_accuracy" not in data.get("summary", {})
         ):
             continue
-        model = (data["summary"]["model"], data["summary"].get("variant") or "")
+        model = (
+            data["summary"]["model"],
+            data["summary"].get("variant") or "",
+            data["summary"].get("suite") or "",
+        )
         key = (len(cases), p.stat().st_mtime)
         if model not in best or key > best[model][:2]:
             best[model] = (*key, data, p)
@@ -402,17 +406,19 @@ def eval_results(settings: Settings) -> list[dict[str, Any]]:
     order = sorted(
         best.items(),
         key=lambda kv: (
+            bool(kv[0][2]),  # main suite before held-out
             bool(kv[0][1]),
             -kv[1][2]["summary"].get("route_accuracy", 0),
             kv[1][2]["summary"].get("cost_usd") or 0,
             kv[0],
         ),
     )
-    for (model, variant), (_, mtime, data, p) in order:
+    for (model, variant, suite), (_, mtime, data, p) in order:
         out.append(
             {
                 "model": model,
                 "variant": variant or None,
+                "suite": suite or "main",
                 "file": p.name,
                 "date": mtime,
                 "summary": data["summary"],
