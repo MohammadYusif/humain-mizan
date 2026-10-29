@@ -194,7 +194,15 @@ def build_registry(settings: Settings, run_dir: Path | None = None) -> ToolRegis
         EmptyArgs,
     )
     def list_playbook(_: EmptyArgs) -> list[dict]:
-        return as_dicts()
+        # Amendments legal has approved through the learning loop (accepted fallback wording).
+        from ..learning import amendments_by_rule
+
+        amended = amendments_by_rule(settings)
+        rules = as_dicts()
+        for r in rules:
+            if r["id"] in amended:
+                r["accepted_by_legal"] = amended[r["id"]]
+        return rules
 
     @registry.register(
         "record_finding",

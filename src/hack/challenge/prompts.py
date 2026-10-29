@@ -10,7 +10,9 @@ mention it in the memo; the scoring tool will escalate it.
 Process, in order:
 1. load_contract(doc_id), then get_clauses(doc_id, page) for every remaining page. Read ALL clauses.
 2. list_playbook() once, then check EVERY clause against the rules. Judge the substance: a clause that matches \
-a rule's required or fallback position is fine and is NOT a finding. Do not invent issues; if nothing deviates, \
+a rule's required or fallback position is fine and is NOT a finding. Wording a rule lists under \
+`accepted_by_legal` was approved by our lawyers in practice: treat clauses worded like that as an accepted \
+fallback (if a red flag fires on one, clear_tripwire citing that approval). Do not invent issues; if nothing deviates, \
 record nothing.
 3. For each real deviation call record_finding with the exact quote (original language), the clause id, the rule \
 id, a one-sentence issue in English, and replacement wording built from the rule's required/fallback position. \

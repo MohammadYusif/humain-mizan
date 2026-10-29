@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from . import demo as D
+from . import learning as L
 from . import workflow as W
 from .challenge import contracts as C
 from .challenge.playbook import as_dicts
@@ -46,6 +47,11 @@ class DecisionRequest(BaseModel):
     decision: str
     note: str = ""
     message: str | None = None  # optional human-edited message to the counterparty
+
+
+class ProposalDecision(BaseModel):
+    action: str  # accept | reject
+    note: str = ""
 
 
 class ReplayRequest(BaseModel):
@@ -306,9 +312,24 @@ def create_app(
     def demo_reset() -> dict[str, int]:
         return {"deleted": D.reset(cfg)}
 
+    @app.get("/insights")
+    def insights() -> dict[str, Any]:
+        """Learning loop: per-rule evidence from lawyers' decisions and proposed amendments."""
+        return L.insights(cfg)
+
+    @app.post("/insights/proposals/{proposal_id}")
+    def decide_proposal(proposal_id: str, req: ProposalDecision) -> dict[str, Any]:
+        try:
+            return L.decide_proposal(cfg, proposal_id, req.action, req.note)
+        except FileNotFoundError:
+            raise HTTPException(404, "unknown or already decided proposal") from None
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from None
+
     @app.get("/playbook")
     def playbook() -> list[dict[str, Any]]:
-        return as_dicts()
+        amended = L.amendments_by_rule(cfg)
+        return [{**r, "accepted_by_legal": amended.get(r["id"], [])} for r in as_dicts()]
 
     @app.get("/evals")
     def evals() -> list[dict[str, Any]]:

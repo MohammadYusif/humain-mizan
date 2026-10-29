@@ -442,3 +442,55 @@ def test_demo_replay_plays_a_recorded_run_without_any_model(tmp_path):
     assert client.post("/demo/replay", json={"scene_id": "nope"}).status_code == 404
     assert client.post("/demo/reset").json()["deleted"] == 1
     assert client.get(f"/runs/{rid}/review").status_code == 404
+
+
+def test_learning_loop_turns_lawyer_decisions_into_a_playbook_amendment(tmp_path):
+    from hack import learning as L
+    from hack.challenge.tools import build_registry
+    from hack.llm.base import ToolCall
+
+    s = settings(tmp_path)
+    client = TestClient(create_app(s))
+    # two negotiate runs whose redlines legal decided NOT to send: the deviation is acceptable
+    _, st = run_batch(s, lambda: scripted_review("services-en-01"), ["services-en-01"] * 2, False)
+    for it in st["items"]:
+        W.decide(s, it["run_id"], "discard", note="we accept supplier-only termination here")
+    ins = client.get("/insights").json()
+    assert ins["signals"]["TERM-CONV"] == {"accepted": 2, "upheld": 0}
+    (p,) = ins["proposals"]
+    assert (
+        p["rule_id"] == "TERM-CONV"
+        and "Client may terminate this Agreement only" in p["proposed_addition"]
+    )
+    assert (
+        client.post(f"/insights/proposals/{p['id']}", json={"action": "maybe"}).status_code == 400
+    )
+    acc = client.post(
+        f"/insights/proposals/{p['id']}", json={"action": "accept", "note": "ok"}
+    ).json()
+    assert acc["status"] == "accepted"
+    assert client.get("/insights").json()["proposals"] == []  # not proposed again
+    assert (
+        client.post(f"/insights/proposals/{p['id']}", json={"action": "accept"}).status_code == 404
+    )
+    # the agent now sees the accepted wording in its playbook
+    rules = json.loads(build_registry(s).execute(ToolCall("x", "list_playbook", {})).content)
+    term = next(r for r in rules if r["id"] == "TERM-CONV")
+    assert "Client may terminate this Agreement only" in term["accepted_by_legal"][0]
+    assert L.amendments_by_rule(s)["TERM-CONV"]
+
+
+def test_learning_loop_never_relaxes_critical_rules(tmp_path):
+    from hack import learning as L
+
+    s = settings(tmp_path)
+    crit = [
+        call_tools(("1", "load_contract", {"doc_id": "saas-en-01"})),
+        call_tools(("2", "record_finding", {"doc_id": "saas-en-01", "clause_id": "c9", "rule_id": "LIAB-CAP", "quote": "Customer's aggregate liability", "issue": "uncapped", "redline": "cap", "confidence": 0.9})),
+        text("stop"),
+    ]  # fmt: skip
+    _, st = run_batch(s, lambda: list(crit), ["saas-en-01"] * 2, False)
+    for it in st["items"]:
+        W.decide(s, it["run_id"], "approve_contract")
+    ins = L.insights(s)
+    assert ins["proposals"] == [] and ins["notes"][0]["rule_id"] == "LIAB-CAP"
