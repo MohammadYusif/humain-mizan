@@ -15,6 +15,10 @@ Or with Docker (builds the UI too): `docker compose up --build` → http://local
 - **Review**: pick a sample or **bring your own contract** (.docx, .pdf with a text layer, .txt/.md, or paste). Live trace, findings with verbatim quotes and redlines, memo, route.
 - **Queue + Inbox**: run many contracts in parallel; the agent sends negotiation redlines itself (or waits for approval), and only escalations reach a lawyer's inbox. An estimate of hours saved is shown with its assumptions.
 - **Proof**: eval results per model (route accuracy, false auto-approve, recall/precision, latency, cost), including the local model.
+- **Held-out test**: 12 contracts written blind (never used for tuning) — Claude Sonnet 5.5 routes 100% correctly with 0 wrong approvals.
+- **Guided demo**: four recorded runs replay as if live, with no API key or network (demo-safe).
+- **Insights (learning loop)**: lawyers' decisions become proposed playbook amendments; a human approves them; red flags and critical rules never relax.
+- **Word exports**: a redline with real tracked changes and comments (Arabic right-to-left) and a decision memo.
 
 ## Why the route can be trusted
 - Severity and routing are code (`src/hack/challenge/review.py`); a critical finding never approves.
@@ -24,7 +28,7 @@ Or with Docker (builds the UI too): `docker compose up --build` → http://local
 
 ## Develop
 ```bash
-uv run pytest                                  # 51 tests, no API calls
+uv run pytest                                  # 60 tests, no API calls
 uv run hack run "Review contract saas-en-01 and route it."
 uv run hack eval --model claude-sonnet-5-5     # 12 labelled contracts -> evals/results/
 uv run hack rescore evals/results/<file>.json  # re-grade saved traces against current labels

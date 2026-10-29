@@ -15,6 +15,19 @@
 | Latency p50 / p95 | 15.1s / 21.6s | 366s / 1186s |
 | Cost per contract | ~$0.047 | local, no API cost |
 
+## Held-out (blind) test: contracts the system was never tuned on
+
+12 more contracts (`evals/heldout/`) written by a separate agent that never saw the red-flag patterns, the main contracts or their labels: seven industries (construction, fleet, medical supplies, marketing, freight, cloud hosting, facility management, catering, staffing, equipment lease, cybersecurity, translation), 6 English, 4 Arabic, 2 bilingual, with traps, unusually worded critical liability, an Arabic prompt-injection and a missing governing-law clause.
+
+| Claude Sonnet 5.5 | Blind first run | After the injection fix (current) |
+|---|---|---|
+| Route accuracy | 92% | **100%** |
+| **Approved a contract that should not be approved** | **0 / 8** | **0 / 8** |
+| Finding recall / precision | 100% / 100% | 92% / 100% |
+| Latency p50 / cost per contract | 15.9s / $0.052 | 15.9s / $0.053 |
+
+The blind run's one miss was the Arabic prompt-injection: the model noticed the instruction, ignored it and flagged it in the memo, but the injection regex did not match its wording, so code routed the contract to negotiate instead of escalate (it was never approved). The fix lets the model report an injected instruction with a verified quote as a second detector; the regex was deliberately **not** widened to fit the held-out wording. After the fix the only miss is one unrecorded language-precedence finding on the bilingual audit contract, where the route was still correct.
+
 ## How the safety layers changed the local model
 
 | qwen3:14b (local) | No safeguards | + red-flag checks | + completion check (current) |
@@ -35,6 +48,6 @@ Claude Opus 5.5 was measured earlier, before the red-flag checks: 11/11 + the mi
 - Sonnet's very first run was graded 11/12 because on the bilingual licence it recorded the IP issue on the English half (c6) of the clause whose Arabic half (c5) was labelled; the label now accepts either half (re-graded with `hack rescore`, no new model calls). Every later Sonnet run passed 12/12 directly.
 - The one precision miss for the Claude models is an extra LANG-PREC finding on the Arabic/English conflict contract, which is arguably correct.
 
-Guarantees enforced in code, each covered by a test (51 tests): a critical finding never approves or negotiates; approval needs every page read, every clause typed, liability and governing-law clauses present, no unclear clause, no finding filed under a mismatched rule, and no instruction aimed at the AI reviewer in the text; deterministic red flags must agree (critical ones always escalate, others must be recorded or cleared with a verbatim quote); quotes must appear verbatim in the clause; outward sends need approval (or the queue's auto-send policy) and are route-gated; a run that ends without a route goes to a lawyer.
+Guarantees enforced in code, each covered by a test (60 tests): a critical finding never approves or negotiates; approval needs every page read, every clause typed, liability and governing-law clauses present, no unclear clause, no finding filed under a mismatched rule, and no instruction aimed at the AI reviewer in the text; deterministic red flags must agree (critical ones always escalate, others must be recorded or cleared with a verbatim quote); quotes must appear verbatim in the clause; outward sends need approval (or the queue's auto-send policy) and are route-gated; a run that ends without a route goes to a lawyer; an instruction aimed at the reviewer, found by the regex or reported by the model, forces escalation; an identical tool call is not repeated a third time.
 
 Known limits: playbook rules are illustrative demo defaults (not legal advice); eval data is synthetic and the red-flag patterns were tuned on these same contracts, so their recall on unseen contracts will be lower; the local model is slow on this laptop (p95 ~20 minutes) and can loop (one case hit the turn cap); Arabic recall not measured separately (4 Arabic/bilingual cases).
