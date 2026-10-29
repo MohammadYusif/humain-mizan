@@ -23,7 +23,7 @@ Or with Docker (builds the UI too): `docker compose up --build` → http://local
 ## Why the route can be trusted
 - Severity and routing are code (`src/hack/challenge/review.py`); a critical finding never approves.
 - Approval requires evidence of coverage: every page read, every clause typed, liability and governing-law clauses present, nothing unclear.
-- **Two detectors**: deterministic red-flag patterns (Arabic + English, `tripwires.py`) run independently of the model. Critical flags always escalate; others must be recorded as findings or cleared with a verbatim quote, on record.
+- **Two detectors**: deterministic red-flag patterns (Arabic + English, `tripwires.py`) run independently of the model. Critical flags always escalate; others must be recorded as findings or cleared with a verbatim quote, on record. Measured honestly: the patterns catch known wording (12/12 on the suite they were written against) but only 1 of 13 issues on the blind held-out set, so on new contracts the model is the real detector — use a strong model for unattended review.
 - Quotes must appear verbatim in the clause; instructions inside a contract force escalation; outward sends need approval.
 
 ## Develop
