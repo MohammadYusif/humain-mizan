@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from .challenge import contracts as C
+from .challenge.tripwires import scan
 from .challenge.view import review_view
 from .config import Settings
 from .evals import final_route
@@ -27,7 +28,11 @@ from .tracing import read_trace
 DECISIONS = {
     "legal_review": ("approve_contract", "request_changes", "reject"),
     "approve_send": ("send", "discard"),
+    # the agent finished without a route: a lawyer reviews it like an escalation
+    "unrouted": ("approve_contract", "request_changes", "reject"),
 }
+UNROUTED_REASON = "the agent stopped before computing a route; a lawyer must review this contract"
+_TASK_DOC = re.compile(r"contract\s+([A-Za-z0-9_-]{1,64})")
 
 
 class InvalidDecision(ValueError):
@@ -44,13 +49,37 @@ def run_state(settings: Settings, run_id: str) -> dict[str, Any]:
     status = (
         "running" if end is None else ("error" if end.get("stop_reason") == "error" else "done")
     )
-    return {
-        "run_id": run_id,
-        "status": status,
-        "route": final_route(tr),
-        "view": review_view(tr),
-        "end": end,
-    }
+    route = final_route(tr)
+    view = review_view(tr)
+    if view["doc_id"] is None:  # the model never loaded it (e.g. failed first call): use the task
+        start = next((e for e in tr if e["type"] == "run_start"), {})
+        if m := _TASK_DOC.search(start.get("task", "")):
+            view["doc_id"] = m.group(1)
+    if route is None and status == "done" and not view["tripwires"] and view["doc_id"]:
+        view["tripwires"] = _tripwires_without_score(settings, view)
+    return {"run_id": run_id, "status": status, "route": route, "view": view, "end": end}
+
+
+def _tripwires_without_score(settings: Settings, view: dict[str, Any]) -> list[dict[str, Any]]:
+    """Red flags for a run the model never scored, so a lawyer still sees them."""
+    try:
+        contract = C.load_contract([settings.contracts_dir, settings.uploads_dir], view["doc_id"])
+    except (FileNotFoundError, ValueError):
+        return []
+    recorded = {f["rule_id"] for f in view["findings"]}
+    cleared = {(c["clause_id"], c["rule_id"]) for c in view["cleared"]}
+    out = []
+    for t in scan(contract):
+        if t.critical:
+            status = "critical"
+        elif t.rule_id in recorded:
+            status = "recorded"
+        elif (t.clause_id, t.rule_id) in cleared:
+            status = "cleared"
+        else:
+            status = "unresolved"
+        out.append({**t.__dict__, "status": status})
+    return out
 
 
 def read_decision(settings: Settings, run_id: str) -> dict[str, Any] | None:
@@ -64,6 +93,8 @@ def pending_kind(state: dict[str, Any], decision: dict[str, Any] | None) -> str 
         return None
     if state["status"] != "done" or decision is not None or state["view"] is None:
         return None
+    if state["route"] is None:
+        return "unrouted"
     if state["route"] == "escalate":
         return "legal_review"
     # The process is owned by the route, not by whether the model remembered the follow-up:
@@ -110,8 +141,9 @@ def inbox(settings: Settings) -> list[dict[str, Any]]:
                 "route": state["route"],
                 "risk_score": v["risk_score"],
                 "counts": v["counts"],
-                "reasons": v["reasons"],
+                "reasons": v["reasons"] or ([UNROUTED_REASON] if kind == "unrouted" else []),
                 "findings": v["findings"],
+                "tripwires": v["tripwires"],
                 "agent_text": agent_text,
                 "options": list(DECISIONS[kind]),
                 "created": (d / "trace.jsonl").stat().st_mtime,
@@ -260,9 +292,9 @@ class BatchRunner:
         if not re.fullmatch(r"[A-Za-z0-9]{1,32}", batch_id) or not path.is_file():
             raise FileNotFoundError(batch_id)
         manifest = json.loads(path.read_text(encoding="utf-8"))
-        items, routes = [], {"approve": 0, "negotiate": 0, "escalate": 0}
-        cost = agent_s = 0.0
-        needs_human = done = errors = 0
+        items, routes = [], {"approve": 0, "negotiate": 0, "escalate": 0, "unrouted": 0}
+        cost = priced_cost = agent_s = 0.0
+        needs_human = done = errors = unpriced = 0
         for it in manifest["items"]:
             st = run_state(self.settings, it["run_id"])
             decision = read_decision(self.settings, it["run_id"])
@@ -270,11 +302,14 @@ class BatchRunner:
             end = st["end"] or {}
             if st["status"] == "done":
                 done += 1
-                if st["route"] in routes:
-                    routes[st["route"]] += 1
+                routes[st["route"] or "unrouted"] += 1
             errors += st["status"] == "error"
             needs_human += kind is not None
             cost += end.get("cost_usd") or 0.0
+            if end and end.get("priced") is False:
+                unpriced += 1
+            else:
+                priced_cost += end.get("cost_usd") or 0.0
             agent_s += end.get("latency_s") or 0.0
             v = st["view"] or {}
             items.append(
@@ -298,7 +333,12 @@ class BatchRunner:
             )
         s = self.settings
         finished = [i for i in items if i["status"] in ("done", "error")]
-        human_min = routes["escalate"] * s.legal_minutes_per_escalation
+        # An escalation costs a lawyer's targeted review; an unrouted or failed contract costs a
+        # full manual review, so it saves nothing.
+        human_min = (
+            routes["escalate"] * s.legal_minutes_per_escalation
+            + (routes["unrouted"] + errors) * s.manual_minutes_per_contract
+        )
         return {
             "batch_id": manifest["batch_id"],
             "created": manifest["created"],
@@ -311,12 +351,17 @@ class BatchRunner:
             "cost_usd": round(cost, 4),
             # False when any finished run used a model with no known price (e.g. a local model).
             "priced": all(i["priced"] for i in finished) if finished else None,
+            "priced_cost_usd": round(priced_cost, 4),  # the part of the cost we can price
+            "unpriced_runs": unpriced,
             "agent_minutes": round(agent_s / 60, 2),
             "estimate": {
-                "manual_hours": round(done * s.manual_minutes_per_contract / 60, 2),
+                "manual_hours": round((done + errors) * s.manual_minutes_per_contract / 60, 2),
                 "human_hours_with_agent": round(human_min / 60, 2),
-                "hours_saved": round((done * s.manual_minutes_per_contract - human_min) / 60, 2),
-                "assumptions": f"{s.manual_minutes_per_contract:g} min manual review per contract; "
+                "hours_saved": round(
+                    ((done + errors) * s.manual_minutes_per_contract - human_min) / 60, 2
+                ),
+                "assumptions": f"{s.manual_minutes_per_contract:g} min manual review per contract "
+                f"(also for contracts the agent could not route or failed on); "
                 f"{s.legal_minutes_per_escalation:g} min lawyer time per escalation",
             },
             "items": items,

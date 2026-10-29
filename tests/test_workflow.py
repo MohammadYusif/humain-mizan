@@ -361,3 +361,52 @@ def test_nudges_are_bounded_and_the_workflow_owns_the_follow_up(tmp_path):
     assert it2["decided_by"] == "workflow (auto-send policy)"
     rec = W.read_decision(s2, it2["run_id"])
     assert rec["by"] == "workflow (auto-send policy)" and "Requested changes" in rec["message"]
+
+
+def test_unrouted_run_goes_to_a_lawyer_and_saves_no_time(tmp_path):
+    s = settings(tmp_path)
+    quits = [call_tools(("1", "load_contract", {"doc_id": "saas-en-01"})), text("I give up")]
+    _, st = run_batch(s, lambda: list(quits), ["saas-en-01"], True)
+    it = st["items"][0]
+    assert it["status"] == "done" and it["route"] is None and it["pending"] == "unrouted"
+    assert st["routes"]["unrouted"] == 1 and st["needs_human"] == 1
+    assert st["estimate"]["hours_saved"] == 0.0  # a full manual review is still needed
+    item = next(i for i in W.inbox(s) if i["run_id"] == it["run_id"])
+    assert item["kind"] == "unrouted" and "lawyer must review" in item["reasons"][0]
+    # red flags are still shown even though the model never scored
+    assert {t["rule_id"] for t in item["tripwires"]} >= {"LIAB-CAP", "GOV-LAW"}
+    assert any(t["status"] == "critical" for t in item["tripwires"])
+    assert W.decide(s, it["run_id"], "reject")["kind"] == "unrouted"
+
+
+def test_failed_model_call_is_a_clean_502_and_listed_with_its_contract(tmp_path):
+    s = settings(tmp_path)
+
+    def boom(_messages):
+        raise RuntimeError("401 invalid x-api-key")
+
+    client = TestClient(create_app(s, provider_factory=lambda: FakeProvider([boom])))
+    r = client.post(
+        "/run", json={"task": "Review contract nda-en-01 and route it.", "run_id": "ui-x-1"}
+    )
+    assert r.status_code == 502 and "model call failed" in r.json()["detail"]
+    row = next(x for x in client.get("/runs").json() if x["run_id"] == "ui-x-1")
+    assert row["status"] == "error" and row["doc_id"] == "nda-en-01"
+
+
+def test_red_flag_excerpt_uses_the_contracts_own_words():
+    from hack.challenge.contracts import normalize, normalize_with_map
+    from hack.challenge.tripwires import scan
+
+    s = Settings(provider="fake")
+    for p in s.contracts_dir.glob("*.md"):
+        contract = C.load_contract(s.contracts_dir, p.stem)
+        for cl in contract.clauses:
+            assert normalize_with_map(cl.text)[0] == normalize(
+                cl.text
+            )  # same text the patterns saw
+        for t in scan(contract):
+            assert t.match.replace(" …", "").split()[0] in contract.clause(t.clause_id).text
+    ar = C.load_contract(s.contracts_dir, "ar-data-01")
+    flag = next(t for t in scan(ar) if t.rule_id == "INTEREST")
+    assert "فائدة" in flag.match  # original teh marbuta, not the normalised heh

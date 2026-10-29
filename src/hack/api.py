@@ -91,6 +91,10 @@ def create_app(
             inflight.add(req.run_id)
         try:
             r = run_task(req.task, cfg, provider=provider, run_id=req.run_id)
+        except Exception as e:  # the model call failed; the trace already records the error
+            raise HTTPException(
+                502, f"model call failed: {type(e).__name__}: {str(e)[:300]}"
+            ) from None
         finally:
             inflight.discard(req.run_id or "")
         return RunResponse(
