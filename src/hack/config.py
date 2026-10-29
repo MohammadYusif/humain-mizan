@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     results_dir: Path = Path("evals/results")
     # Curated result files shown on the Proof screen (tracked in git, shipped in the image).
     proof_dir: Path = Path("evals/proof")
+    # Recorded runs for the demo-safe replay mode (tracked, shipped in the image).
+    demo_dir: Path = Path("demo")
     # Assumptions behind the "hours saved" estimate, shown next to the number in the UI.
     manual_minutes_per_contract: float = 60.0
     legal_minutes_per_escalation: float = 15.0

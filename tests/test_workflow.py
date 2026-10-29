@@ -419,3 +419,26 @@ def test_runs_without_a_contract_never_reach_the_inbox(tmp_path):
     r = run_task("hello", s, provider=FakeProvider([text("hi")]), run_id="ui-smoke-1")
     assert W.pending_kind(W.run_state(s, r.run_id), None) is None
     assert W.inbox(s) == []
+
+
+def test_demo_replay_plays_a_recorded_run_without_any_model(tmp_path):
+    import time as _t
+
+    s = settings(tmp_path, demo_dir=Settings().demo_dir)
+    client = TestClient(create_app(s))
+    sc = client.get("/demo/scenes").json()
+    assert {x["id"] for x in sc} >= {"approve-nda", "escalate-injection"}
+    r = client.post("/demo/replay", json={"scene_id": "escalate-injection", "speed": 50}).json()
+    rid = r["run_id"]
+    assert rid.startswith("demo-escalate-injection-")
+    for _ in range(200):
+        rv = client.get(f"/runs/{rid}/review")
+        if rv.status_code == 200 and rv.json()["status"] == "done":
+            break
+        _t.sleep(0.05)
+    rv = rv.json()
+    assert rv["route"] == "escalate" and rv["replay_of"] and rv["pending"] == "legal_review"
+    assert any(i["run_id"] == rid for i in client.get("/inbox").json())
+    assert client.post("/demo/replay", json={"scene_id": "nope"}).status_code == 404
+    assert client.post("/demo/reset").json()["deleted"] == 1
+    assert client.get(f"/runs/{rid}/review").status_code == 404

@@ -29,6 +29,7 @@ RUN useradd --create-home --uid 1000 app \
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=web /src/web ./web
 COPY evals ./evals
+COPY demo ./demo
 ENV PATH="/app/.venv/bin:$PATH"
 USER app
 EXPOSE 8000

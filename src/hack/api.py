@@ -8,6 +8,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
+from . import demo as D
 from . import workflow as W
 from .challenge import contracts as C
 from .challenge.playbook import as_dicts
@@ -45,6 +46,11 @@ class DecisionRequest(BaseModel):
     decision: str
     note: str = ""
     message: str | None = None  # optional human-edited message to the counterparty
+
+
+class ReplayRequest(BaseModel):
+    scene_id: str
+    speed: float = 3.0  # 1 = recorded pace; higher is faster (gaps are capped at 2 s anyway)
 
 
 class BatchRequest(BaseModel):
@@ -137,6 +143,7 @@ def create_app(
                     "priced": end.get("priced"),
                     "latency_s": end.get("latency_s"),
                     "needs_human": W.pending_kind(st, W.read_decision(cfg, d.name)),
+                    "replay_of": start.get("replay_of"),
                     "started": (d / "trace.jsonl").stat().st_ctime,
                 }
             )
@@ -173,6 +180,7 @@ def create_app(
             "stats": st["end"],
             "decision": decision,
             "pending": W.pending_kind(st, decision),
+            "replay_of": D.is_replay(tr),
             "final_text": next(
                 (e["text"] for e in reversed(tr) if e["type"] == "llm_call" and e["text"]), ""
             ),
@@ -281,6 +289,22 @@ def create_app(
             "title": c.title,
             "clauses": [{"id": cl.id, "lang": cl.lang, "text": cl.text} for cl in c.clauses],
         }
+
+    @app.get("/demo/scenes")
+    def demo_scenes() -> list[dict[str, Any]]:
+        return D.scenes(cfg)
+
+    @app.post("/demo/replay")
+    def demo_replay(req: ReplayRequest) -> dict[str, Any]:
+        """Replay a recorded run as if live: no API key or network needed (demo-safe mode)."""
+        try:
+            return D.replay(cfg, checked(req.scene_id), req.speed)
+        except FileNotFoundError:
+            raise HTTPException(404, "unknown scene") from None
+
+    @app.post("/demo/reset")
+    def demo_reset() -> dict[str, int]:
+        return {"deleted": D.reset(cfg)}
 
     @app.get("/playbook")
     def playbook() -> list[dict[str, Any]]:
