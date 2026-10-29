@@ -87,10 +87,6 @@ function variantText(m: EvalModel) {
   return m.variant ?? "with red-flag checks"
 }
 
-function displayName(m: EvalModel) {
-  return `${modelName(m.model)} (${variantText(m)})`
-}
-
 function VariantLabel({ m }: { m: EvalModel }) {
   return (
     <span
@@ -102,10 +98,6 @@ function VariantLabel({ m }: { m: EvalModel }) {
       {variantText(m)}
     </span>
   )
-}
-
-function listNames(names: string[]) {
-  return names.length <= 1 ? names.join("") : `${names.slice(0, -1).join(", ")} and ${names.at(-1)}`
 }
 
 function money(m: EvalModel, v: number | null | undefined) {
@@ -205,64 +197,60 @@ function ModelCard({ m }: { m: EvalModel }) {
   )
 }
 
+/** The headline is the first entry (the API orders the current configuration first); the rest follow as lines. */
 function Headline({ models }: { models: EvalModel[] }) {
-  const safe = models.filter((m) => notSafe(safety(m)) === 0)
-  const unsafe = models.filter((m) => notSafe(safety(m)) > 0)
+  const [lead, ...rest] = models
+  const sf = safety(lead)
+  const bad = notSafe(sf)
+  const current = lead.variant === null
   return (
     <Card className="gap-6 p-6 sm:p-8">
       <span className="flex items-center gap-2 text-xs font-medium tracking-[0.14em] text-brass-ink uppercase">
         <ShieldCheck className="size-4" aria-hidden />
-        Measured on saved eval runs, per model
+        {current ? "The configuration the app runs today" : "Measured on saved eval runs"}
       </span>
-      <div className={cn("grid gap-6", safe.length && unsafe.length && "lg:grid-cols-[1.2fr_1fr]")}>
-        {safe.length ? (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-5">
-            <span className="font-heading text-7xl leading-none font-semibold text-approve tabular sm:text-8xl">0</span>
-            <div className="flex flex-col gap-1.5 pb-1">
-              <h1 className="text-2xl leading-snug font-semibold text-balance sm:text-3xl">
-                risky contracts auto-approved by {listNames(safe.map(displayName))}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Every contract labelled negotiate or escalate was routed to a human or to negotiation:{" "}
-                {safe.map((m, i) => (
-                  <span key={keyOf(m)}>
-                    {i ? "; " : ""}
-                    {displayName(m)} {m.summary.false_auto_approve}
-                  </span>
-                ))}
-                .
-              </p>
-            </div>
-          </div>
-        ) : null}
-        {unsafe.length ? (
-          <div className="flex flex-col gap-3">
-        {unsafe.map((m) => {
-          const sf = safety(m)
-          return (
-            <div
-              key={keyOf(m)}
-              className="flex flex-col gap-3 rounded-xl border border-escalate/40 bg-escalate-soft p-4 sm:flex-row sm:items-end sm:gap-4"
-            >
-              <span className="font-heading text-6xl leading-none font-semibold text-escalate tabular">
-                {notSafe(sf)}/{sf.risky}
-              </span>
-              <div className="flex flex-col gap-1 pb-0.5">
-                <p className="font-heading text-xl leading-snug font-semibold">
-                  {modelName(m.model)}
-                  {isLocal(m) ? " (local)" : ""}: not safe for unattended use
-                  <span className="mt-1 block">
-                    <VariantLabel m={m} />
-                  </span>
-                </p>
-                <p className="text-sm text-foreground/80">{notSafeText(sf)}.</p>
-              </div>
-            </div>
-          )
-        })}
-          </div>
-        ) : null}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-6">
+        <span
+          className={cn(
+            "font-heading text-7xl leading-none font-semibold tabular sm:text-8xl",
+            bad ? "text-escalate" : "text-approve"
+          )}
+        >
+          {bad}
+        </span>
+        <div className="flex max-w-3xl flex-col gap-1.5 pb-1">
+          <h1 className="text-2xl leading-snug font-semibold text-balance sm:text-3xl">
+            risky contracts {bad ? "not safely routed" : "auto-approved"} by {modelName(lead.model)} {variantText(lead)} (
+            {plural(lead.summary.cases, "contract")})
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {bad
+              ? `${notSafeText(sf)}.`
+              : `All ${sf.risky} contracts labelled negotiate or escalate went to negotiation or to a lawyer (false auto-approve ${lead.summary.false_auto_approve}).`}
+          </p>
+        </div>
       </div>
+      {rest.length ? (
+        <ul className="flex flex-col divide-y rounded-lg border bg-background/60">
+          {rest.map((m) => {
+            const r = safety(m)
+            const n = notSafe(r)
+            return (
+              <li key={keyOf(m)} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
+                <span className={cn("w-12 font-mono font-semibold tabular", n ? "text-escalate" : "text-approve")}>
+                  {n}/{r.risky}
+                </span>
+                <span className="font-medium">{modelName(m.model)}</span>
+                <VariantLabel m={m} />
+                {isLocal(m) ? <span className="text-xs text-muted-foreground">local</span> : null}
+                <span className={cn("text-xs sm:ms-auto", n ? "text-escalate" : "text-muted-foreground")}>
+                  {n ? `${notSafeText(r)} · not safe for unattended use` : "no risky contract auto-approved"}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
     </Card>
   )
 }
@@ -551,9 +539,8 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
   }
 
   // Safe models first, then by pass rate; local models are discussed in their own note.
-  const models = [...data].sort(
-    (a, b) => notSafe(safety(a)) - notSafe(safety(b)) || b.summary.pass_rate - a.summary.pass_rate
-  )
+  // Kept in the API's order: current configuration first, then route accuracy, then cost.
+  const models = data
   const local = models.filter(isLocal)
   const anyRegraded = models.some((m) => m.summary.rescored_from)
 
