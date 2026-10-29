@@ -1,4 +1,4 @@
-import { Inbox, Layers, Monitor, Moon, Scale, ScrollText, ShieldCheck, Sun } from "lucide-react"
+import { Clapperboard, Inbox, Layers, Lightbulb, Monitor, Moon, Scale, ScrollText, ShieldCheck, Sun } from "lucide-react"
 import type { ReactNode } from "react"
 
 import { Badge } from "@/components/ui/badge"
@@ -85,9 +85,9 @@ function ThemeToggle() {
 
 /** The four product areas. Lives inside the app-level <Tabs>, so it drives the hash route. */
 export function AreaNav({ inboxCount }: { inboxCount: number | null }) {
-  const item = "h-full gap-1.5 px-2.5 text-[0.8rem] sm:px-3 sm:text-sm"
+  const item = "h-full gap-1.5 px-1.5 text-[0.78rem] sm:px-3 sm:text-sm"
   return (
-    <TabsList aria-label="Areas" className="grid h-10! w-full grid-cols-4 lg:inline-flex lg:w-auto">
+    <TabsList aria-label="Areas" className="grid h-10! w-full grid-cols-5 lg:inline-flex lg:w-auto">
       <TabsTrigger value="review" className={item}>
         <ScrollText aria-hidden className="hidden sm:block" />
         Review
@@ -108,6 +108,10 @@ export function AreaNav({ inboxCount }: { inboxCount: number | null }) {
           </Badge>
         ) : null}
       </TabsTrigger>
+      <TabsTrigger value="insights" className={item}>
+        <Lightbulb aria-hidden className="hidden sm:block" />
+        Insights
+      </TabsTrigger>
       <TabsTrigger value="proof" className={item}>
         <ShieldCheck aria-hidden className="hidden sm:block" />
         Proof
@@ -120,10 +124,13 @@ export function AppHeader({
   health,
   healthError,
   nav,
+  onDemo,
 }: {
   health: Health | null
   healthError: string | null
   nav: ReactNode
+  /** Starts the guided demo; undefined while one is running. */
+  onDemo?: () => void
 }) {
   return (
     <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-md">
@@ -148,6 +155,12 @@ export function AppHeader({
         </div>
         <nav className="order-last basis-full lg:order-none lg:ms-4 lg:basis-auto">{nav}</nav>
         <div className="ms-auto flex min-w-0 items-center gap-1.5 sm:gap-2">
+          {onDemo ? (
+            <Button variant="outline" size="sm" onClick={onDemo} className="gap-1.5" aria-label="Start the guided demo">
+              <Clapperboard aria-hidden />
+              <span className="hidden sm:inline">Guided demo</span>
+            </Button>
+          ) : null}
           <HealthBadge health={health} error={healthError} />
           <ThemeToggle />
         </div>

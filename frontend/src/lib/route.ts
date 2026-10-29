@@ -1,6 +1,6 @@
 /** Hash routes, so every screen (and a run or batch inside it) has a link: #run=<id>, #batch=<id>, #inbox, #proof. */
 
-export type Area = "review" | "queue" | "inbox" | "proof"
+export type Area = "review" | "queue" | "inbox" | "insights" | "proof"
 
 export interface Loc {
   area: Area
@@ -18,7 +18,14 @@ export function parseHash(hash: string): Loc {
   if (hash === "#queue") return { area: "queue", runId: null, batchId: null }
   if (hash === "#inbox") return { area: "inbox", runId: null, batchId: null }
   if (hash === "#proof") return { area: "proof", runId: null, batchId: null }
+  if (hash === "#insights") return { area: "insights", runId: null, batchId: null }
   return { area: "review", runId: null, batchId: null }
+}
+
+/** #print=<run id>: a print-friendly memo page (no app chrome), for Save as PDF. */
+export function printRunFromHash(hash: string): string | null {
+  const m = new RegExp(`^#print=(${ID})$`).exec(hash)
+  return m ? m[1] : null
 }
 
 export function toHash(loc: Loc): string {

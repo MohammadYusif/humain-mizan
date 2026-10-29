@@ -15,8 +15,8 @@ import { Badge } from "@/components/ui/badge"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UploadContractDialog } from "@/components/upload-contract-dialog"
-import { useContract, useResource, useRunData } from "@/hooks/use-api"
-import { api, errorMessage, newRunId, type ContractSummary, type RunSummary } from "@/lib/api"
+import { useContract, useRunData } from "@/hooks/use-api"
+import { api, errorMessage, newRunId, type ContractSummary, type PlaybookRule, type RunSummary } from "@/lib/api"
 import { ROUTE_LABEL, seconds, usd } from "@/lib/format"
 import { go } from "@/lib/route"
 
@@ -28,8 +28,6 @@ function revealWorkspace() {
   requestAnimationFrame(() => document.getElementById("workspace")?.scrollIntoView({ behavior: "smooth", block: "start" }))
 }
 
-const loadPlaybook = () => api.playbook()
-
 interface Props {
   runId: string | null
   contracts: ContractSummary[] | null
@@ -38,10 +36,10 @@ interface Props {
   refreshRuns: () => void
   posting: boolean
   setPosting: (v: boolean) => void
+  playbook: PlaybookRule[] | null
 }
 
-export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRuns, posting, setPosting }: Props) {
-  const playbook = useResource("playbook", loadPlaybook)
+export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRuns, posting, setPosting, playbook }: Props) {
   const [pickedDoc, setDocId] = useState<string | null>(null)
   const [liveRunId, setLiveRunId] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>("review")
@@ -58,6 +56,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
   if (runId !== pickRun) {
     setPickRun(runId)
     if (runId && runId !== liveRunId) setDocId(null)
+    if (runId) setTab("review")
   }
 
   const runSummary = runs?.find((r) => r.run_id === runId) ?? null
@@ -188,7 +187,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
                 </EmptyHeader>
               </Empty>
             ) : review ? (
-              <ReviewTab review={review} onJump={jumpToClause} />
+              <ReviewTab review={review} onJump={jumpToClause} runId={runId} />
             ) : (
               <ReviewTabSkeleton />
             )}
@@ -221,7 +220,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
             )}
           </TabsContent>
           <TabsContent value="playbook">
-            <PlaybookTab rules={playbook.data} />
+            <PlaybookTab rules={playbook} />
           </TabsContent>
         </Tabs>
       </section>

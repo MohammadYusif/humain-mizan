@@ -1,26 +1,39 @@
 import { useCallback, useEffect, useState } from "react"
+import { toast } from "sonner"
 
 import { AppHeader, AreaNav } from "@/components/app-header"
+import { DemoBar, type DemoState } from "@/components/demo-bar"
 import { InboxView } from "@/components/inbox-view"
+import { InsightsView } from "@/components/insights-view"
+import { PrintMemo } from "@/components/print-memo"
 import { ProofView } from "@/components/proof-view"
 import { QueueView } from "@/components/queue-view"
 import { ReviewArea } from "@/components/review-area"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
-import { useContracts, useInbox, useResource, useRuns } from "@/hooks/use-api"
-import { api } from "@/lib/api"
-import { go, parseHash, type Area, type Loc } from "@/lib/route"
+import { useContracts, useInbox, usePolled, useResource, useRuns } from "@/hooks/use-api"
+import { api, errorMessage, type DemoScene } from "@/lib/api"
+import { go, parseHash, printRunFromHash, type Area, type Loc } from "@/lib/route"
 
 const loadHealth = () => api.health()
+const loadPlaybook = () => api.playbook()
+
+function typing(t: EventTarget | null) {
+  const el = t as HTMLElement | null
+  return !!el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName))
+}
 
 export default function App() {
   const health = useResource("health", loadHealth)
   const contracts = useContracts()
+  const playbook = usePolled("playbook", loadPlaybook, () => null)
   const { data: inboxItems, error: inboxError, refresh: refreshInbox } = useInbox()
   const [posting, setPosting] = useState(false)
-  const { runs, refresh: refreshRuns } = useRuns(posting)
+  const [demo, setDemo] = useState<DemoState | null>(null)
+  const { runs, refresh: refreshRuns } = useRuns(posting || demo !== null)
 
   const [loc, setLoc] = useState<Loc>(() => parseHash(window.location.hash))
+  const [printRun, setPrintRun] = useState<string | null>(() => printRunFromHash(window.location.hash))
   const [lastRun, setLastRun] = useState<string | null>(loc.runId)
   const [lastBatch, setLastBatch] = useState<string | null>(loc.batchId)
 
@@ -28,6 +41,7 @@ export default function App() {
   useEffect(() => {
     const onHash = () => {
       const l = parseHash(window.location.hash)
+      setPrintRun(printRunFromHash(window.location.hash))
       setLoc(l)
       if (l.area === "review") setLastRun(l.runId)
       if (l.area === "queue" && l.batchId) setLastBatch(l.batchId)
@@ -47,14 +61,79 @@ export default function App() {
     refreshRuns()
   }, [refreshInbox, refreshRuns])
 
+  // ---- guided demo: replays of recorded runs, scene by scene ----------------------------------------
+  const playScene = useCallback(
+    async (scenes: DemoScene[], index: number) => {
+      setDemo({ scenes, index, runId: null, busy: true })
+      try {
+        const { run_id } = await api.demoReplay(scenes[index].id)
+        setDemo({ scenes, index, runId: run_id, busy: false })
+        go({ area: "review", runId: run_id })
+        refreshRuns()
+      } catch (e) {
+        setDemo({ scenes, index, runId: null, busy: false })
+        toast.error("Could not start the replay", { description: errorMessage(e) })
+      }
+    },
+    [refreshRuns]
+  )
+
+  const startDemo = useCallback(async () => {
+    try {
+      const scenes = await api.demoScenes()
+      if (!scenes.length) return void toast.error("No demo scenes are available on this server.")
+      await playScene(scenes, 0)
+    } catch (e) {
+      toast.error("Could not load the demo", { description: errorMessage(e) })
+    }
+  }, [playScene])
+
+  const nextScene = useCallback(() => {
+    if (!demo || demo.busy) return
+    if (demo.index + 1 < demo.scenes.length) void playScene(demo.scenes, demo.index + 1)
+    else {
+      setDemo(null)
+      toast.success("End of the guided demo")
+    }
+  }, [demo, playScene])
+
+  const restartDemo = useCallback(async () => {
+    if (!demo) return
+    try {
+      const { deleted } = await api.demoReset()
+      toast.success(`Demo reset: ${deleted} replayed run${deleted === 1 ? "" : "s"} removed`)
+      refreshInbox()
+      await playScene(demo.scenes, 0)
+    } catch (e) {
+      toast.error("Could not reset the demo", { description: errorMessage(e) })
+    }
+  }, [demo, playScene, refreshInbox])
+
+  useEffect(() => {
+    if (!demo) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "ArrowRight" || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || typing(e.target)) return
+      e.preventDefault()
+      nextScene()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [demo, nextScene])
+
+  const demoRun = demo?.runId ? runs?.find((r) => r.run_id === demo.runId) : undefined
+  const demoFinished = !!demoRun && demoRun.status !== "running"
+
+  if (printRun) return <PrintMemo runId={printRun} contracts={contracts.data} />
+
   return (
     <Tabs value={loc.area} onValueChange={(v) => openArea(v as Area)} className="min-h-dvh gap-0">
       <AppHeader
         health={health.data}
         healthError={health.error}
         nav={<AreaNav inboxCount={inboxItems?.length ?? null} />}
+        onDemo={demo ? undefined : () => void startDemo()}
       />
-      <main className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:py-8">
+      <main className={demo ? "mx-auto w-full max-w-[1440px] px-4 pt-6 pb-72 sm:px-6 lg:pt-8" : "mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 lg:py-8"}>
         {contracts.error && !contracts.data ? (
           <Alert className="mb-6 border-escalate/40 bg-escalate-soft text-escalate">
             <AlertTitle>Cannot reach the review API</AlertTitle>
@@ -74,6 +153,7 @@ export default function App() {
             refreshRuns={refreshRuns}
             posting={posting}
             setPosting={setPosting}
+            playbook={playbook.data}
           />
         </TabsContent>
         <TabsContent value="queue">
@@ -88,10 +168,22 @@ export default function App() {
             onDecided={onDecided}
           />
         </TabsContent>
+        <TabsContent value="insights">
+          <InsightsView rules={playbook.data} onChanged={playbook.refresh} />
+        </TabsContent>
         <TabsContent value="proof">
           <ProofView contracts={contracts.data} />
         </TabsContent>
       </main>
+      {demo ? (
+        <DemoBar
+          demo={demo}
+          finished={demoFinished}
+          onNext={nextScene}
+          onRestart={() => void restartDemo()}
+          onExit={() => setDemo(null)}
+        />
+      ) : null}
     </Tabs>
   )
 }

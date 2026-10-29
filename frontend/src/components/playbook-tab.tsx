@@ -3,6 +3,21 @@ import { Card } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { PlaybookRule } from "@/lib/api"
+import { langOf } from "@/lib/format"
+
+function Amendments({ items }: { items?: string[] }) {
+  if (!items?.length) return null
+  return (
+    <div className="mt-2 flex flex-col gap-1 rounded-md border border-brass/40 bg-brass-soft/60 p-2 text-foreground">
+      <span className="text-[0.65rem] font-semibold tracking-wide text-brass-ink uppercase">Accepted by legal</span>
+      {items.map((t) => (
+        <p key={t} dir="auto" lang={langOf(t)} className="text-[0.8rem]">
+          {t}
+        </p>
+      ))}
+    </div>
+  )
+}
 
 export function PlaybookTab({ rules }: { rules: PlaybookRule[] | null }) {
   if (!rules) {
@@ -45,6 +60,7 @@ export function PlaybookTab({ rules }: { rules: PlaybookRule[] | null }) {
                 <TableCell className="text-[0.8rem] leading-relaxed whitespace-normal">{r.required}</TableCell>
                 <TableCell className="text-[0.8rem] leading-relaxed whitespace-normal text-muted-foreground">
                   {r.fallback}
+                  <Amendments items={r.accepted_by_legal} />
                 </TableCell>
                 <TableCell className="hidden pe-4 text-[0.8rem] leading-relaxed whitespace-normal text-muted-foreground xl:table-cell">
                   {r.hint}
@@ -70,7 +86,10 @@ export function PlaybookTab({ rules }: { rules: PlaybookRule[] | null }) {
               </div>
               <div>
                 <dt className="text-[0.7rem] font-semibold tracking-wide text-muted-foreground uppercase">Fallback</dt>
-                <dd>{r.fallback}</dd>
+                <dd>
+                  {r.fallback}
+                  <Amendments items={r.accepted_by_legal} />
+                </dd>
               </div>
               <div>
                 <dt className="text-[0.7rem] font-semibold tracking-wide text-muted-foreground uppercase">Hint</dt>

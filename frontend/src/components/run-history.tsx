@@ -106,6 +106,11 @@ export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
                         <span className="min-w-0 flex-1 truncate font-mono text-[0.8rem] font-medium">
                           {r.doc_id ?? "starting…"}
                         </span>
+                        {r.replay_of ? (
+                          <Badge variant="outline" className="rounded-md border-dashed text-[0.65rem] font-normal text-brass-ink">
+                            Replay
+                          </Badge>
+                        ) : null}
                         {r.status === "running" ? (
                           <Badge variant="outline" className="gap-1 rounded-md border-brass/50 bg-brass-soft text-brass-ink">
                             <LoaderCircle className="animate-spin" data-icon="inline-start" aria-hidden />

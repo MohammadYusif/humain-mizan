@@ -32,7 +32,7 @@ export default defineConfig({
   server: {
     // Exact API prefixes only: '/run' must not swallow '/runs', and the SPA owns every other path.
     proxy: Object.fromEntries(
-      ['run', 'runs', 'contracts', 'playbook', 'healthz', 'batches', 'inbox', 'evals'].map((p) => [
+      ['run', 'runs', 'contracts', 'playbook', 'healthz', 'batches', 'inbox', 'evals', 'demo', 'insights'].map((p) => [
         `^/${p}(/|\\?|$)`,
         api,
       ])

@@ -1,4 +1,4 @@
-import { CircleX, LoaderCircle } from "lucide-react"
+import { CircleX, Clapperboard, LoaderCircle } from "lucide-react"
 
 import { RouteBadge } from "@/components/tone-badges"
 import { Badge } from "@/components/ui/badge"
@@ -24,10 +24,20 @@ export function RunHeader({ runId, phase, review, contract, task }: Props) {
         <span className="tracking-[0.14em] uppercase">Review</span>
         <span aria-hidden>·</span>
         <span className="font-mono break-all">{runId}</span>
+        {review?.replay_of ? (
+          <Badge
+            variant="outline"
+            title={`Replays ${review.replay_of}`}
+            className="gap-1 rounded-md border-dashed border-brass/60 text-brass-ink"
+          >
+            <Clapperboard data-icon="inline-start" aria-hidden />
+            Replay of a recorded run
+          </Badge>
+        ) : null}
         {running ? (
           <Badge variant="outline" className="gap-1 rounded-md border-brass/50 bg-brass-soft text-brass-ink">
             <LoaderCircle className="animate-spin" data-icon="inline-start" aria-hidden />
-            {phase === "starting" ? "Starting" : "Live"}
+            {phase === "starting" ? "Starting" : review?.replay_of ? "Replaying" : "Live"}
           </Badge>
         ) : review?.status === "error" ? (
           <Badge variant="outline" className="gap-1 rounded-md border-escalate/40 bg-escalate-soft text-escalate">

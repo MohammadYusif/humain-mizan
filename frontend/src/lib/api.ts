@@ -44,6 +44,8 @@ export interface PlaybookRule {
   required: string
   fallback: string
   hint: string
+  /** Amendments legal accepted through the Insights loop. */
+  accepted_by_legal?: string[]
 }
 
 export interface RunSummary {
@@ -57,6 +59,8 @@ export interface RunSummary {
   priced: boolean | null
   latency_s: number | null
   needs_human: NeedsHuman | null
+  /** Set on demo replays: the recorded run this one replays (never a live run). */
+  replay_of?: string | null
   started: number
 }
 
@@ -142,6 +146,7 @@ export interface ReviewView {
   stats: RunEndEvent | null
   decision: DecisionRecord | null
   pending: NeedsHuman | null
+  replay_of?: string | null
   final_text: string
 }
 
@@ -296,6 +301,53 @@ export interface EvalModel {
   cases: EvalCase[]
 }
 
+export interface DemoScene {
+  id: string
+  doc_id: string
+  title: string
+  narration: string
+  route: Route
+  recorded_run: string
+  model: string
+}
+
+export interface InsightEvidence {
+  run_id: string
+  doc_id: string | null
+  clause_id: string
+  quote: string
+  decision: DecisionKind
+  note: string
+}
+
+export interface Proposal {
+  id: string
+  rule_id: string
+  clause_type: string
+  current_fallback: string
+  proposed_addition: string
+  why: string
+  effect: string
+  evidence: InsightEvidence[]
+}
+
+export interface Amendment {
+  id: string
+  rule_id: string
+  text: string
+  note: string
+  at: number
+  evidence_runs: string[]
+}
+
+export interface Insights {
+  signals: Record<string, { accepted: number; upheld: number }>
+  proposals: Proposal[]
+  notes: { rule_id: string; text: string; evidence: InsightEvidence[] }[]
+  amendments: Amendment[]
+  min_accepted: number
+}
+
 export class ApiError extends Error {
   readonly status: number
   constructor(status: number, message: string) {
@@ -354,7 +406,16 @@ export const api = {
   startBatch: (docIds: string[], autoSend: boolean) =>
     request<BatchManifest>("/batches", post({ doc_ids: docIds, auto_send: autoSend })),
   evals: () => request<EvalModel[]>("/evals"),
+  demoScenes: () => request<DemoScene[]>("/demo/scenes"),
+  demoReplay: (sceneId: string, speed = 3) =>
+    request<{ run_id: string; scene: DemoScene }>("/demo/replay", post({ scene_id: sceneId, speed })),
+  demoReset: () => request<{ deleted: number }>("/demo/reset", { method: "POST" }),
+  insights: () => request<Insights>("/insights"),
+  decideProposal: (id: string, action: "accept" | "reject", note?: string) =>
+    request<{ id: string; status: string }>(`/insights/proposals/${enc(id)}`, post({ action, note: note ?? "" })),
 }
+
+export const exportUrl = (runId: string, kind: "redline.docx" | "memo.docx") => `/runs/${enc(runId)}/export/${kind}`
 
 /** Client-chosen run id so the UI can poll the trace while POST /run blocks. Matches ^[A-Za-z0-9_-]{1,64}$. */
 export function newRunId(): string {

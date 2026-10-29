@@ -3,6 +3,8 @@ import {
   CircleX,
   Inbox,
   UserRoundCheck,
+  FileDown,
+  Printer,
   Workflow,
   Check,
   ChevronDown,
@@ -32,7 +34,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import type { DecisionRecord, Finding, NeedsHuman, ReviewView, Route, Severity, WriteAction } from "@/lib/api"
+import { exportUrl, type DecisionRecord, type Finding, type NeedsHuman, type ReviewView, type Route, type Severity, type WriteAction } from "@/lib/api"
 import { byWorkflow, DECISION_LABEL, langOf, relativeTime, ROUTE_DESCRIPTION, ROUTE_LABEL, SEVERITY_ORDER } from "@/lib/format"
 import { go } from "@/lib/route"
 import { ROUTE_ICON, ROUTE_TONE, SEVERITY_TONE } from "@/lib/tones"
@@ -407,12 +409,47 @@ export function ReviewTabSkeleton() {
   )
 }
 
+function Documents({ runId }: { runId: string }) {
+  return (
+    <Card className="gap-3">
+      <CardHeader>
+        <CardTitle className="font-heading text-lg font-semibold">Documents</CardTitle>
+        <CardDescription>For the lawyer's file and the counterparty.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-2">
+        <Button asChild variant="outline" className="h-auto justify-start py-2 text-start whitespace-normal">
+          <a href={exportUrl(runId, "redline.docx")} download>
+            <FileDown aria-hidden />
+            Download redline (.docx, tracked changes)
+          </a>
+        </Button>
+        <Button asChild variant="outline" className="h-auto justify-start py-2 text-start whitespace-normal">
+          <a href={exportUrl(runId, "memo.docx")} download>
+            <FileDown aria-hidden />
+            Download memo (.docx)
+          </a>
+        </Button>
+        <Button
+          variant="ghost"
+          className="justify-start"
+          onClick={() => window.open(`${window.location.pathname}#print=${runId}`, "_blank", "noopener")}
+        >
+          <Printer aria-hidden />
+          Print memo or save as PDF
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function ReviewTab({
   review,
   onJump,
+  runId,
 }: {
   review: ReviewView
   onJump: (clauseId: string) => void
+  runId: string
 }) {
   const running = review.status === "running" || review.status === "starting"
   return (
@@ -496,6 +533,8 @@ export function ReviewTab({
               )}
             </CardContent>
           </Card>
+
+          {review.status === "done" && review.doc_id ? <Documents runId={runId} /> : null}
 
           <Card>
             <CardHeader>

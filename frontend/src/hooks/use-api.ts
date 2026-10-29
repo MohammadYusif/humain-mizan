@@ -158,6 +158,7 @@ export function useRunData(runId: string | null, live: boolean) {
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | undefined
     let inflight = false
+    let early404 = 0 // a demo replay has no trace file until its first event (under 2 s)
 
     const load = async () => {
       if (inflight) return
@@ -179,7 +180,7 @@ export function useRunData(runId: string | null, live: boolean) {
         else if (review.pending) timer = setTimeout(load, 4000)
       } catch (e) {
         if (cancelled) return
-        if (e instanceof ApiError && e.status === 404 && liveRef.current) {
+        if (e instanceof ApiError && e.status === 404 && (liveRef.current || (runId.startsWith("demo-") && early404++ < 8))) {
           setState((s) => ({ ...s, runId, phase: "starting" }))
           timer = setTimeout(load, 1000)
         } else if (liveRef.current) {
