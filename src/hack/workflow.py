@@ -31,7 +31,7 @@ DECISIONS = {
     # the agent finished without a route: a lawyer reviews it like an escalation
     "unrouted": ("approve_contract", "request_changes", "reject"),
 }
-UNROUTED_REASON = "the agent stopped before computing a route; a lawyer must review this contract"
+UNROUTED_REASON = "The agent stopped before computing a route; a lawyer must review this contract"
 _TASK_DOC = re.compile(r"contract\s+([A-Za-z0-9_-]{1,64})")
 
 

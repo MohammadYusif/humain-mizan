@@ -1,9 +1,17 @@
 """Structured view of a contract-review run, derived from its trace (what the tools accepted)."""
 
 import json
+import re
 from typing import Any
 
 from .playbook import BY_ID
+
+_PY_LIST = re.compile(r"\[('[^\]]*')\]")
+
+
+def _clean_reason(reason: str) -> str:
+    """Runs recorded before reasons were formatted show Python lists (['c7']); render as text."""
+    return _PY_LIST.sub(lambda m: m.group(1).replace("'", ""), reason)
 
 
 def review_view(trace: list[dict[str, Any]]) -> dict[str, Any]:
@@ -61,7 +69,7 @@ def review_view(trace: list[dict[str, Any]]) -> dict[str, Any]:
         "route": score["route"] if score else None,
         "risk_score": score["risk_score"] if score else None,
         "counts": score["counts"] if score else None,
-        "reasons": score["reasons"] if score else [],
+        "reasons": [_clean_reason(r) for r in score["reasons"]] if score else [],
         "injected": score.get("injected", []) if score else [],
         "tripwires": score.get("tripwires", []) if score else [],
         "cleared": cleared,

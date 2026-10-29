@@ -371,7 +371,10 @@ def create_app(
         f = (cfg.web_dir / path).resolve()
         root = cfg.web_dir.resolve()
         if path and f.is_file() and f.is_relative_to(root):
-            return FileResponse(f)
+            # hashed build assets never change; everything else must be revalidated
+            immutable = path.startswith("assets/")
+            cache = "public, max-age=31536000, immutable" if immutable else "no-cache"
+            return FileResponse(f, headers={"Cache-Control": cache})
         if path.startswith("assets/"):
             raise HTTPException(404, "asset not found")  # never answer a script request with HTML
         page = cfg.web_dir / "index.html"
@@ -379,7 +382,7 @@ def create_app(
             raise HTTPException(
                 404, "UI not built: run `npm install && npm run build` in frontend/"
             )
-        return FileResponse(page)
+        return FileResponse(page, headers={"Cache-Control": "no-cache"})
 
     return app
 

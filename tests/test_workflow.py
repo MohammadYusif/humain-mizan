@@ -563,3 +563,22 @@ def test_demo_replays_are_marked_in_the_inbox_and_never_teach_the_learning_loop(
     for rid in rids:
         W.decide(s, rid, "discard")
     assert L.signals(s) == {} and L.insights(s)["proposals"] == []
+
+
+def test_reasons_read_as_plain_text_even_for_old_traces():
+    from hack.challenge.view import _clean_reason
+
+    assert _clean_reason(
+        "red flag(s) that always need a lawyer: ['LIAB-CAP@c8', 'GOV-LAW@c2']"
+    ) == ("red flag(s) that always need a lawyer: LIAB-CAP@c8, GOV-LAW@c2")
+    assert _clean_reason("Plain text, c7") == "Plain text, c7"
+
+
+def test_index_is_revalidated_and_assets_are_immutable(tmp_path):
+    s = settings(tmp_path)
+    (s.web_dir / "assets").mkdir(parents=True)
+    (s.web_dir / "index.html").write_text("<html>app</html>")
+    (s.web_dir / "assets" / "index-abc.js").write_text("x")
+    client = TestClient(create_app(s))
+    assert client.get("/").headers["cache-control"] == "no-cache"
+    assert "immutable" in client.get("/assets/index-abc.js").headers["cache-control"]

@@ -119,7 +119,8 @@ def score(review: Review) -> dict:
     counts = {s: sum(f.severity == s for f in fs) for s in WEIGHT}
     escalate: list[str] = []
     if counts["critical"]:
-        escalate.append(f"{counts['critical']} critical finding(s): never auto-approved")
+        n = counts["critical"]
+        escalate.append(f"{n} critical {_pl(n, 'finding')}: never approved automatically")
     mismatched = [
         f"{f.rule_id}@{f.clause_id}"
         for f in fs
@@ -127,40 +128,50 @@ def score(review: Review) -> dict:
     ]
     if mismatched:
         escalate.append(
-            f"finding(s) filed under a rule that does not match the clause type: {_ls(mismatched)}"
+            f"{_pl(len(mismatched), 'Finding')} filed under a rule that does not match the clause type: "
+            f"{_ls(mismatched)}"
         )
     unclear = [cid for cid, ts in cmap.items() if UNCLEAR in ts]
     if unclear:
-        escalate.append(f"clause(s) the reviewer could not classify: {_ls(unclear)}")
+        escalate.append(
+            f"{_pl(len(unclear), 'Clause')} the reviewer could not classify: {_ls(unclear)}"
+        )
     present = {t for ts in cmap.values() for t in ts}
     missing = [t for t in REQUIRED_TYPES if t not in present]
     if missing:
-        escalate.append(f"required clause(s) missing from the contract: {_ls(missing)}")
+        escalate.append(
+            f"Required {_pl(len(missing), 'clause')} missing from the contract: {_ls(missing)}"
+        )
     if review.injected:
         escalate.append(
-            f"clause(s) contain instructions aimed at an AI reviewer (untrusted): {_ls(review.injected)}"
+            f"{_pl(len(review.injected), 'Clause')} with instructions aimed at an AI reviewer (untrusted): "
+            f"{_ls(review.injected)}"
         )
     if any(
         f.severity == "major" and (f.confidence < MIN_CONFIDENCE or not f.redline.strip())
         for f in fs
     ):
-        escalate.append("a major finding is low-confidence or has no proposed redline")
+        escalate.append("A major finding is low-confidence or has no proposed redline")
     trip = review.tripwire_status()
     critical_flags = [f"{t['rule_id']}@{t['clause_id']}" for t in trip if t["status"] == "critical"]
     if critical_flags:
         escalate.append(
-            f"deterministic red flag(s) that always need a lawyer: {_ls(critical_flags)}"
+            f"Deterministic red {_pl(len(critical_flags), 'flag')} that always go to a lawyer: "
+            f"{_ls(critical_flags)}"
         )
     unresolved = [f"{t['rule_id']}@{t['clause_id']}" for t in trip if t["status"] == "unresolved"]
     if unresolved:
-        escalate.append(f"red flag(s) the reviewer neither recorded nor cleared: {_ls(unresolved)}")
+        escalate.append(
+            f"Red {_pl(len(unresolved), 'flag')} the reviewer neither recorded nor cleared: {_ls(unresolved)}"
+        )
 
     if escalate:
         route, reasons = "escalate", escalate
     elif counts["major"]:
-        route, reasons = "negotiate", [f"{counts['major']} major finding(s) with playbook redlines"]
+        n = counts["major"]
+        route, reasons = "negotiate", [f"{n} major {_pl(n, 'finding')} with playbook redlines"]
     else:
-        route, reasons = "approve", ["full coverage and no findings above minor"]
+        route, reasons = "approve", ["Full coverage and no findings above minor"]
     review.route = route
     review.risk_score = min(100, sum(WEIGHT[f.severity] for f in fs))
     return {
@@ -172,6 +183,11 @@ def score(review: Review) -> dict:
         "injected": review.injected,
         "tripwires": trip,
     }
+
+
+def _pl(n: int, word: str) -> str:
+    """'finding' / 'findings': real plurals in text lawyers read, not 'finding(s)'."""
+    return word if n == 1 else word + "s"
 
 
 def _ls(items: list[str]) -> str:
