@@ -59,6 +59,13 @@ class Review:
         self.cleared[(clause_id, rule_id)] = {"reason": reason, "quote": quote}
         self.route = None
 
+    def report_instruction(self, clause_id: str) -> None:
+        """The model's own report of an instruction aimed at it: a second detector next to the
+        regex, which cannot know every wording (or language) an injection can take."""
+        if clause_id not in self.injected:
+            self.injected.append(clause_id)
+        self.route = None
+
     def tripwire_status(self) -> list[dict]:
         """Major red flags are resolved by a finding for the rule (on this clause or, for bilingual
         twins, any clause) or by an explicit clearance; critical ones are never resolvable."""
