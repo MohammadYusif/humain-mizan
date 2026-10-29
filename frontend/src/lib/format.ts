@@ -81,6 +81,7 @@ export function contractTitle(title: string): { primary: string; secondary: stri
 
 export const NEEDS_HUMAN_LABEL: Record<NeedsHuman, string> = {
   legal_review: "Lawyer review",
+  unrouted: "Full lawyer review",
   approve_send: "Approve send",
 }
 
@@ -100,6 +101,10 @@ export function byWorkflow(by: string | null | undefined): boolean {
 /** An Inbox draft the server composed from the recorded redlines (the model wrote none). */
 export function composedFromRedlines(text: string): boolean {
   return text.startsWith("Requested changes to")
+}
+
+export function isEvalRun(runId: string): boolean {
+  return runId.startsWith("eval-")
 }
 
 export function plural(n: number, word: string): string {

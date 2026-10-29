@@ -1,5 +1,6 @@
 import {
   ArrowUpRight,
+  CircleDashed,
   CircleX,
   Clock,
   Coins,
@@ -29,15 +30,18 @@ import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useBatch, useBatches } from "@/hooks/use-api"
 import { api, errorMessage, type BatchItem, type BatchStatus, type ContractSummary, type Route } from "@/lib/api"
-import { byWorkflow, cost, DECISION_LABEL, relativeTime, ROUTE_LABEL, seconds } from "@/lib/format"
+import { byWorkflow, cost, DECISION_LABEL, plural, relativeTime, ROUTE_LABEL, seconds, usd } from "@/lib/format"
 import { go } from "@/lib/route"
 import { ROUTE_ICON, ROUTE_TONE } from "@/lib/tones"
 
 const ROUTES: Route[] = ["approve", "negotiate", "escalate"]
 
 function batchCost(b: BatchStatus) {
-  if (b.done === 0) return "—"
-  return cost(b.cost_usd, b.priced)
+  if (b.done + b.errors === 0) return "—"
+  const finished = b.done + b.errors
+  if (b.unpriced_runs >= finished) return "local, no API cost"
+  const priced = usd(b.priced_cost_usd)
+  return b.unpriced_runs ? `${priced} + ${plural(b.unpriced_runs, "unpriced run")}` : priced
 }
 
 // --- composer ------------------------------------------------------------------------------------
@@ -299,7 +303,11 @@ function HumanState({ it }: { it: BatchItem }) {
         onClick={() => go({ area: "inbox" })}
       >
         <UserRound data-icon="inline-start" aria-hidden />
-        {it.pending === "legal_review" ? "Waiting for a lawyer" : "Waiting: approve send"}
+        {it.pending === "legal_review"
+          ? "Waiting for a lawyer"
+          : it.pending === "unrouted"
+            ? "Needs a full lawyer review"
+            : "Waiting: approve send"}
       </Button>
     )
   if (it.sent)
@@ -383,7 +391,7 @@ function BatchDetail({ batchId }: { batchId: string }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))]">
           {ROUTES.map((r) => {
             const Icon = ROUTE_ICON[r]
             return (
@@ -396,6 +404,14 @@ function BatchDetail({ batchId }: { batchId: string }) {
               />
             )
           })}
+          {b.routes.unrouted > 0 ? (
+            <Tile
+              label="Unrouted"
+              value={<span className="text-negotiate">{b.routes.unrouted}</span>}
+              icon={<CircleDashed className="size-3.5 text-negotiate" aria-hidden />}
+              className="border-dashed border-negotiate/40"
+            />
+          ) : null}
           <Tile
             label="Needs a human"
             value={<span className={b.needs_human ? "text-brass-ink" : undefined}>{b.needs_human}</span>}

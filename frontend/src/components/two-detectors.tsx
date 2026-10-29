@@ -93,6 +93,39 @@ function FlagRow({
   )
 }
 
+/** Compact red-flag line for Inbox cards: counts by status plus one chip per flag. */
+export function RedFlagSummary({ flags }: { flags: Tripwire[] }) {
+  if (!flags.length)
+    return (
+      <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Flag className="size-3.5" aria-hidden /> No red-flag pattern matched
+      </p>
+    )
+  const sorted = [...flags].sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status))
+  return (
+    <div className="flex flex-col gap-1.5">
+      <h3 className="font-sans text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        Red flags · pattern checks
+      </h3>
+      <ul className="flex flex-wrap gap-1.5">
+        {sorted.map((t) => (
+          <li key={`${t.clause_id}-${t.rule_id}`}>
+            <Badge
+              variant="outline"
+              title={t.match}
+              className={cn("gap-1 rounded-md font-mono text-[0.7rem] font-normal", STATUS[t.status].badge)}
+            >
+              <Flag data-icon="inline-start" aria-hidden />
+              {t.rule_id} · {t.clause_id}
+              <span className="font-sans">{t.status}</span>
+            </Badge>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 /** The model's findings and the deterministic red flags side by side: approval needs both to agree. */
 export function TwoDetectors({ review, onJump }: { review: ReviewView; onJump: (clauseId: string) => void }) {
   const flags = [...review.tripwires].sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status))

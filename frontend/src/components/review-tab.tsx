@@ -287,6 +287,10 @@ function ActionItem({ a }: { a: WriteAction }) {
 }
 
 const PENDING_TEXT: Record<NeedsHuman, { title: string; body: string }> = {
+  unrouted: {
+    title: "Needs a full lawyer review — the agent did not finish",
+    body: "The agent stopped before computing a route, so nothing is approved or sent. A lawyer reviews the whole contract in the Inbox.",
+  },
   legal_review: {
     title: "Waiting for a lawyer",
     body: "Escalations are never decided by the agent. A lawyer approves, requests changes or rejects in the Inbox.",
@@ -465,7 +469,11 @@ export function ReviewTab({
                   ? byWorkflow(review.decision.by)
                     ? "The model did not send its redlines, so the batch's auto-send policy did."
                     : "A human reviewed the agent's proposal and decided."
-                  : "Write actions stay dry-run until a human approves them."}
+                  : review.actions.some((a) => a.dry_run)
+                    ? "Write actions stay dry-run until a human approves them."
+                    : review.actions.length
+                      ? "What the agent did at the end of the review."
+                      : "What the agent proposes to do next."}
               </CardDescription>
             </CardHeader>
             <CardContent>

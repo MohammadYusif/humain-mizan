@@ -6,7 +6,8 @@ export type Lang = "ar" | "en"
 export type RunStatus = "done" | "running" | "error"
 /** "starting": accepted by the API, first trace event not written yet (review endpoint only). */
 export type ReviewStatus = RunStatus | "starting"
-export type NeedsHuman = "legal_review" | "approve_send"
+/** unrouted: the run finished without a route, so a lawyer reviews the whole contract. */
+export type NeedsHuman = "legal_review" | "approve_send" | "unrouted"
 export type DecisionKind = "approve_contract" | "request_changes" | "reject" | "send" | "discard"
 
 export interface Health {
@@ -224,10 +225,13 @@ export interface BatchStatus {
   total: number
   done: number
   errors: number
-  routes: Record<Route, number>
+  routes: Record<Route | "unrouted", number>
   needs_human: number
   cost_usd: number
   priced: boolean | null
+  /** The part of the cost that could be priced, and how many runs used an unpriced (e.g. local) model. */
+  priced_cost_usd: number
+  unpriced_runs: number
   agent_minutes: number
   estimate: {
     manual_hours: number
@@ -241,13 +245,14 @@ export interface BatchStatus {
 export interface InboxItem {
   run_id: string
   kind: NeedsHuman
-  doc_id: string
+  doc_id: string | null
   route: Route | null
   risk_score: number | null
   counts: Record<Severity, number> | null
   reasons: string[]
   findings: Finding[]
   agent_text: string
+  tripwires: Tripwire[]
   options: DecisionKind[]
   created: number
 }

@@ -1,6 +1,6 @@
 import { CircleX, History, LoaderCircle, UserRound } from "lucide-react"
 import { cn } from "cn"
-import { useEffect, useState } from "react"
+import { useEffect, useId, useState } from "react"
 
 import { RouteBadge } from "@/components/tone-badges"
 import { Badge } from "@/components/ui/badge"
@@ -9,7 +9,9 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { RunSummary } from "@/lib/api"
-import { cost, NEEDS_HUMAN_LABEL, relativeTime, seconds } from "@/lib/format"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { cost, isEvalRun, NEEDS_HUMAN_LABEL, relativeTime, seconds } from "@/lib/format"
 
 function useNow(ms: number) {
   const [now, setNow] = useState(() => Date.now())
@@ -27,19 +29,43 @@ interface Props {
   className?: string
 }
 
+const SHOW_EVAL_KEY = "mizan-show-eval-runs"
+
+function readShowEval(): boolean {
+  try {
+    return localStorage.getItem(SHOW_EVAL_KEY) === "1"
+  } catch {
+    return false
+  }
+}
+
 export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
   const now = useNow(30_000)
-  // Runs that never loaded a contract (smoke tests, calculator evals) are not contract reviews.
-  const reviews = runs?.filter((r) => r.doc_id || r.status === "running") ?? null
+  const [showEval, setShowEval] = useState(readShowEval)
+  const toggleEval = (v: boolean) => {
+    setShowEval(v)
+    try {
+      localStorage.setItem(SHOW_EVAL_KEY, v ? "1" : "0")
+    } catch {
+      /* storage blocked: the choice lasts for this page view */
+    }
+  }
+  const switchId = useId()
+  // Runs that never loaded a contract (smoke tests) are not contract reviews, except failed or running ones.
+  const reviews =
+    runs?.filter(
+      (r) => (r.doc_id || r.status !== "done") && (showEval || !isEvalRun(r.run_id) || r.run_id === selectedId)
+    ) ?? null
 
   return (
     <Card className={cn("min-h-0 gap-3", className)}>
       <CardHeader>
         <CardTitle className="font-heading text-lg font-semibold">History</CardTitle>
-        <CardAction>
-          {reviews ? (
-            <span className="text-xs text-muted-foreground tabular">{reviews.length} runs</span>
-          ) : null}
+        <CardAction className="flex items-center gap-2">
+          <Switch id={switchId} size="sm" checked={showEval} onCheckedChange={toggleEval} />
+          <Label htmlFor={switchId} className="text-xs font-normal text-muted-foreground">
+            Show eval runs
+          </Label>
         </CardAction>
       </CardHeader>
       <CardContent className="min-h-0 flex-1 px-0">

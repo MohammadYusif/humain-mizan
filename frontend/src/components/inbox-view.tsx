@@ -4,6 +4,7 @@ import { useId, useState } from "react"
 import { toast } from "sonner"
 
 import { RouteBadge, SeverityBadge } from "@/components/tone-badges"
+import { RedFlagSummary } from "@/components/two-detectors"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +32,7 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { api, errorMessage, type ContractSummary, type DecisionKind, type InboxItem, type RunSummary } from "@/lib/api"
-import { composedFromRedlines, contractTitle, DECISION_LABEL, langOf, relativeTime } from "@/lib/format"
+import { composedFromRedlines, contractTitle, DECISION_LABEL, isEvalRun, langOf, relativeTime } from "@/lib/format"
 import { go } from "@/lib/route"
 
 interface OptionSpec {
@@ -229,8 +230,9 @@ function InboxCard({
   contract: ContractSummary | null
   onDone: (d: DecisionKind) => void
 }) {
-  const legal = item.kind === "legal_review"
-  const title = contract ? contractTitle(contract.title).primary : item.doc_id
+  const legal = item.kind !== "approve_send"
+  const unrouted = item.kind === "unrouted"
+  const title = contract ? contractTitle(contract.title).primary : (item.doc_id ?? "A run that did not load a contract")
   const findings = item.findings.slice(0, 3)
   return (
     <Card className="gap-0 p-0">
@@ -238,7 +240,7 @@ function InboxCard({
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline" className="gap-1 rounded-md border-brass/50 bg-brass-soft text-brass-ink">
             {legal ? <Gavel data-icon="inline-start" aria-hidden /> : <Send data-icon="inline-start" aria-hidden />}
-            {legal ? "Lawyer review" : "Approve send"}
+            {unrouted ? "Full lawyer review" : legal ? "Lawyer review" : "Approve send"}
           </Badge>
           {item.route ? <RouteBadge route={item.route} /> : null}
           <span className="font-mono text-xs text-muted-foreground">{item.doc_id}</span>
@@ -280,6 +282,7 @@ function InboxCard({
               </ul>
             </div>
           ) : null}
+          <RedFlagSummary flags={item.tripwires ?? []} />
           {findings.length ? (
             <div className="flex flex-col gap-2">
               <h3 className="font-sans text-xs font-semibold tracking-wide text-muted-foreground uppercase">
@@ -311,7 +314,9 @@ function InboxCard({
 
         <div className="flex min-w-0 flex-col gap-1.5">
           <h3 className="font-sans text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-            {legal
+            {unrouted
+              ? "The agent did not finish"
+              : legal
               ? "The agent's question for legal"
               : composedFromRedlines(item.agent_text)
                 ? "Drafted from the recorded redlines"
@@ -322,7 +327,10 @@ function InboxCard({
             lang={item.agent_text ? langOf(item.agent_text) : undefined}
             className="rounded-lg border bg-background/60 p-3 text-sm leading-relaxed whitespace-pre-line"
           >
-            {item.agent_text || "The agent did not write a message."}
+            {item.agent_text ||
+              (unrouted
+                ? "No route was computed and no question was prepared: review the whole contract."
+                : "The agent did not write a message.")}
           </p>
         </div>
       </div>
@@ -353,9 +361,11 @@ export function InboxView({
   // Hide a decided item at once; the next poll confirms it has left the inbox.
   const [decided, setDecided] = useState<Set<string>>(new Set())
   const visible = items?.filter((i) => !decided.has(i.run_id)) ?? null
-  const legal = visible?.filter((i) => i.kind === "legal_review").length ?? 0
+  const legal = visible?.filter((i) => i.kind !== "approve_send").length ?? 0
   const sends = (visible?.length ?? 0) - legal
-  const finished = runs?.filter((r) => r.status === "done" && r.route && !r.needs_human).length ?? 0
+  // Finished non-eval runs that reached a route and need nobody.
+  const finished =
+    runs?.filter((r) => !isEvalRun(r.run_id) && r.status === "done" && r.route && !r.needs_human).length ?? 0
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -404,7 +414,7 @@ export function InboxView({
             <EmptyTitle className="font-heading text-2xl font-semibold">Nothing needs a human right now</EmptyTitle>
             <EmptyDescription className="text-[0.95rem]">
               {finished > 0
-                ? `The agent has ${finished} finished review${finished === 1 ? "" : "s"} in recent history with nothing left for a person to do.`
+                ? `The agent finished ${finished} review${finished === 1 ? "" : "s"} recently that needed nobody.`
                 : "When the agent escalates a contract or drafts a message that needs approval, it appears here."}
             </EmptyDescription>
           </EmptyHeader>
