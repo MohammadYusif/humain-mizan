@@ -1,0 +1,223 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+/* DM Sans (variable: weight + optical size) for all Latin text; it has no Arabic glyphs, so the
+   stack falls through to IBM Plex Sans Arabic for Arabic characters, glyph by glyph. */
+@import "@fontsource-variable/dm-sans/opsz.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-400.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-500.css";
+@import "@fontsource/ibm-plex-sans-arabic/arabic-600.css";
+@import "@fontsource/ibm-plex-mono/latin-400.css";
+@import "@fontsource/ibm-plex-mono/latin-500.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: "DM Sans Variable", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  /* Same family as the body: headings differ by weight (600-700) and slightly negative tracking. */
+  --font-heading: "DM Sans Variable", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Product tokens: brass accent, route and severity scales. `-soft` = tinted surface, base = text/stroke. */
+  --color-brass: var(--brass);
+  --color-brass-soft: var(--brass-soft);
+  --color-brass-ink: var(--brass-ink);
+  --color-paper: var(--paper);
+  --color-approve: var(--approve);
+  --color-approve-soft: var(--approve-soft);
+  --color-negotiate: var(--negotiate);
+  --color-negotiate-soft: var(--negotiate-soft);
+  --color-escalate: var(--escalate);
+  --color-escalate-soft: var(--escalate-soft);
+  --color-critical: var(--escalate);
+  --color-critical-soft: var(--escalate-soft);
+  --color-major: var(--negotiate);
+  --color-major-soft: var(--negotiate-soft);
+  --color-minor: var(--minor);
+  --color-minor-soft: var(--minor-soft);
+  --color-highlight: var(--highlight);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --animate-pulse-ring: pulse-ring 1.6s ease-out 1;
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--brass) 70%, transparent); }
+    100% { box-shadow: 0 0 0 14px color-mix(in oklch, var(--brass) 0%, transparent); }
+  }
+}
+
+/* Light: warm parchment paper, ink text, deep ink-green primary, restrained brass. */
+:root {
+  --radius: 0.5rem;
+  --background: oklch(0.968 0.013 84);
+  --foreground: oklch(0.235 0.018 62);
+  --paper: oklch(0.987 0.008 86);
+  --card: oklch(0.987 0.008 86);
+  --card-foreground: oklch(0.235 0.018 62);
+  --popover: oklch(0.99 0.007 86);
+  --popover-foreground: oklch(0.235 0.018 62);
+  --primary: oklch(0.37 0.062 166);
+  --primary-foreground: oklch(0.975 0.012 86);
+  --secondary: oklch(0.935 0.017 82);
+  --secondary-foreground: oklch(0.28 0.02 62);
+  --muted: oklch(0.938 0.015 82);
+  --muted-foreground: oklch(0.45 0.022 64);
+  --accent: oklch(0.925 0.024 84);
+  --accent-foreground: oklch(0.26 0.02 62);
+  --destructive: oklch(0.5 0.15 33);
+  --border: oklch(0.872 0.02 80);
+  --input: oklch(0.85 0.022 80);
+  --ring: oklch(0.52 0.08 166);
+
+  --brass: oklch(0.6 0.105 76);
+  --brass-soft: oklch(0.93 0.038 84);
+  --brass-ink: oklch(0.47 0.085 70);
+  --highlight: oklch(0.9 0.075 88);
+  --approve: oklch(0.44 0.1 152);
+  --approve-soft: oklch(0.935 0.04 150);
+  --negotiate: oklch(0.49 0.105 64);
+  --negotiate-soft: oklch(0.94 0.05 80);
+  --escalate: oklch(0.49 0.145 33);
+  --escalate-soft: oklch(0.935 0.035 35);
+  --minor: oklch(0.46 0.04 245);
+  --minor-soft: oklch(0.935 0.014 245);
+
+  --chart-1: var(--primary);
+  --chart-2: var(--brass);
+  --chart-3: var(--approve);
+  --chart-4: var(--negotiate);
+  --chart-5: var(--escalate);
+  --sidebar: var(--paper);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+/* Dark: lamp-lit desk; warm near-black, parchment text, lifted green and brass. */
+.dark {
+  --background: oklch(0.175 0.011 70);
+  --foreground: oklch(0.93 0.016 84);
+  --paper: oklch(0.212 0.012 70);
+  --card: oklch(0.212 0.012 70);
+  --card-foreground: oklch(0.93 0.016 84);
+  --popover: oklch(0.235 0.013 70);
+  --popover-foreground: oklch(0.93 0.016 84);
+  --primary: oklch(0.76 0.09 166);
+  --primary-foreground: oklch(0.2 0.03 166);
+  --secondary: oklch(0.27 0.013 70);
+  --secondary-foreground: oklch(0.91 0.016 84);
+  --muted: oklch(0.255 0.012 70);
+  --muted-foreground: oklch(0.73 0.02 80);
+  --accent: oklch(0.285 0.018 76);
+  --accent-foreground: oklch(0.93 0.016 84);
+  --destructive: oklch(0.72 0.13 35);
+  --border: oklch(0.33 0.014 70);
+  --input: oklch(0.38 0.016 70);
+  --ring: oklch(0.7 0.09 166);
+
+  --brass: oklch(0.78 0.1 80);
+  --brass-soft: oklch(0.3 0.04 78);
+  --brass-ink: oklch(0.82 0.095 82);
+  --highlight: oklch(0.38 0.06 85);
+  --approve: oklch(0.78 0.12 152);
+  --approve-soft: oklch(0.28 0.045 152);
+  --negotiate: oklch(0.82 0.12 78);
+  --negotiate-soft: oklch(0.3 0.05 74);
+  --escalate: oklch(0.74 0.13 35);
+  --escalate-soft: oklch(0.3 0.06 33);
+  --minor: oklch(0.78 0.045 245);
+  --minor-soft: oklch(0.28 0.02 245);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans antialiased;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "kern", "liga";
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    font-optical-sizing: auto;
+  }
+  h1, h2, h3 {
+    @apply font-heading font-semibold;
+    letter-spacing: -0.022em;
+  }
+  /* Display-sized text set with the heading utility (route word, big metrics) gets the same tightening. */
+  .font-heading {
+    letter-spacing: -0.02em;
+  }
+  /* Metrics, costs and tables line up. */
+  .tabular,
+  table,
+  dl,
+  [data-slot="badge"] {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Arabic: Plex Sans Arabic with room for diacritics. Unlayered on purpose so it wins over leading-* utilities. */
+:lang(ar) {
+  font-family: "IBM Plex Sans Arabic", "DM Sans Variable", ui-sans-serif, sans-serif;
+  line-height: 1.95;
+  letter-spacing: 0;
+}
+h1:lang(ar),
+h2:lang(ar),
+h3:lang(ar) {
+  line-height: 1.6;
+}

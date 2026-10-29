@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/src/assets/favicon.svg" />
+    <!-- Preload the Latin DM Sans file the bundled CSS also references (same hashed URL), to shorten the swap. -->
+    <link rel="preload" href="./node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-opsz-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Mizan: an agent that owns contract review end to end and routes each contract to approve, negotiate or escalate." />
+    <title>Mizan · Contract review</title>
+    <script>
+      // Apply the saved or system theme before first paint (no flash). Storage can throw: ignore.
+      (function () {
+        var t = null;
+        try { t = localStorage.getItem("mizan-theme"); } catch (e) {}
+        var dark = t === "dark" || ((t === null || t === "system") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.toggle("dark", dark);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
