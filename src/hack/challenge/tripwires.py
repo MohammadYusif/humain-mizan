@@ -15,7 +15,7 @@ So a contract is approved only if the model AND the patterns agree. Patterns are
 import re
 from dataclasses import dataclass
 
-from .contracts import Contract, normalize
+from .contracts import Contract, normalize_with_map, original_excerpt
 
 _PARTY_US = r"(customer|client|licensee|buyer|purchaser)"
 _PARTY_THEM = r"(supplier|licensor|consultant|vendor|provider|contractor)"
@@ -178,7 +178,11 @@ def _long_renewal(text: str) -> bool:
 def scan(contract: Contract) -> list[Tripwire]:
     hits: list[Tripwire] = []
     for c in contract.clauses:
-        t = normalize(c.text)
+        t, idx = normalize_with_map(c.text)
+
+        def excerpt(m: re.Match[str], c=c, idx=idx) -> str:
+            return original_excerpt(c.text, idx, m.start(), m.end())
+
         for rule_id, critical, rx in PATTERNS:
             if rule_id in _NEEDS and not _NEEDS[rule_id].search(t):
                 continue
@@ -186,19 +190,19 @@ def scan(contract: Contract) -> list[Tripwire]:
                 continue
             m = next((m for m in rx.finditer(t) if not _negated(t, m.start())), None)
             if m:
-                hits.append(Tripwire(c.id, rule_id, critical, m.group(0)[:120]))
+                hits.append(Tripwire(c.id, rule_id, critical, excerpt(m)))
         for m in _MONTHS_CAP.finditer(t):  # liability cap measured in months, below 12
             if (n := _first_int(m)) is not None and n < 12:
-                hits.append(Tripwire(c.id, "LIAB-CAP", True, m.group(0)[-120:]))
+                hits.append(Tripwire(c.id, "LIAB-CAP", True, excerpt(m)))
                 break
         if _PAY_CONTEXT.search(t):
             for m in _PAY_DAYS.finditer(t):
                 if (n := _first_int(m)) is not None and n < 30:
-                    hits.append(Tripwire(c.id, "PAY-TERMS", False, m.group(0)[:120]))
+                    hits.append(Tripwire(c.id, "PAY-TERMS", False, excerpt(m)))
                     break
             for m in _PREPAY.finditer(t):
                 if (n := _first_int(m)) is not None and n > 50:
-                    hits.append(Tripwire(c.id, "PAY-TERMS", False, m.group(0)[:120]))
+                    hits.append(Tripwire(c.id, "PAY-TERMS", False, excerpt(m)))
                     break
     seen: set[tuple[str, str]] = set()
     out = []

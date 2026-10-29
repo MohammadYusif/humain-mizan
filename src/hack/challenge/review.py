@@ -120,18 +120,18 @@ def score(review: Review) -> dict:
     ]
     if mismatched:
         escalate.append(
-            f"finding(s) filed under a rule that does not match the clause type: {mismatched}"
+            f"finding(s) filed under a rule that does not match the clause type: {_ls(mismatched)}"
         )
     unclear = [cid for cid, ts in cmap.items() if UNCLEAR in ts]
     if unclear:
-        escalate.append(f"clause(s) the reviewer could not classify: {unclear}")
+        escalate.append(f"clause(s) the reviewer could not classify: {_ls(unclear)}")
     present = {t for ts in cmap.values() for t in ts}
     missing = [t for t in REQUIRED_TYPES if t not in present]
     if missing:
-        escalate.append(f"required clause(s) missing from the contract: {missing}")
+        escalate.append(f"required clause(s) missing from the contract: {_ls(missing)}")
     if review.injected:
         escalate.append(
-            f"clause(s) contain instructions aimed at an AI reviewer (untrusted): {review.injected}"
+            f"clause(s) contain instructions aimed at an AI reviewer (untrusted): {_ls(review.injected)}"
         )
     if any(
         f.severity == "major" and (f.confidence < MIN_CONFIDENCE or not f.redline.strip())
@@ -141,10 +141,12 @@ def score(review: Review) -> dict:
     trip = review.tripwire_status()
     critical_flags = [f"{t['rule_id']}@{t['clause_id']}" for t in trip if t["status"] == "critical"]
     if critical_flags:
-        escalate.append(f"deterministic red flag(s) that always need a lawyer: {critical_flags}")
+        escalate.append(
+            f"deterministic red flag(s) that always need a lawyer: {_ls(critical_flags)}"
+        )
     unresolved = [f"{t['rule_id']}@{t['clause_id']}" for t in trip if t["status"] == "unresolved"]
     if unresolved:
-        escalate.append(f"red flag(s) the reviewer neither recorded nor cleared: {unresolved}")
+        escalate.append(f"red flag(s) the reviewer neither recorded nor cleared: {_ls(unresolved)}")
 
     if escalate:
         route, reasons = "escalate", escalate
@@ -163,6 +165,11 @@ def score(review: Review) -> dict:
         "injected": review.injected,
         "tripwires": trip,
     }
+
+
+def _ls(items: list[str]) -> str:
+    """Human-readable list for reasons shown to lawyers (not a Python repr)."""
+    return ", ".join(items)
 
 
 def severity_of(rule_id: str) -> str:

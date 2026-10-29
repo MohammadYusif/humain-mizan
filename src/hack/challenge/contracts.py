@@ -196,6 +196,53 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().casefold()
 
 
+_CHARMAP = {
+    **{a: b for a, b in zip("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789", strict=True)},
+    "أ": "ا", "إ": "ا", "آ": "ا",
+    "ة": "ه", "ى": "ي", "ی": "ي", "ک": "ك",
+    "“": '"', "”": '"', "«": '"', "»": '"', "’": "'", "‘": "'",
+}  # fmt: skip
+
+
+def normalize_with_map(text: str) -> tuple[str, list[int]]:
+    """Same output as normalize(), plus, for each output char, its index in the original text,
+    so a match found in normalised text can be shown in the contract's own wording."""
+    out: list[str] = []
+    idx: list[int] = []
+    for i, ch in enumerate(text):
+        if _TASHKEEL.match(ch) or ch == "*":
+            continue
+        ch = _CHARMAP.get(ch, ch)
+        if ch.isspace():
+            if out and out[-1] != " ":
+                out.append(" ")
+                idx.append(i)
+            continue
+        for c in ch.casefold():
+            out.append(c)
+            idx.append(i)
+    if out and out[-1] == " ":
+        out.pop()
+        idx.pop()
+    return "".join(out), idx
+
+
+def original_excerpt(text: str, idx: list[int], start: int, end: int, limit: int = 120) -> str:
+    """The original words behind normalised span [start, end), widened to whole words."""
+    if not idx:
+        return ""
+    a, b = idx[min(start, len(idx) - 1)], idx[min(end, len(idx)) - 1] + 1
+    while a > 0 and not text[a - 1].isspace():
+        a -= 1
+    while b < len(text) and not text[b].isspace():
+        b += 1
+    s = text[a:b].strip()
+    if len(s) > limit:
+        cut = s[:limit].rsplit(" ", 1)[0]
+        s = cut + " …"
+    return s
+
+
 def quote_in_clause(quote: str, clause: Clause) -> bool:
     q = normalize(quote)
     return len(q) >= 8 and q in normalize(clause.text)
