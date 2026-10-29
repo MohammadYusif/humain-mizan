@@ -12,7 +12,7 @@ import { RunHistory } from "@/components/run-history"
 import { StatsStrip } from "@/components/stats-strip"
 import { TraceTab } from "@/components/trace-tab"
 import { Badge } from "@/components/ui/badge"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UploadContractDialog } from "@/components/upload-contract-dialog"
 import { useContract, useRunData } from "@/hooks/use-api"
@@ -210,11 +210,8 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
             ) : (
               <Empty className="border bg-card">
                 <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <ListTree aria-hidden />
-                  </EmptyMedia>
                   <EmptyTitle>No run selected</EmptyTitle>
-                  <EmptyDescription>Start a review or pick one from History to see every model and tool call.</EmptyDescription>
+                  <EmptyDescription>Open a run from History to see its model and tool calls.</EmptyDescription>
                 </EmptyHeader>
               </Empty>
             )}

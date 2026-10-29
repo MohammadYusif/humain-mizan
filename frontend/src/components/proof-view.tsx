@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useResource } from "@/hooks/use-api"
@@ -121,28 +121,6 @@ function notSafeText(s: Safety) {
 
 // --- pieces ----------------------------------------------------------------------------------------
 
-function Metric({
-  label,
-  value,
-  hint,
-  tone,
-  className,
-}: {
-  label: string
-  value: ReactNode
-  hint?: ReactNode
-  tone?: string
-  className?: string
-}) {
-  return (
-    <div className={cn("flex min-w-0 flex-col gap-0.5 rounded-lg border bg-background/60 px-3 py-2.5", className)}>
-      <span className="text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">{label}</span>
-      <span className={cn("font-heading text-2xl leading-tight font-semibold tabular", tone)}>{value}</span>
-      {hint ? <span className="text-xs text-muted-foreground tabular">{hint}</span> : null}
-    </div>
-  )
-}
-
 function Regraded({ m }: { m: EvalModel }) {
   const from = m.summary.rescored_from
   if (!from) return null
@@ -185,23 +163,35 @@ function ModelCard({ m }: { m: EvalModel }) {
           <Regraded m={m} />
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-        <Metric
-          label="False auto-approve"
-          value={s.false_auto_approve}
-          hint={bad ? `${sf.approved} approved · ${sf.unrouted} unrouted` : "of the risky contracts"}
-          tone={bad ? "text-escalate" : "text-approve"}
-          className={bad ? "border-escalate/40 bg-escalate-soft" : "border-approve/30 bg-approve-soft/60"}
-        />
-        <Metric label="Pass rate" value={percent(s.pass_rate)} hint={s.passed != null ? `${s.passed} of ${s.cases}` : undefined} />
-        <Metric label="Route accuracy" value={percent(s.route_accuracy)} />
-        <Metric label="Finding recall" value={percent(s.recall)} hint={`precision ${percent(s.precision)}`} />
-        <Metric label="Latency p50" value={seconds(s.latency_p50_s)} hint={`p95 ${seconds(s.latency_p95_s)}`} />
-        <Metric
-          label="Cost per contract"
-          value={isLocal(m) ? <span className="text-base">local, no API cost</span> : usd(s.cases ? s.cost_usd / s.cases : null)}
-          hint={isLocal(m) ? "runs on your own hardware" : `${usd(s.cost_usd)} for the suite`}
-        />
+      <CardContent className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm text-muted-foreground">False auto-approve</span>
+          <span className={cn("font-heading text-4xl leading-none font-semibold tabular", bad ? "text-escalate" : "text-approve")}>
+            {s.false_auto_approve}
+          </span>
+          <span className="text-xs text-muted-foreground tabular">
+            {bad ? `${sf.approved} approved, ${sf.unrouted} unrouted` : "risky contracts approved or unrouted"}
+          </span>
+        </div>
+        <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 text-sm sm:border-s sm:ps-5">
+          <dt className="text-muted-foreground">Pass rate</dt>
+          <dd className="text-end tabular">
+            {percent(s.pass_rate)}
+            {s.passed != null ? <span className="text-muted-foreground"> ({s.passed}/{s.cases})</span> : null}
+          </dd>
+          <dt className="text-muted-foreground">Route accuracy</dt>
+          <dd className="text-end tabular">{percent(s.route_accuracy)}</dd>
+          <dt className="text-muted-foreground">Finding recall / precision</dt>
+          <dd className="text-end tabular">
+            {percent(s.recall)} / {percent(s.precision)}
+          </dd>
+          <dt className="text-muted-foreground">Latency p50 / p95</dt>
+          <dd className="text-end tabular">
+            {seconds(s.latency_p50_s)} / {seconds(s.latency_p95_s)}
+          </dd>
+          <dt className="text-muted-foreground">Cost per contract</dt>
+          <dd className="text-end tabular">{isLocal(m) ? "local, no API cost" : usd(s.cases ? s.cost_usd / s.cases : null)}</dd>
+        </dl>
       </CardContent>
     </Card>
   )
@@ -215,7 +205,7 @@ function Headline({ models }: { models: EvalModel[] }) {
   const current = lead.variant === null
   return (
     <Card className="gap-6 p-6 sm:p-8">
-      <span className="flex items-center gap-2 text-xs font-medium tracking-[0.14em] text-brass-ink uppercase">
+      <span className="flex items-center gap-2 text-xs font-medium text-brass-ink">
         <ShieldCheck className="size-4" aria-hidden />
         {current ? "The configuration the app runs today" : "Measured on saved eval runs"}
       </span>
@@ -323,11 +313,11 @@ function SovereignNote({ variants, heldOut }: { variants: EvalModel[]; heldOut: 
         })}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold tracking-wide text-approve uppercase">What you gain</span>
+            <span className="text-xs font-semibold text-approve">What you gain</span>
             <p>Contract text never leaves the machine, and there is no API cost per contract.</p>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-semibold tracking-wide text-escalate uppercase">What it costs</span>
+            <span className="text-xs font-semibold text-escalate">What it costs</span>
             <p>
               On the main suite ({variantText(m)}), it found {percent(s.recall)} of the labelled issues. Of the {sf.risky} contracts that needed negotiation or a lawyer, it approved {sf.approved} and left{" "}
               {sf.unrouted} unrouted, with a median of {seconds(s.latency_p50_s)} per contract. The routing code blocks the
@@ -481,7 +471,7 @@ function CaseMatrix({
               <span className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate font-mono text-[0.8rem] font-medium">{id}</span>
                 <span className="text-xs text-muted-foreground">expected</span>
-                {expected ? <RouteBadge route={expected} /> : "—"}
+                {expected ? <RouteBadge route={expected} /> : "–"}
               </span>
               {models.map((m) => (
                 <span key={keyOf(m)} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
@@ -521,10 +511,10 @@ function CaseMatrix({
                   <TableCell className="ps-4">
                     <span className="font-mono text-[0.8rem] font-medium">{id}</span>
                     {langs ? (
-                      <span className="ms-2 text-[0.7rem] text-muted-foreground uppercase">{langs.join(" + ")}</span>
+                      <span className="ms-2 text-[0.7rem] text-muted-foreground">{langs.map((l) => l.toUpperCase()).join(" + ")}</span>
                     ) : null}
                   </TableCell>
-                  <TableCell>{expected ? <RouteBadge route={expected} /> : "—"}</TableCell>
+                  <TableCell>{expected ? <RouteBadge route={expected} /> : "–"}</TableCell>
                   {models.map((m) => (
                     <TableCell key={keyOf(m)} className="pe-4">
                       <CaseResult m={m} id={id} />
@@ -603,7 +593,7 @@ function HeldOut({ models, contracts }: { models: EvalModel[]; contracts: Contra
                 <p key={`${keyOf(m)}-${c.id}`}>
                   The {m.variant}
                   {m.variant?.includes(",") ? "," : ""} missed <span className="font-mono">{c.id}</span>: routed{" "}
-                  {c.got_route ?? "nowhere"} instead of {c.expected_route ?? "—"}
+                  {c.got_route ?? "nowhere"} instead of {c.expected_route ?? "–"}
                   {c.got_route !== "approve" ? ", never approved" : ""}.
                 </p>
               ))}
@@ -633,8 +623,8 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
       </Empty>
     ) : (
       <div className="flex flex-col gap-5">
-        <Skeleton className="h-56 w-full rounded-xl" />
-        <Skeleton className="h-72 w-full rounded-xl" />
+        <Skeleton className="h-56 w-full rounded-lg" />
+        <Skeleton className="h-72 w-full rounded-lg" />
       </div>
     )
   }
@@ -643,9 +633,6 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
     return (
       <Empty className="border bg-card py-16">
         <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <FlaskConical aria-hidden />
-          </EmptyMedia>
           <EmptyTitle>No saved eval runs yet</EmptyTitle>
           <EmptyDescription>
             Run <code className="font-mono">uv run hack eval</code> to measure the agent on the contract suite.
@@ -714,9 +701,9 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
           </CardContent>
         </Card>
 
-        <Collapsible className="h-fit rounded-xl bg-card ring-1 ring-foreground/10">
+        <Collapsible className="h-fit rounded-lg bg-card ring-1 ring-foreground/10">
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" className="group h-auto w-full justify-start gap-2 rounded-xl px-4 py-4 text-start">
+            <Button variant="ghost" className="group h-auto w-full justify-start gap-2 rounded-lg px-4 py-4 text-start">
               <FlaskConical aria-hidden />
               <span className="font-heading text-lg font-semibold">How we measure</span>
               <ChevronDown

@@ -1,16 +1,13 @@
-import { Clock, Coins, Cpu, Hash, Repeat } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { ReviewView, TraceEvent } from "@/lib/api"
 import { seconds, tokens, usd } from "@/lib/format"
 
-function Stat({ icon: Icon, label, value, hint }: { icon: LucideIcon; label: string; value: string; hint?: string }) {
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   const body = (
     <div className="flex min-w-0 flex-col gap-0.5 px-4 py-3" tabIndex={hint ? 0 : undefined}>
-      <dt className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
-        <Icon className="size-3.5" aria-hidden />
+      <dt className="flex items-center gap-1.5 text-[0.7rem] font-medium text-muted-foreground">
         {label}
       </dt>
       <dd className="truncate font-mono text-sm font-medium tabular">{value}</dd>
@@ -28,7 +25,7 @@ function Stat({ icon: Icon, label, value, hint }: { icon: LucideIcon; label: str
 /** Run stats from the run_end event; while running, live totals summed from the trace so far. */
 export function StatsStrip({ review, trace }: { review: ReviewView | null; trace: TraceEvent[] | null }) {
   if (!review || !trace) {
-    return <Skeleton className="h-[4.25rem] w-full rounded-xl" />
+    return <Skeleton className="h-[4.25rem] w-full rounded-lg" />
   }
   const start = trace.find((e) => e.type === "run_start")
   const calls = trace.filter((e) => e.type === "llm_call")
@@ -46,22 +43,20 @@ export function StatsStrip({ review, trace }: { review: ReviewView | null; trace
   const live = !s
 
   return (
-    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-3 lg:grid-cols-5 [&>*]:bg-card max-lg:[&>*:last-child]:col-span-2">
-      <Stat icon={Cpu} label="Model" value={start?.type === "run_start" ? start.model : "—"} />
-      <Stat icon={Repeat} label={live ? "Turns so far" : "Turns"} value={String(s?.turns ?? calls.length)} />
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3 lg:grid-cols-5 [&>*]:bg-card max-lg:[&>*:last-child]:col-span-2">
+      <Stat label="Model" value={start?.type === "run_start" ? start.model : "–"} />
+      <Stat label={live ? "Turns so far" : "Turns"} value={String(s?.turns ?? calls.length)} />
       <Stat
-        icon={Hash}
         label="Tokens"
         value={`${tokens(inTotal)} / ${tokens(usage.output_tokens)}`}
         hint={`In ${inTotal.toLocaleString("en-US")} (cache read ${(usage.cache_read_tokens ?? 0).toLocaleString("en-US")}, cache write ${(usage.cache_write_tokens ?? 0).toLocaleString("en-US")}) · out ${usage.output_tokens.toLocaleString("en-US")}`}
       />
       <Stat
-        icon={Coins}
         label="Cost"
         value={s?.priced === false ? "unpriced" : usd(cost)}
         hint={s?.priced === false ? "This provider/model has no price configured" : undefined}
       />
-      <Stat icon={Clock} label={live ? "Elapsed" : "Latency"} value={seconds(latency)} />
+      <Stat label={live ? "Elapsed" : "Latency"} value={seconds(latency)} />
     </dl>
   )
 }

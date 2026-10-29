@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -289,7 +289,7 @@ function InboxCard({
         <div className="flex min-w-0 flex-col gap-4">
           {item.reasons.length ? (
             <div className="flex flex-col gap-1.5">
-              <h3 className="font-sans text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              <h3 className="font-sans text-xs font-semibold text-muted-foreground">
                 Why the agent stopped
               </h3>
               <ul className="flex flex-col gap-1">
@@ -305,7 +305,7 @@ function InboxCard({
           <RedFlagSummary flags={item.tripwires ?? []} />
           {findings.length ? (
             <div className="flex flex-col gap-2">
-              <h3 className="font-sans text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              <h3 className="font-sans text-xs font-semibold text-muted-foreground">
                 Key findings {item.findings.length > 3 ? `(3 of ${item.findings.length})` : null}
               </h3>
               <ul className="flex flex-col gap-2">
@@ -319,7 +319,7 @@ function InboxCard({
                     <span
                       dir="auto"
                       lang={langOf(f.quote)}
-                      className="line-clamp-2 border-s-2 border-brass ps-2 font-heading text-[0.95rem] text-foreground/90"
+                      className="line-clamp-2 font-heading text-[0.95rem] text-foreground/90"
                     >
                       {f.quote}
                     </span>
@@ -333,7 +333,7 @@ function InboxCard({
         </div>
 
         <div className="flex min-w-0 flex-col gap-1.5">
-          <h3 className="font-sans text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+          <h3 className="font-sans text-xs font-semibold text-muted-foreground">
             {unrouted
               ? "The agent did not finish"
               : legal
@@ -397,8 +397,7 @@ export function InboxView({
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl leading-tight font-semibold">Legal inbox</h1>
         <p className="max-w-2xl text-[0.95rem] text-muted-foreground">
-          Only what the agent may not decide alone: escalations that need a lawyer, and drafted messages waiting for
-          approval to send. Everything else it finished on its own.
+          Escalations for a lawyer and drafted messages that need approval before they are sent.
         </p>
         {visible && visible.length > 0 ? (
           <div className="flex flex-wrap gap-2 pt-1">
@@ -424,26 +423,22 @@ export function InboxView({
           </Empty>
         ) : (
           <div className="flex flex-col gap-4">
-            <Skeleton className="h-72 w-full rounded-xl" />
-            <Skeleton className="h-72 w-full rounded-xl" />
+            <Skeleton className="h-72 w-full rounded-lg" />
+            <Skeleton className="h-72 w-full rounded-lg" />
           </div>
         )
       ) : visible.length === 0 ? (
-        <Empty className="border border-approve/30 bg-approve-soft/40 py-16">
-          <EmptyHeader className="max-w-md">
-            <EmptyMedia>
-              <span className="grid size-16 place-items-center rounded-full bg-approve-soft text-approve ring-1 ring-approve/30">
-                <CircleCheck className="size-8" strokeWidth={1.75} aria-hidden />
-              </span>
-            </EmptyMedia>
-            <EmptyTitle className="font-heading text-2xl font-semibold">Nothing needs a human right now</EmptyTitle>
-            <EmptyDescription className="text-[0.95rem]">
-              {finished > 0
-                ? `The agent finished ${finished} review${finished === 1 ? "" : "s"} recently that needed nobody.`
-                : "When the agent escalates a contract or drafts a message that needs approval, it appears here."}
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+        <div className="flex flex-col gap-1 rounded-lg border bg-card px-6 py-8">
+          <p className="flex items-center gap-2 text-lg font-semibold">
+            <CircleCheck className="size-5 text-approve" aria-hidden />
+            Nothing is waiting for a decision.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {finished > 0
+              ? `${finished} recent review${finished === 1 ? "" : "s"} finished without needing anyone.`
+              : "Escalations and drafts that need approval appear here."}
+          </p>
+        </div>
       ) : (
         <ul className="flex flex-col gap-5">
           {visible.map((it) => (

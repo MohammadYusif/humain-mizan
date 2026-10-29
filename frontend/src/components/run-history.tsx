@@ -1,11 +1,11 @@
-import { CircleX, History, LoaderCircle, UserRound } from "lucide-react"
+import { CircleX, LoaderCircle, UserRound } from "lucide-react"
 import { cn } from "cn"
 import { useEffect, useId, useState } from "react"
 
 import { RouteBadge } from "@/components/tone-badges"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { RunSummary } from "@/lib/api"
@@ -78,11 +78,8 @@ export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
         ) : reviews.length === 0 ? (
           <Empty className="mx-4 border">
             <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <History aria-hidden />
-              </EmptyMedia>
               <EmptyTitle>No reviews yet</EmptyTitle>
-              <EmptyDescription>Runs appear here as soon as the agent writes its first event.</EmptyDescription>
+              <EmptyDescription>Start a review above.</EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (

@@ -9,7 +9,7 @@ function Amendments({ items }: { items?: string[] }) {
   if (!items?.length) return null
   return (
     <div className="mt-2 flex flex-col gap-1 rounded-md border border-brass/40 bg-brass-soft/60 p-2 text-foreground">
-      <span className="text-[0.65rem] font-semibold tracking-wide text-brass-ink uppercase">Accepted by legal</span>
+      <span className="text-[0.65rem] font-semibold text-brass-ink">Accepted by legal</span>
       {items.map((t) => (
         <p key={t} dir="auto" lang={langOf(t)} className="text-[0.8rem]">
           {t}
@@ -73,7 +73,7 @@ export function PlaybookTab({ rules }: { rules: PlaybookRule[] | null }) {
 
       <ul className="flex flex-col gap-3 md:hidden">
         {rules.map((r) => (
-          <li key={r.id} className="rounded-xl border bg-card p-4">
+          <li key={r.id} className="rounded-lg border bg-card p-4">
             <div className="flex items-center gap-2">
               <span className="font-mono text-[0.8rem] font-medium">{r.id}</span>
               <SeverityBadge severity={r.severity} className="ms-auto" />
@@ -81,18 +81,18 @@ export function PlaybookTab({ rules }: { rules: PlaybookRule[] | null }) {
             <p className="mt-0.5 text-xs text-muted-foreground">{r.clause_type}</p>
             <dl className="mt-3 flex flex-col gap-2.5 text-[0.8rem] leading-relaxed">
               <div>
-                <dt className="text-[0.7rem] font-semibold tracking-wide text-muted-foreground uppercase">Required</dt>
+                <dt className="text-[0.7rem] font-semibold text-muted-foreground">Required</dt>
                 <dd>{r.required}</dd>
               </div>
               <div>
-                <dt className="text-[0.7rem] font-semibold tracking-wide text-muted-foreground uppercase">Fallback</dt>
+                <dt className="text-[0.7rem] font-semibold text-muted-foreground">Fallback</dt>
                 <dd>
                   {r.fallback}
                   <Amendments items={r.accepted_by_legal} />
                 </dd>
               </div>
               <div>
-                <dt className="text-[0.7rem] font-semibold tracking-wide text-muted-foreground uppercase">Hint</dt>
+                <dt className="text-[0.7rem] font-semibold text-muted-foreground">Hint</dt>
                 <dd className="text-muted-foreground">{r.hint}</dd>
               </div>
             </dl>

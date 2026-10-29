@@ -21,7 +21,7 @@ export function RunHeader({ runId, phase, review, contract, task }: Props) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span className="tracking-[0.14em] uppercase">Review</span>
+        <span className="">Review</span>
         <span aria-hidden>·</span>
         <span className="font-mono break-all">{runId}</span>
         {review?.replay_of ? (

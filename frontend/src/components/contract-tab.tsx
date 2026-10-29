@@ -1,11 +1,11 @@
-import { FileText, Flag, ShieldAlert } from "lucide-react"
+import { Flag, ShieldAlert } from "lucide-react"
 import { cn } from "cn"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 
 import { LangChips } from "@/components/new-review-panel"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { Contract, Finding, Lang, Severity, Tripwire } from "@/lib/api"
 import { contractTitle, langOf, plural, SEVERITY_ORDER } from "@/lib/format"
@@ -80,9 +80,6 @@ export function ContractTab({ contract, loading, error, findings, clauseMap, foc
     return (
       <Empty className="border bg-card">
         <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <FileText aria-hidden />
-          </EmptyMedia>
           <EmptyTitle>Contract unavailable</EmptyTitle>
           <EmptyDescription>{error}</EmptyDescription>
         </EmptyHeader>
@@ -154,15 +151,22 @@ export function ContractTab({ contract, loading, error, findings, clauseMap, foc
                 else refs.current.delete(cl.id)
               }}
               className={cn(
-                "scroll-mt-28 border-s-4 border-s-transparent px-5 py-5 outline-none sm:px-8",
-                worst && SEVERITY_TONE[worst].borderStart,
-                (isInjected || criticalFlag) && !worst && "border-s-escalate",
-                !worst && !isInjected && !criticalFlag && flags.some((t) => t.status === "unresolved") && "border-s-negotiate",
+                "scroll-mt-28 px-5 py-5 outline-none transition-colors duration-700 sm:px-8",
                 worst && "bg-[color-mix(in_oklch,var(--highlight)_22%,transparent)]",
-                pulsing?.id === cl.id && "relative z-10 animate-pulse-ring"
+                // Jumping here from a finding: a brief tint marks the target clause (no animation loop).
+                pulsing?.id === cl.id && "bg-[color-mix(in_oklch,var(--brass)_18%,transparent)]"
               )}
             >
               <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                {worst || criticalFlag || flags.some((t) => t.status === "unresolved") ? (
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "size-2 rounded-[2px]",
+                      worst ? SEVERITY_TONE[worst].dot : criticalFlag ? "bg-escalate" : "bg-negotiate"
+                    )}
+                  />
+                ) : null}
                 <span className="me-1 font-mono text-xs font-medium text-muted-foreground">{cl.id}</span>
                 {types
                   .filter((t) => t !== "Other")

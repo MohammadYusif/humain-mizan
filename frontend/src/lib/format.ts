@@ -10,7 +10,7 @@ export function langOf(text: string): Lang {
 }
 
 export function usd(v: number | null | undefined): string {
-  if (v == null) return "—"
+  if (v == null) return "–"
   if (v === 0) return "$0.00"
   return v < 0.01 ? `$${v.toFixed(4)}` : `$${v.toFixed(3)}`
 }
@@ -22,14 +22,14 @@ export function cost(v: number | null | undefined, priced: boolean | null | unde
 }
 
 export function seconds(v: number | null | undefined): string {
-  if (v == null) return "—"
+  if (v == null) return "–"
   if (v < 60) return `${v.toFixed(1)} s`
   const m = Math.floor(v / 60)
   return `${m} m ${Math.round(v - m * 60)} s`
 }
 
 export function tokens(v: number | null | undefined): string {
-  if (v == null) return "—"
+  if (v == null) return "–"
   return v >= 10_000 ? `${(v / 1000).toFixed(1)}k` : v.toLocaleString("en-US")
 }
 
@@ -112,5 +112,5 @@ export function plural(n: number, word: string): string {
 }
 
 export function percent(v: number | null | undefined): string {
-  return v == null ? "—" : `${Math.round(v * 1000) / 10}%`
+  return v == null ? "–" : `${Math.round(v * 1000) / 10}%`
 }

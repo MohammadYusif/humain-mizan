@@ -29,7 +29,7 @@ function HealthBadge({ health, error }: { health: Health | null; error: string |
   if (!health) {
     return (
       <Badge variant="outline" className="gap-1.5 rounded-md text-muted-foreground">
-        <span aria-hidden className="size-1.5 animate-pulse rounded-full bg-muted-foreground" />
+        <span aria-hidden className="size-1.5 rounded-full bg-muted-foreground" />
         Connecting
       </Badge>
     )
@@ -102,7 +102,7 @@ export function AreaNav({ inboxCount }: { inboxCount: number | null }) {
         {inboxCount ? (
           <Badge
             aria-label={`${inboxCount} waiting`}
-            className="h-4.5 min-w-4.5 rounded-full bg-escalate px-1.5 font-mono text-[0.65rem] text-paper tabular"
+            className="h-4.5 min-w-4.5 rounded-sm bg-escalate px-1 font-mono text-[0.65rem] text-paper tabular"
           >
             {inboxCount}
           </Badge>
@@ -133,7 +133,7 @@ export function AppHeader({
   onDemo?: () => void
 }) {
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur-md">
+    <header className="sticky top-0 z-30 border-b bg-background">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-3 gap-y-2.5 px-4 py-3 sm:px-6 lg:h-16 lg:flex-nowrap lg:py-0">
         <a
           href="#review"
@@ -150,7 +150,7 @@ export function AppHeader({
             </span>
           </div>
           <p className="mt-1 hidden truncate text-xs text-muted-foreground xl:block">
-            Autonomous contract review for in-house legal
+            Contract review for in-house legal
           </p>
         </div>
         <nav className="order-last basis-full lg:order-none lg:ms-4 lg:basis-auto">{nav}</nav>

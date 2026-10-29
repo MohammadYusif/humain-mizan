@@ -1,4 +1,4 @@
-import { ArrowUpRight, Bot, Check, ChevronDown, Flag, ShieldAlert, TriangleAlert, Undo2 } from "lucide-react"
+import { ArrowUpRight, Check, FileSearch, ChevronDown, Flag, ShieldAlert, TriangleAlert, Undo2 } from "lucide-react"
 import { cn } from "cn"
 
 import { Badge } from "@/components/ui/badge"
@@ -83,7 +83,7 @@ function FlagRow({
           <p dir="auto" lang={langOf(cleared.reason)}>
             {cleared.reason}
           </p>
-          <blockquote dir="auto" lang={langOf(cleared.quote)} className="border-s-2 border-brass ps-3 font-heading text-[0.95rem]">
+          <blockquote dir="auto" lang={langOf(cleared.quote)} className="font-heading text-[0.95rem] text-foreground">
             {cleared.quote}
           </blockquote>
           <p className="text-xs text-muted-foreground">Kept on record for audit; the quote was checked to be verbatim.</p>
@@ -104,7 +104,7 @@ export function RedFlagSummary({ flags }: { flags: Tripwire[] }) {
   const sorted = [...flags].sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status))
   return (
     <div className="flex flex-col gap-1.5">
-      <h3 className="font-sans text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+      <h3 className="font-sans text-xs font-semibold text-muted-foreground">
         Red flags · pattern checks
       </h3>
       <ul className="flex flex-wrap gap-1.5">
@@ -141,8 +141,8 @@ export function TwoDetectors({ review, onJump }: { review: ReviewView; onJump: (
       </div>
       <div className="grid gap-px bg-border sm:grid-cols-2">
         <div className="flex flex-col gap-1 bg-card px-4 py-3 sm:px-5">
-          <span className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
-            <Bot className="size-3.5" aria-hidden /> Model findings
+          <span className="flex items-center gap-1.5 text-[0.7rem] font-medium text-muted-foreground">
+            <FileSearch className="size-3.5" aria-hidden /> Model findings
           </span>
           <span className="font-heading text-3xl leading-tight font-semibold tabular">{review.findings.length}</span>
           <span className="flex flex-wrap gap-x-3 text-xs text-muted-foreground tabular">
@@ -157,10 +157,10 @@ export function TwoDetectors({ review, onJump }: { review: ReviewView; onJump: (
           </span>
         </div>
         <div className="flex flex-col gap-1 bg-card px-4 py-3 sm:px-5">
-          <span className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
+          <span className="flex items-center gap-1.5 text-[0.7rem] font-medium text-muted-foreground">
             <Flag className="size-3.5" aria-hidden /> Red flags · pattern checks, no model
           </span>
-          <span className="font-heading text-3xl leading-tight font-semibold tabular">{scored ? flags.length : "—"}</span>
+          <span className="font-heading text-3xl leading-tight font-semibold tabular">{scored ? flags.length : "–"}</span>
           <span className="flex flex-wrap gap-x-3 text-xs text-muted-foreground tabular">
             {scored
               ? ORDER.map((s) => (

@@ -189,14 +189,12 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
                   onDragLeave={() => setDragging(false)}
                   onDrop={onDrop}
                   className={cn(
-                    "flex cursor-pointer flex-col items-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-colors",
+                    "flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-8 text-center transition-colors",
                     "has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
                     dragging ? "border-primary bg-primary/5" : "border-border bg-background/60 hover:bg-muted/60"
                   )}
                 >
-                  <span className="grid size-11 place-items-center rounded-full bg-brass-soft text-brass-ink">
-                    <Upload className="size-5" aria-hidden />
-                  </span>
+                  <Upload className="size-5 text-muted-foreground" aria-hidden />
                   <span className="text-sm font-semibold">
                     Drop a contract here, or <span className="text-primary underline underline-offset-4">browse</span>
                   </span>

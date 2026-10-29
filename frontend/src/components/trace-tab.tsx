@@ -1,4 +1,4 @@
-import { Bot, CircleAlert, Flag, FlagTriangleRight, ListTree, MessageSquareDashed, Wrench } from "lucide-react"
+import { CircleAlert, MessageSquare, Flag, FlagTriangleRight, MessageSquareDashed, Wrench } from "lucide-react"
 import { cn } from "cn"
 import { useState } from "react"
 
@@ -6,7 +6,7 @@ import { RichText } from "@/components/rich-text"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { TraceEvent, Usage } from "@/lib/api"
 import { langOf, prettyPayload, seconds, tokens, usd } from "@/lib/format"
@@ -15,7 +15,7 @@ function Payload({ label, value, error }: { label: string; value: unknown; error
   const text = prettyPayload(value)
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <span className={cn("text-[0.7rem] font-semibold tracking-wide uppercase", error ? "text-escalate" : "text-muted-foreground")}>
+      <span className={cn("text-[0.7rem] font-semibold", error ? "text-escalate" : "text-muted-foreground")}>
         {label}
       </span>
       <pre
@@ -25,7 +25,7 @@ function Payload({ label, value, error }: { label: string; value: unknown; error
           error && "border-escalate/40 bg-escalate-soft"
         )}
       >
-        {text || "—"}
+        {text || "–"}
       </pre>
     </div>
   )
@@ -49,12 +49,12 @@ function ClearTripwire({ input, output, error }: { input: unknown; output: strin
         </dd>
         <dt className="text-muted-foreground">Reason</dt>
         <dd dir="auto" lang={langOf(reason)}>
-          {reason || "—"}
+          {reason || "–"}
         </dd>
         <dt className="text-muted-foreground">Evidence</dt>
         <dd>
-          <blockquote dir="auto" lang={langOf(quote)} className="border-s-2 border-brass ps-3 font-heading text-[0.95rem]">
-            {quote || "—"}
+          <blockquote dir="auto" lang={langOf(quote)} className="font-heading text-[0.95rem] text-foreground">
+            {quote || "–"}
           </blockquote>
         </dd>
       </dl>
@@ -87,7 +87,7 @@ function eventMeta(e: TraceEvent) {
     case "run_start":
       return { icon: Flag, title: "Run started", tone: "text-primary" }
     case "llm_call":
-      return { icon: Bot, title: `Turn ${e.turn} · model call`, tone: "text-primary" }
+      return { icon: MessageSquare, title: `Turn ${e.turn} · model call`, tone: "text-primary" }
     case "tool_call":
       return { icon: Wrench, title: e.name, tone: e.is_error ? "text-escalate" : "text-brass-ink" }
     case "run_end":
@@ -171,7 +171,7 @@ function Detail({ e }: { e: TraceEvent }) {
           <dt className="text-muted-foreground">Task</dt>
           <dd dir="auto">{e.task}</dd>
           <dt className="text-muted-foreground">Provider</dt>
-          <dd className="font-mono text-[0.8rem]">{e.provider ?? "—"}</dd>
+          <dd className="font-mono text-[0.8rem]">{e.provider ?? "–"}</dd>
           <dt className="text-muted-foreground">Model</dt>
           <dd className="font-mono text-[0.8rem]">{e.model}</dd>
         </dl>
@@ -242,11 +242,8 @@ export function TraceTab({ trace, running }: { trace: TraceEvent[] | null; runni
     return (
       <Empty className="border bg-card">
         <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <ListTree aria-hidden />
-          </EmptyMedia>
           <EmptyTitle>No events yet</EmptyTitle>
-          <EmptyDescription>The trace fills in as the agent calls the model and its tools.</EmptyDescription>
+          <EmptyDescription>Events appear as the agent works.</EmptyDescription>
         </EmptyHeader>
       </Empty>
     )
@@ -331,7 +328,7 @@ export function TraceTab({ trace, running }: { trace: TraceEvent[] | null; runni
         {running ? (
           <div className="relative flex items-center gap-3 rounded-lg border border-dashed px-2.5 py-2.5 text-sm text-muted-foreground sm:px-3">
             <span className="relative z-10 grid size-6 place-items-center rounded-full border bg-background">
-              <span className="size-2 animate-pulse rounded-full bg-brass" />
+              <span className="size-2 rounded-full bg-brass" />
             </span>
             Live · waiting for the next event…
           </div>

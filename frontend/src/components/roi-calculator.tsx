@@ -1,6 +1,6 @@
 import { Calculator, ChevronDown } from "lucide-react"
 import { cn } from "cn"
-import { useId, useState, type ReactNode } from "react"
+import { useId, useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -35,7 +35,7 @@ function Field({ label, hint, value, onChange, min, max, step, unit, tag }: Fiel
   const id = useId()
   const set = (v: number) => onChange(Number.isFinite(v) ? Math.min(max, Math.max(min, v)) : min)
   return (
-    <div className="flex flex-col gap-2 rounded-lg border bg-background/60 p-3">
+    <div className="flex flex-col gap-2 border-b pb-3 last:border-b-0 last:pb-0">
       <div className="flex flex-wrap items-center gap-2">
         <Label htmlFor={id} className="text-sm font-medium">
           {label}
@@ -73,18 +73,6 @@ function Field({ label, hint, value, onChange, min, max, step, unit, tag }: Fiel
         </div>
       </div>
       <p className="text-xs text-muted-foreground">{hint}</p>
-    </div>
-  )
-}
-
-function Out({ label, value, sub, strong }: { label: string; value: ReactNode; sub?: ReactNode; strong?: boolean }) {
-  return (
-    <div className={cn("flex min-w-0 flex-col gap-0.5 rounded-lg border px-3 py-2.5", strong ? "border-primary/30 bg-primary/5" : "bg-background/60")}>
-      <span className="text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">{label}</span>
-      <span className={cn("font-heading text-xl leading-tight font-semibold whitespace-nowrap tabular sm:text-2xl", strong && "text-primary")}>
-        {value}
-      </span>
-      {sub ? <span className="text-xs text-muted-foreground tabular">{sub}</span> : null}
     </div>
   )
 }
@@ -175,20 +163,21 @@ export function RoiCalculator({ model, name, local }: { model: EvalModel; name: 
         </div>
 
         <div className="flex flex-col gap-3">
-          <div className="grid grid-cols-2 gap-2.5">
-            <Out label="Hours saved" value={hours(savedH)} sub={`of ${hours(manualTotalMin / 60)} manual, per month`} strong />
-            <Out label="Saved" value={sar(savedSar)} sub="lawyer time, per month" strong />
-            <Out
-              label="Agent API cost"
-              value={local ? "local" : sar(apiSar)}
-              sub={local ? "no API cost (on-premise model)" : `per month, at ${SAR_PER_USD} SAR/USD`}
-            />
-            <Out
-              label="Payback"
-              value={apiSar > 0 ? `${Math.max(1, Math.round(minutesToCoverApi))} min` : "immediate"}
-              sub={apiSar > 0 ? "of saved lawyer time covers the month's API cost" : "no API cost to recover"}
-            />
+          <div className="flex flex-col gap-1">
+            <span className="text-sm text-muted-foreground">Estimated lawyer time saved per month</span>
+            <span className="font-heading text-4xl leading-none font-semibold text-primary tabular">{sar(savedSar)}</span>
+            <span className="text-sm text-muted-foreground tabular">
+              {hours(savedH)} of {hours(manualTotalMin / 60)} of manual review
+            </span>
           </div>
+          <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1.5 border-t pt-3 text-sm">
+            <dt className="text-muted-foreground">Agent API cost per month</dt>
+            <dd className="text-end tabular">{local ? "none (local model)" : sar(apiSar)}</dd>
+            <dt className="text-muted-foreground">Payback</dt>
+            <dd className="text-end tabular">
+              {apiSar > 0 ? `${Math.max(1, Math.round(minutesToCoverApi))} min of saved lawyer time` : "no API cost"}
+            </dd>
+          </dl>
           <p className="rounded-lg border border-dashed px-3 py-2 text-sm">
             Net of API cost: <span className="font-semibold text-primary tabular">{sar(net)}</span> per month
             {apiSar > 0 ? (
@@ -199,7 +188,7 @@ export function RoiCalculator({ model, name, local }: { model: EvalModel; name: 
             ) : null}
           </p>
           <div className="rounded-lg border bg-background/60 p-3 text-xs leading-relaxed">
-            <p className="mb-1.5 font-semibold tracking-wide text-muted-foreground uppercase">
+            <p className="mb-1.5 font-semibold text-muted-foreground">
               Measured on the eval ({name}, {cases} contracts)
             </p>
             <ul className="flex flex-col gap-1 tabular">

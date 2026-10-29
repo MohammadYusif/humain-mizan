@@ -10,7 +10,6 @@ import {
   ChevronDown,
   CircleDashed,
   ClipboardCopy,
-  FileSearch,
   Gavel,
   Info,
   LoaderCircle,
@@ -31,62 +30,24 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { exportUrl, type DecisionRecord, type Finding, type NeedsHuman, type ReviewView, type Route, type Severity, type WriteAction } from "@/lib/api"
+import { exportUrl, type DecisionRecord, type Finding, type NeedsHuman, type ReviewView, type Severity, type WriteAction } from "@/lib/api"
 import { byWorkflow, DECISION_LABEL, langOf, relativeTime, ROUTE_DESCRIPTION, ROUTE_LABEL, SEVERITY_ORDER } from "@/lib/format"
 import { go } from "@/lib/route"
-import { ROUTE_ICON, ROUTE_TONE, SEVERITY_TONE } from "@/lib/tones"
+import { ROUTE_TONE, SEVERITY_TONE } from "@/lib/tones"
 
-function RiskGauge({ score, route }: { score: number; route: Route }) {
-  const r = 44
-  const c = 2 * Math.PI * r
-  const v = Math.max(0, Math.min(100, score))
+function SeverityLine({ counts }: { counts: Record<Severity, number> }) {
   return (
-    <div className="relative size-32 shrink-0" role="img" aria-label={`Risk score ${v} out of 100`}>
-      <svg viewBox="0 0 100 100" className="size-full -rotate-90">
-        <circle cx="50" cy="50" r={r} fill="none" strokeWidth="7" className="stroke-muted" />
-        <circle
-          cx="50"
-          cy="50"
-          r={r}
-          fill="none"
-          strokeWidth="7"
-          strokeLinecap="round"
-          opacity={v === 0 ? 0 : 1}
-          strokeDasharray={`${(v / 100) * c} ${c}`}
-          className={cn("transition-[stroke-dasharray] duration-700", ROUTE_TONE[route].stroke)}
-        />
-      </svg>
-      <div className="absolute inset-0 grid place-content-center text-center">
-        <span className="font-heading text-4xl leading-none font-semibold tabular">{v}</span>
-        <span className="mt-1 text-[0.65rem] font-medium tracking-[0.14em] text-muted-foreground uppercase">risk / 100</span>
-      </div>
-    </div>
-  )
-}
-
-function SeverityCounts({ counts }: { counts: Record<Severity, number> }) {
-  return (
-    <dl className="grid grid-cols-3 gap-2">
+    <p className="flex flex-wrap gap-x-3 gap-y-1 text-sm tabular">
       {SEVERITY_ORDER.map((s) => (
-        <div key={s} className={cn("rounded-lg px-3 py-2", counts[s] > 0 ? SEVERITY_TONE[s].soft : "bg-muted/60")}>
-          <dt className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
-            <span aria-hidden className={cn("size-1.5 rounded-full", SEVERITY_TONE[s].dot)} />
-            {s}
-          </dt>
-          <dd
-            className={cn(
-              "font-heading text-2xl leading-tight font-semibold tabular",
-              counts[s] > 0 ? SEVERITY_TONE[s].text : "text-muted-foreground"
-            )}
-          >
-            {counts[s]}
-          </dd>
-        </div>
+        <span key={s} className={cn("inline-flex items-center gap-1.5", counts[s] ? SEVERITY_TONE[s].text : "text-muted-foreground")}>
+          <span aria-hidden className={cn("size-2 rounded-[2px]", SEVERITY_TONE[s].dot, !counts[s] && "opacity-40")} />
+          <span className="font-semibold">{counts[s]}</span> {s}
+        </span>
       ))}
-    </dl>
+    </p>
   )
 }
 
@@ -122,7 +83,7 @@ function RouteCard({ review }: { review: ReviewView }) {
       <Card className="p-0">
         <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
           <div className="flex min-w-0 flex-1 flex-col gap-3">
-            <span className="inline-flex items-center gap-2 text-xs font-medium tracking-[0.14em] text-brass-ink uppercase">
+            <span className="inline-flex items-center gap-2 text-xs font-medium text-brass-ink">
               <LoaderCircle className="size-3.5 animate-spin" aria-hidden /> Reviewing
             </span>
             <p className="font-heading text-2xl font-semibold">Reading clauses and recording findings…</p>
@@ -132,28 +93,19 @@ function RouteCard({ review }: { review: ReviewView }) {
                 : "The route appears once the scoring code runs."}
             </p>
           </div>
-          <Skeleton className="size-32 shrink-0 rounded-full" />
+          <Skeleton className="h-16 w-28 shrink-0" />
         </div>
       </Card>
     )
   }
 
-  const Icon = ROUTE_ICON[route]
   const tone = ROUTE_TONE[route]
   return (
-    <Card className="relative p-0">
-      <div aria-hidden className={cn("absolute inset-y-0 start-0 w-1.5", tone.bar)} />
-      <div className="grid gap-6 p-5 ps-6 sm:p-6 sm:ps-8 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+    <Card className="p-0">
+      <div className="grid gap-6 p-5 sm:p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
         <div className="flex min-w-0 flex-col gap-3">
-          <span className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-            Route · computed by the scoring code
-          </span>
-          <div className="flex items-center gap-3">
-            <span className={cn("grid size-11 shrink-0 place-items-center rounded-full", tone.soft, tone.text)}>
-              <Icon className="size-6" strokeWidth={1.75} aria-hidden />
-            </span>
-            <h2 className={cn("text-4xl leading-none font-semibold sm:text-5xl", tone.text)}>{ROUTE_LABEL[route]}</h2>
-          </div>
+          <span className="text-sm text-muted-foreground">Route, computed by the scoring code</span>
+          <h2 className={cn("text-4xl leading-none font-semibold sm:text-5xl", tone.text)}>{ROUTE_LABEL[route]}</h2>
           <p className="max-w-prose text-[0.95rem] text-muted-foreground">{ROUTE_DESCRIPTION[route]}</p>
           {reasons.length > 0 ? (
             <ul className="flex flex-col gap-1.5">
@@ -166,13 +118,13 @@ function RouteCard({ review }: { review: ReviewView }) {
             </ul>
           ) : null}
         </div>
-        <div className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center md:flex-col md:items-stretch">
-          <div className="flex justify-center">
-            <RiskGauge score={risk_score} route={route} />
-          </div>
-          <div className="min-w-0 sm:flex-1 md:w-64 md:flex-none">
-            <SeverityCounts counts={counts} />
-          </div>
+        <div className="flex flex-col gap-2 border-t pt-4 md:min-w-56 md:border-t-0 md:border-s md:ps-6 md:pt-0">
+          <span className="text-sm text-muted-foreground">Risk score</span>
+          <span className="font-heading text-4xl leading-none font-semibold tabular">
+            {risk_score}
+            <span className="ms-1 text-base font-normal text-muted-foreground">/ 100</span>
+          </span>
+          <SeverityLine counts={counts} />
         </div>
       </div>
     </Card>
@@ -204,9 +156,8 @@ function CopyButton({ text, label }: { text: string; label: string }) {
 }
 
 function FindingCard({ f, onJump }: { f: Finding; onJump: (clauseId: string) => void }) {
-  const tone = SEVERITY_TONE[f.severity]
   return (
-    <article className={cn("rounded-xl border border-s-4 bg-card p-4 sm:p-5", tone.borderStart)}>
+    <article className={cn("rounded-lg border bg-card p-4 sm:p-5")}>
       <header className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <SeverityBadge severity={f.severity} />
         <span className="font-mono text-[0.8rem] font-medium">{f.rule_id}</span>
@@ -227,7 +178,7 @@ function FindingCard({ f, onJump }: { f: Finding; onJump: (clauseId: string) => 
         <blockquote
           dir="auto"
           lang={langOf(f.quote)}
-          className="mt-3.5 border-s-2 border-brass ps-3 font-heading text-[1.02rem] leading-relaxed text-foreground"
+          className="mt-3 font-heading text-[1.02rem] leading-relaxed text-foreground"
         >
           <mark className="rounded-sm bg-highlight px-0.5 text-foreground [box-decoration-break:clone]">{f.quote}</mark>
         </blockquote>
@@ -241,7 +192,7 @@ function FindingCard({ f, onJump }: { f: Finding; onJump: (clauseId: string) => 
         <div className="mt-4 rounded-lg border border-dashed border-approve/40 bg-approve-soft/50 p-3">
           <div className="mb-1 flex items-center gap-2">
             <PenLine className="size-3.5 text-approve" aria-hidden />
-            <span className="text-xs font-semibold tracking-wide text-approve uppercase">Proposed redline</span>
+            <span className="text-xs font-semibold text-approve">Proposed redline</span>
             <span className="ms-auto">
               <CopyButton text={f.redline} label="Copy redline" />
             </span>
@@ -290,7 +241,7 @@ function ActionItem({ a }: { a: WriteAction }) {
 
 const PENDING_TEXT: Record<NeedsHuman, { title: string; body: string }> = {
   unrouted: {
-    title: "Needs a full lawyer review — the agent did not finish",
+    title: "Needs a full lawyer review: the agent did not finish",
     body: "The agent stopped before computing a route, so nothing is approved or sent. A lawyer reviews the whole contract in the Inbox.",
   },
   legal_review: {
@@ -372,7 +323,7 @@ function DecidedAction({ decision, actions }: { decision: DecisionRecord; action
           <CollapsibleContent className="mt-2 flex flex-col gap-2">
             {drafts.map((a, i) => (
               <div key={i} className="rounded-lg border border-dashed p-3">
-                <p className="mb-1 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                <p className="mb-1 text-xs font-semibold text-muted-foreground">
                   {a.kind === "legal" ? "Agent's question for legal" : "Agent's draft to the counterparty"}
                 </p>
                 <p dir="auto" lang={langOf(a.text)} className="text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
@@ -391,7 +342,7 @@ function SectionSkeleton({ rows = 3 }: { rows?: number }) {
   return (
     <div className="flex flex-col gap-3">
       {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} className="h-28 w-full rounded-xl" />
+        <Skeleton key={i} className="h-28 w-full rounded-lg" />
       ))}
     </div>
   )
@@ -400,10 +351,10 @@ function SectionSkeleton({ rows = 3 }: { rows?: number }) {
 export function ReviewTabSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <Skeleton className="h-52 w-full rounded-xl" />
+      <Skeleton className="h-52 w-full rounded-lg" />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <SectionSkeleton />
-        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-lg" />
       </div>
     </div>
   )
@@ -473,16 +424,13 @@ export function ReviewTab({
               {review.findings.map((f) => (
                 <FindingCard key={`${f.clause_id}-${f.rule_id}`} f={f} onJump={onJump} />
               ))}
-              {running ? <Skeleton className="h-24 w-full rounded-xl" /> : null}
+              {running ? <Skeleton className="h-24 w-full rounded-lg" /> : null}
             </div>
           ) : running ? (
             <SectionSkeleton rows={2} />
           ) : (
             <Empty className="flex-none border bg-card py-10">
               <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <FileSearch aria-hidden />
-                </EmptyMedia>
                 <EmptyTitle>No findings</EmptyTitle>
                 <EmptyDescription>
                   {review.route
@@ -556,9 +504,9 @@ export function ReviewTab({
           </Card>
 
           {review.final_text && !running ? (
-            <Collapsible className="rounded-xl border bg-card">
+            <Collapsible className="rounded-lg border bg-card">
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" className="group h-auto w-full justify-start gap-2 rounded-xl px-4 py-3 text-start">
+                <Button variant="ghost" className="group h-auto w-full justify-start gap-2 rounded-lg px-4 py-3 text-start">
                   <MessageSquareText aria-hidden />
                   <span className="font-medium">Agent’s closing message</span>
                   <ChevronDown className="ms-auto text-muted-foreground transition-transform group-data-[state=open]:rotate-180" aria-hidden />

@@ -31,10 +31,10 @@ export function DemoBar({ demo, finished, onNext, onRestart, onExit }: Props) {
       aria-label="Guided demo"
       className="fixed inset-x-0 bottom-0 z-40 px-3 pb-3 sm:px-6 sm:pb-5 print:hidden"
     >
-      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-xl border border-brass/40 bg-popover/95 p-4 shadow-lg backdrop-blur-md sm:p-5">
+      <div className="mx-auto flex max-w-3xl flex-col gap-3 rounded-lg border bg-popover p-4 shadow-md sm:p-5">
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-medium tracking-[0.14em] text-brass-ink uppercase">
-            Guided demo · scene {demo.index + 1} of {demo.scenes.length}
+          <span className="font-medium text-muted-foreground">
+            Guided demo, scene {demo.index + 1} of {demo.scenes.length}
           </span>
           <RouteBadge route={scene.route} />
           <Badge variant="outline" className="rounded-md border-dashed font-normal text-muted-foreground">

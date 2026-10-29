@@ -1,4 +1,4 @@
-import { ArrowRight, FileText, LoaderCircle, Play, Upload } from "lucide-react"
+import { LoaderCircle, Play, Upload } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -24,9 +24,9 @@ export function LangChips({ languages }: { languages: Lang[] }) {
         <Badge
           key={l}
           variant="outline"
-          className="h-4.5 rounded px-1.5 font-mono text-[0.625rem] font-medium tracking-wider text-muted-foreground uppercase"
+          className="h-4.5 rounded px-1.5 font-mono text-[0.625rem] font-medium text-muted-foreground"
         >
-          {l}
+          {l.toUpperCase()}
         </Badge>
       ))}
     </span>
@@ -64,25 +64,14 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
     <Card className="shrink-0 gap-5">
       <CardHeader>
         <CardTitle className="font-heading text-lg font-semibold">New review</CardTitle>
-        <CardDescription>
-          The agent reads every clause, records findings with exact quotes, then the scoring code routes it.
-        </CardDescription>
+        <CardDescription>Choose a contract or upload your own.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <button
-          type="button"
-          onClick={onUpload}
-          className="group flex w-full items-center gap-3 rounded-lg border border-dashed border-brass/60 bg-brass-soft/50 p-3 text-start transition-colors outline-none hover:bg-brass-soft focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-        >
-          <span className="grid size-9 shrink-0 place-items-center rounded-md bg-brass-soft text-brass-ink ring-1 ring-brass/30">
-            <Upload className="size-4" aria-hidden />
-          </span>
-          <span className="flex min-w-0 flex-col">
-            <span className="text-sm font-semibold">Use your own contract</span>
-            <span className="text-xs text-muted-foreground">Upload a PDF or Word file, or paste text</span>
-          </span>
-          <ArrowRight className="ms-auto size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 rtl:rotate-180" aria-hidden />
-        </button>
+        <Button variant="outline" className="h-10 w-full justify-start bg-background" onClick={onUpload}>
+          <Upload aria-hidden />
+          Use your own contract
+          <span className="ms-auto text-xs font-normal text-muted-foreground">PDF, Word or text</span>
+        </Button>
         <div className="flex flex-col gap-2">
           <label htmlFor="contract-select" className="text-xs font-medium text-muted-foreground">
             Contract
@@ -118,9 +107,8 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
         </div>
 
         {selected && title ? (
-          <div className="rounded-lg border bg-background/60 p-3">
-            <div className="mb-1.5 flex items-center gap-2 text-xs text-muted-foreground">
-              <FileText className="size-3.5" aria-hidden />
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="tabular">{plural(selected.clauses, "clause")}</span>
               <LangChips languages={selected.languages} />
             </div>
@@ -142,8 +130,7 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
           {busy ? "Reviewing…" : "Review contract"}
         </Button>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Sending to the counterparty or escalating to legal runs as a dry-run unless writes are approved on the
-          server.
+          Nothing is sent to the counterparty without approval.
         </p>
       </CardContent>
     </Card>

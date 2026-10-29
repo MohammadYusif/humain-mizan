@@ -19,10 +19,10 @@ export function SeverityBadge({ severity, className }: { severity: Severity; cla
   return (
     <Badge
       variant="outline"
-      className={cn("gap-1.5 rounded-md text-[0.7rem] font-semibold tracking-wide uppercase", SEVERITY_TONE[severity].badge, className)}
+      className={cn("gap-1.5 rounded-md text-[0.7rem] font-semibold", SEVERITY_TONE[severity].badge, className)}
     >
-      <span aria-hidden className={cn("size-1.5 rounded-full", SEVERITY_TONE[severity].dot)} />
-      {severity}
+      <span aria-hidden className={cn("size-1.5 rounded-[1px]", SEVERITY_TONE[severity].dot)} />
+      {severity[0].toUpperCase() + severity.slice(1)}
     </Badge>
   )
 }

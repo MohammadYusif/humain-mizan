@@ -1,19 +1,15 @@
 import {
   ArrowUpRight,
-  CircleDashed,
   CircleX,
   Clock,
-  Coins,
   Hourglass,
-  Layers,
   LoaderCircle,
   Play,
   Send,
-  Timer,
   UserRound,
 } from "lucide-react"
 import { cn } from "cn"
-import { useId, useState, type ReactNode } from "react"
+import { useId, useState } from "react"
 import { toast } from "sonner"
 
 import { LangChips } from "@/components/new-review-panel"
@@ -22,7 +18,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -30,14 +26,14 @@ import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useBatch, useBatches } from "@/hooks/use-api"
 import { api, errorMessage, type BatchItem, type BatchStatus, type ContractSummary, type Route } from "@/lib/api"
-import { byWorkflow, cost, DECISION_LABEL, plural, relativeTime, ROUTE_LABEL, seconds, usd } from "@/lib/format"
+import { byWorkflow, cost, DECISION_LABEL, plural, relativeTime, seconds, usd } from "@/lib/format"
 import { go } from "@/lib/route"
-import { ROUTE_ICON, ROUTE_TONE } from "@/lib/tones"
+import { ROUTE_TONE } from "@/lib/tones"
 
 const ROUTES: Route[] = ["approve", "negotiate", "escalate"]
 
 function batchCost(b: BatchStatus) {
-  if (b.done + b.errors === 0) return "—"
+  if (b.done + b.errors === 0) return "–"
   const finished = b.done + b.errors
   if (b.unpriced_runs >= finished) return "local, no API cost"
   const priced = usd(b.priced_cost_usd)
@@ -101,7 +97,7 @@ function BatchComposer({ contracts, onStarted }: { contracts: ContractSummary[] 
   const group = (label: string, list: ContractSummary[]) =>
     list.length > 0 ? (
       <div>
-        <p className="px-2 pt-1 pb-1 text-[0.7rem] font-semibold tracking-wide text-muted-foreground uppercase">{label}</p>
+        <p className="px-2 pt-1 pb-1 text-[0.7rem] font-semibold text-muted-foreground">{label}</p>
         <ul className="flex flex-col">
           {list.map((c) => (
             <ContractCheck key={c.doc_id} c={c} checked={selected.has(c.doc_id)} onChange={(v) => toggle(c.doc_id, v)} />
@@ -245,14 +241,32 @@ function BatchList({ batches, selected }: { batches: BatchStatus[] | null; selec
 
 // --- batch detail --------------------------------------------------------------------------------
 
-function Tile({ label, value, icon, className }: { label: string; value: ReactNode; icon: ReactNode; className?: string }) {
+const SPLIT: { key: Route | "unrouted"; label: string; bar: string; text: string }[] = [
+  { key: "approve", label: "approved", bar: "bg-approve", text: "text-approve" },
+  { key: "negotiate", label: "negotiate", bar: "bg-negotiate", text: "text-negotiate" },
+  { key: "escalate", label: "escalated", bar: "bg-escalate", text: "text-escalate" },
+  { key: "unrouted", label: "unrouted", bar: "bg-muted-foreground/50", text: "text-muted-foreground" },
+]
+
+/** Route distribution as one proportional bar with a legend, instead of a tile per route. */
+function RouteSplit({ b }: { b: BatchStatus }) {
+  const parts = SPLIT.filter((p) => (b.routes[p.key] ?? 0) > 0)
+  const total = b.total || 1
   return (
-    <div className={cn("flex min-w-0 flex-col gap-1 rounded-lg border bg-background/60 px-3 py-2.5", className)}>
-      <span className="flex items-center gap-1.5 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase">
-        {icon}
-        {label}
-      </span>
-      <span className="font-heading text-2xl leading-tight font-semibold tabular">{value}</span>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex h-2.5 overflow-hidden rounded-sm bg-muted" role="img" aria-label={parts.map((p) => `${b.routes[p.key]} ${p.label}`).join(", ") || "no routes yet"}>
+        {parts.map((p) => (
+          <span key={p.key} className={p.bar} style={{ width: `${(b.routes[p.key] / total) * 100}%` }} />
+        ))}
+      </div>
+      <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm tabular">
+        {SPLIT.filter((p) => p.key !== "unrouted" || b.routes.unrouted > 0).map((p) => (
+          <span key={p.key} className={cn("inline-flex items-center gap-1.5", b.routes[p.key] ? p.text : "text-muted-foreground")}>
+            <span aria-hidden className={cn("size-2 rounded-[2px]", p.bar, !b.routes[p.key] && "opacity-40")} />
+            <span className="font-semibold">{b.routes[p.key] ?? 0}</span> {p.label}
+          </span>
+        ))}
+      </p>
     </div>
   )
 }
@@ -318,7 +332,7 @@ function HumanState({ it }: { it: BatchItem }) {
     )
   if (it.status === "done" && it.route === "approve")
     return <span className="text-sm text-muted-foreground">None needed</span>
-  return <span className="text-sm text-muted-foreground">—</span>
+  return <span className="text-sm text-muted-foreground">–</span>
 }
 
 function OpenRun({ it }: { it: BatchItem }) {
@@ -349,8 +363,8 @@ function BatchDetail({ batchId }: { batchId: string }) {
       </Empty>
     ) : (
       <div className="flex flex-col gap-4">
-        <Skeleton className="h-64 w-full rounded-xl" />
-        <Skeleton className="h-80 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+        <Skeleton className="h-80 w-full rounded-lg" />
       </div>
     )
   }
@@ -364,7 +378,7 @@ function BatchDetail({ batchId }: { batchId: string }) {
       <Card className="gap-5 p-5 sm:p-6">
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span className="tracking-[0.14em] uppercase">Batch</span>
+            <span className="">Batch</span>
             <span aria-hidden>·</span>
             <span className="font-mono">{b.batch_id}</span>
             <span aria-hidden>·</span>
@@ -391,44 +405,27 @@ function BatchDetail({ batchId }: { batchId: string }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-[repeat(auto-fit,minmax(8.5rem,1fr))]">
-          {ROUTES.map((r) => {
-            const Icon = ROUTE_ICON[r]
-            return (
-              <Tile
-                key={r}
-                label={ROUTE_LABEL[r]}
-                value={<span className={ROUTE_TONE[r].text}>{b.routes[r]}</span>}
-                icon={<Icon className={cn("size-3.5", ROUTE_TONE[r].text)} aria-hidden />}
-                className={cn(b.routes[r] > 0 && ROUTE_TONE[r].soft, b.routes[r] > 0 && ROUTE_TONE[r].border)}
-              />
-            )
-          })}
-          {b.routes.unrouted > 0 ? (
-            <Tile
-              label="Unrouted"
-              value={<span className="text-negotiate">{b.routes.unrouted}</span>}
-              icon={<CircleDashed className="size-3.5 text-negotiate" aria-hidden />}
-              className="border-dashed border-negotiate/40"
-            />
+        <div className="flex flex-col gap-3">
+          {b.needs_human ? (
+            <p className="text-base">
+              <span className="font-semibold text-brass-ink tabular">{b.needs_human}</span>{" "}
+              {b.needs_human === 1 ? "contract needs" : "contracts need"} a person.{" "}
+              <button type="button" className="text-primary underline underline-offset-4" onClick={() => go({ area: "inbox" })}>
+                Open the Inbox
+              </button>
+            </p>
+          ) : finished ? (
+            <p className="text-base">Nothing in this batch needs a person.</p>
           ) : null}
-          <Tile
-            label="Needs a human"
-            value={<span className={b.needs_human ? "text-brass-ink" : undefined}>{b.needs_human}</span>}
-            icon={<UserRound className="size-3.5" aria-hidden />}
-            className={b.needs_human ? "border-brass/40 bg-brass-soft" : undefined}
-          />
-          <Tile label="Cost" value={<span className="font-mono text-lg">{batchCost(b)}</span>} icon={<Coins className="size-3.5" aria-hidden />} />
-          <Tile
-            label="Agent time"
-            value={<span className="font-mono text-lg">{b.agent_minutes.toFixed(1)} min</span>}
-            icon={<Timer className="size-3.5" aria-hidden />}
-          />
+          <RouteSplit b={b} />
+          <p className="text-sm text-muted-foreground tabular">
+            Cost {batchCost(b)} · agent time {b.agent_minutes.toFixed(1)} min
+          </p>
         </div>
 
-        <div className="grid gap-4 rounded-xl border border-primary/25 bg-primary/5 p-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:p-5">
+        <div className="grid gap-4 rounded-lg border border-primary/25 bg-primary/5 p-4 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center sm:p-5">
           <div className="flex flex-col">
-            <span className="flex items-center gap-2 text-xs font-medium tracking-[0.14em] text-primary uppercase">
+            <span className="flex items-center gap-2 text-xs font-medium text-primary">
               <Hourglass className="size-3.5" aria-hidden />
               Estimated hours saved
             </span>
@@ -476,7 +473,7 @@ function BatchDetail({ batchId }: { batchId: string }) {
                   <TableCell>
                     <ItemStatus it={it} />
                   </TableCell>
-                  <TableCell className="text-end font-mono tabular">{it.risk_score ?? "—"}</TableCell>
+                  <TableCell className="text-end font-mono tabular">{it.risk_score ?? "–"}</TableCell>
                   <TableCell>
                     <HumanState it={it} />
                   </TableCell>
@@ -504,7 +501,7 @@ function BatchDetail({ batchId }: { batchId: string }) {
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <HumanState it={it} />
                 <span className="text-xs text-muted-foreground tabular">
-                  risk {it.risk_score ?? "—"} · {seconds(it.latency_s)}
+                  risk {it.risk_score ?? "–"} · {seconds(it.latency_s)}
                 </span>
                 <span className="ms-auto">
                   <OpenRun it={it} />
@@ -550,9 +547,6 @@ export function QueueView({
         ) : batches ? (
           <Empty className="border bg-card py-16">
             <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Layers aria-hidden />
-              </EmptyMedia>
               <EmptyTitle>No batches yet</EmptyTitle>
               <EmptyDescription>
                 Select contracts and run the queue. The agent reviews them in parallel, sends what it may send, and
@@ -561,7 +555,7 @@ export function QueueView({
             </EmptyHeader>
           </Empty>
         ) : (
-          <Skeleton className="h-96 w-full rounded-xl" />
+          <Skeleton className="h-96 w-full rounded-lg" />
         )}
       </section>
       <div className="min-w-0 lg:col-start-1 lg:row-start-2">

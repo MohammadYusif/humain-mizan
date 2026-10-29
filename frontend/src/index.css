@@ -77,16 +77,12 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  --animate-pulse-ring: pulse-ring 1.6s ease-out 1;
-  @keyframes pulse-ring {
-    0% { box-shadow: 0 0 0 0 color-mix(in oklch, var(--brass) 70%, transparent); }
-    100% { box-shadow: 0 0 0 14px color-mix(in oklch, var(--brass) 0%, transparent); }
-  }
 }
 
 /* Light: warm parchment paper, ink text, deep ink-green primary, restrained brass. */
 :root {
-  --radius: 0.5rem;
+  /* Radius scale: ~4px controls and badges, ~6-8px cards; full only for status dots. */
+  --radius: 0.375rem;
   --background: oklch(0.968 0.013 84);
   --foreground: oklch(0.235 0.018 62);
   --paper: oklch(0.987 0.008 86);

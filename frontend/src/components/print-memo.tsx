@@ -45,7 +45,7 @@ export function PrintMemo({ runId, contracts }: { runId: string; contracts: Cont
         ) : (
           <article className="flex flex-col gap-6 text-[0.95rem] leading-relaxed">
             <header className="flex flex-col gap-2 border-b pb-4 print:border-black/30">
-              <p className="text-xs tracking-[0.14em] text-muted-foreground uppercase print:text-black/60">
+              <p className="text-xs text-muted-foreground print:text-black/60">
                 Mizan · contract review memo · {r.doc_id}
               </p>
               <h1 dir="auto" lang={langOf(title)} className="text-2xl leading-snug font-semibold">
@@ -69,7 +69,7 @@ export function PrintMemo({ runId, contracts }: { runId: string; contracts: Cont
               <section className="flex flex-col gap-3">
                 <h2 className="text-lg font-semibold">Findings and redlines</h2>
                 {r.findings.map((f) => (
-                  <div key={`${f.clause_id}-${f.rule_id}`} className="break-inside-avoid border-s-2 ps-3 print:border-black/40">
+                  <div key={`${f.clause_id}-${f.rule_id}`} className="break-inside-avoid">
                     <p className="text-sm font-semibold">
                       {f.severity.toUpperCase()} · {f.rule_id} · clause {f.clause_id}
                     </p>

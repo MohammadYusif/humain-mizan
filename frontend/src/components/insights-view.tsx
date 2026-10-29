@@ -1,4 +1,4 @@
-import { BookCheck, Check, Info, Lightbulb, LoaderCircle, ShieldAlert, X } from "lucide-react"
+import { BookCheck, Check, Info, LoaderCircle, ShieldAlert, X } from "lucide-react"
 import { cn } from "cn"
 import { useId, useState } from "react"
 import { toast } from "sonner"
@@ -17,7 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
@@ -34,7 +34,7 @@ function Evidence({ items }: { items: InsightEvidence[] }) {
       {items.map((e, i) => (
         <li key={`${e.run_id}-${e.clause_id}-${i}`} className="flex flex-col gap-1 rounded-lg border bg-background/60 p-2.5">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-            <span className="font-mono">{e.doc_id ?? "—"}</span>
+            <span className="font-mono">{e.doc_id ?? "–"}</span>
             <span className="font-mono">{e.clause_id}</span>
             <Badge variant="outline" className="rounded-md font-normal">
               {DECISION_LABEL[e.decision] ?? e.decision}
@@ -43,7 +43,7 @@ function Evidence({ items }: { items: InsightEvidence[] }) {
               Open run
             </Button>
           </span>
-          <blockquote dir="auto" lang={langOf(e.quote)} className="border-s-2 border-brass ps-2.5 text-sm">
+          <blockquote dir="auto" lang={langOf(e.quote)} className="text-sm">
             {e.quote}
           </blockquote>
           {e.note ? (
@@ -147,7 +147,7 @@ function SignalBars({ signals, rules }: { signals: Record<string, { accepted: nu
                 </span>
                 <span className="flex items-center gap-3">
                   <span
-                    className="flex h-3 flex-1 overflow-hidden rounded-full bg-muted"
+                    className="flex h-2.5 flex-1 overflow-hidden rounded-sm bg-muted"
                     role="img"
                     aria-label={`${s.accepted} accepted, ${s.upheld} upheld`}
                   >
@@ -190,8 +190,8 @@ export function InsightsView({ rules, onChanged }: { rules: PlaybookRule[] | nul
           </Empty>
         ) : (
           <div className="flex flex-col gap-4">
-            <Skeleton className="h-40 w-full rounded-xl" />
-            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-40 w-full rounded-lg" />
+            <Skeleton className="h-64 w-full rounded-lg" />
           </div>
         )
       ) : (
@@ -199,9 +199,6 @@ export function InsightsView({ rules, onChanged }: { rules: PlaybookRule[] | nul
           {data.proposals.length === 0 && data.notes.length === 0 && data.amendments.length === 0 ? (
             <Empty className="border bg-card py-12">
               <EmptyHeader className="max-w-lg">
-                <EmptyMedia variant="icon">
-                  <Lightbulb aria-hidden />
-                </EmptyMedia>
                 <EmptyTitle className="text-lg font-semibold">Nothing to learn yet</EmptyTitle>
                 <EmptyDescription className="text-[0.95rem]">
                   Every decision in the Inbox is evidence. When legal accepts the same kind of deviation at least{" "}
@@ -229,11 +226,11 @@ export function InsightsView({ rules, onChanged }: { rules: PlaybookRule[] | nul
                   <div className="grid gap-4 p-4 sm:p-5 lg:grid-cols-2">
                     <div className="flex min-w-0 flex-col gap-3 text-sm">
                       <div>
-                        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Current fallback</p>
+                        <p className="text-xs font-semibold text-muted-foreground">Current fallback</p>
                         <p>{p.current_fallback}</p>
                       </div>
                       <div className="rounded-lg border border-brass/40 bg-brass-soft/60 p-3">
-                        <p className="text-xs font-semibold tracking-wide text-brass-ink uppercase">Proposed addition</p>
+                        <p className="text-xs font-semibold text-brass-ink">Proposed addition</p>
                         <p dir="auto" lang={langOf(p.proposed_addition)}>
                           {p.proposed_addition}
                         </p>
@@ -241,7 +238,7 @@ export function InsightsView({ rules, onChanged }: { rules: PlaybookRule[] | nul
                       <p className="text-muted-foreground">{p.effect}</p>
                     </div>
                     <div className="flex min-w-0 flex-col gap-2">
-                      <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                      <p className="text-xs font-semibold text-muted-foreground">
                         Evidence · {plural(p.evidence.length, "decision")}
                       </p>
                       <Evidence items={p.evidence} />
