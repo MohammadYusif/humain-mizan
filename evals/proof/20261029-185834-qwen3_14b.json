@@ -14,7 +14,8 @@
     "input_tokens": 372742,
     "output_tokens": 49925,
     "cost_usd": 0.0,
-    "cost_per_pass_usd": 0.0
+    "cost_per_pass_usd": 0.0,
+    "variant": "red-flag checks, before completion check"
   },
   "cases": [
     {

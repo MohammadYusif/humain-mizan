@@ -24,7 +24,7 @@ Or with Docker (builds the UI too): `docker compose up --build` → http://local
 
 ## Develop
 ```bash
-uv run pytest                                  # 42 tests, no API calls
+uv run pytest                                  # 51 tests, no API calls
 uv run hack run "Review contract saas-en-01 and route it."
 uv run hack eval --model claude-sonnet-5-5     # 12 labelled contracts -> evals/results/
 uv run hack rescore evals/results/<file>.json  # re-grade saved traces against current labels
