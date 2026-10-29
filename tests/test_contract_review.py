@@ -487,3 +487,17 @@ def test_rejected_quote_shows_the_clause_text(tmp_path):
     reg, _, _ = reviewed(tmp_path, "saas-en-01")
     res = finding(reg, "saas-en-01", "c9", "LIAB-CAP", "words that are not there at all")
     assert res.is_error and "Customer's aggregate liability" in res.content
+
+
+def test_heldout_cases_reference_real_clauses():
+    from pathlib import Path
+
+    s = Settings(provider="fake")
+    cases = load_cases(Path("evals/heldout/cases.jsonl"))
+    assert len(cases) >= 10
+    for case in cases:
+        contract = load_contract(s.heldout_dir, case["id"])
+        for chk in case["checks"]:
+            if chk["type"] == "finding":
+                cls = chk["clause"] if isinstance(chk["clause"], list) else [chk["clause"]]
+                assert all(contract.clause(cl) is not None for cl in cls), (case["id"], chk)
