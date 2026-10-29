@@ -156,7 +156,7 @@ def score(review: Review) -> dict:
     critical_flags = [f"{t['rule_id']}@{t['clause_id']}" for t in trip if t["status"] == "critical"]
     if critical_flags:
         escalate.append(
-            f"Deterministic red {_pl(len(critical_flags), 'flag')} that always go to a lawyer: "
+            f"Deterministic red {_pl(len(critical_flags), 'flag')} that always {'goes' if len(critical_flags) == 1 else 'go'} to a lawyer: "
             f"{_ls(critical_flags)}"
         )
     unresolved = [f"{t['rule_id']}@{t['clause_id']}" for t in trip if t["status"] == "unresolved"]

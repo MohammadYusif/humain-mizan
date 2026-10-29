@@ -23,7 +23,7 @@
     "title": "Uncapped liability, in Arabic",
     "narration": "Uncapped buyer liability is a critical red flag: it escalates to legal no matter what, with the exact question for the lawyer.",
     "route": "escalate",
-    "recorded_run": "eval-ar-supply-01-ebe9a433",
+    "recorded_run": "eval-ar-supply-01-8f2ce84b",
     "model": "claude-sonnet-5-5"
   },
   {

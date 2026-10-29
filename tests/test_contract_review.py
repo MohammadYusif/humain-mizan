@@ -448,7 +448,7 @@ def test_red_flags_must_be_resolved_and_critical_ones_always_escalate(tmp_path):
     tag(reg, "saas-en-01", ids, SAAS_TYPES)
     out = j(call(reg, "score_contract", doc_id="saas-en-01"))
     assert out["route"] == "escalate"
-    assert any("always go to a lawyer" in r for r in out["reasons"])
+    assert any("to a lawyer" in r for r in out["reasons"])
     assert any("neither recorded nor cleared" in r for r in out["reasons"])
     bad = call(
         reg,
