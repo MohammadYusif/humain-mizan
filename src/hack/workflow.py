@@ -1,0 +1,384 @@
+"""The autonomous process around single reviews: batch queue, legal inbox, human decisions, eval proof.
+
+Everything is derived from files under runs/ (traces, decision.json, batch manifests) so a restart
+loses nothing and the UI, CLI and evals all read the same source of truth.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import threading
+import time
+import uuid
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from typing import Any
+
+from .challenge import contracts as C
+from .challenge.view import review_view
+from .config import Settings
+from .evals import final_route
+from .llm import Provider
+from .service import run_task
+from .tracing import read_trace
+
+DECISIONS = {
+    "legal_review": ("approve_contract", "request_changes", "reject"),
+    "approve_send": ("send", "discard"),
+}
+
+
+class InvalidDecision(ValueError):
+    """The request itself is malformed (HTTP 400), as opposed to a state conflict (HTTP 409)."""
+
+
+def run_state(settings: Settings, run_id: str) -> dict[str, Any]:
+    """Status, route and review view of one run, from its trace."""
+    try:
+        tr = read_trace(settings.runs_dir, run_id)
+    except FileNotFoundError:
+        return {"run_id": run_id, "status": "queued", "route": None, "view": None, "end": None}
+    end = next((e for e in tr if e["type"] == "run_end"), None)
+    status = (
+        "running" if end is None else ("error" if end.get("stop_reason") == "error" else "done")
+    )
+    return {
+        "run_id": run_id,
+        "status": status,
+        "route": final_route(tr),
+        "view": review_view(tr),
+        "end": end,
+    }
+
+
+def read_decision(settings: Settings, run_id: str) -> dict[str, Any] | None:
+    p = settings.runs_dir / run_id / "decision.json"
+    return json.loads(p.read_text(encoding="utf-8")) if p.is_file() else None
+
+
+def pending_kind(state: dict[str, Any], decision: dict[str, Any] | None) -> str | None:
+    """What a human still has to do for this run, if anything. Eval runs are measurements: never."""
+    if state["run_id"].startswith("eval-"):
+        return None
+    if state["status"] != "done" or decision is not None or state["view"] is None:
+        return None
+    if state["route"] == "escalate":
+        return "legal_review"
+    # The process is owned by the route, not by whether the model remembered the follow-up:
+    # a negotiate contract that nothing was actually sent for waits for a human send.
+    if state["route"] == "negotiate" and not any(
+        a["kind"] == "counterparty" and not a["dry_run"] for a in state["view"]["actions"]
+    ):
+        return "approve_send"
+    return None
+
+
+def draft_for(view: dict[str, Any]) -> str:
+    """The agent's drafted counterparty message, or one composed from the redlines if it wrote none."""
+    agent = next((a["text"] for a in view["actions"] if a["kind"] == "counterparty"), "")
+    return agent or requested_changes_message(view)
+
+
+# --- Legal inbox ---------------------------------------------------------------------------------
+
+
+def inbox(settings: Settings) -> list[dict[str, Any]]:
+    """Runs waiting for a human, newest first. Eval runs are excluded (they are measurements)."""
+    base = settings.runs_dir
+    if not base.is_dir():
+        return []
+    items = []
+    for d in sorted(base.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+        if not (d / "trace.jsonl").is_file() or d.name.startswith("eval-"):
+            continue
+        state = run_state(settings, d.name)
+        kind = pending_kind(state, read_decision(settings, d.name))
+        if kind is None:
+            continue
+        v = state["view"]
+        if kind == "approve_send":
+            agent_text = draft_for(v)
+        else:
+            agent_text = next((a["text"] for a in v["actions"] if a["kind"] == "legal"), "")
+        items.append(
+            {
+                "run_id": d.name,
+                "kind": kind,
+                "doc_id": v["doc_id"],
+                "route": state["route"],
+                "risk_score": v["risk_score"],
+                "counts": v["counts"],
+                "reasons": v["reasons"],
+                "findings": v["findings"],
+                "agent_text": agent_text,
+                "options": list(DECISIONS[kind]),
+                "created": (d / "trace.jsonl").stat().st_mtime,
+            }
+        )
+    return items
+
+
+def requested_changes_message(view: dict[str, Any]) -> str:
+    lines = [f"Requested changes to {view['doc_id']}:"]
+    for f in view["findings"]:
+        if f["severity"] in ("critical", "major"):
+            lines.append(f"- Clause {f['clause_id']} ({f['clause_type']}): {f['redline']}")
+    return "\n".join(lines)
+
+
+def decide(
+    settings: Settings,
+    run_id: str,
+    decision: str,
+    note: str = "",
+    message: str | None = None,
+    by: str = "human",
+) -> dict[str, Any]:
+    """Record a decision (a human's, or the workflow's own under the auto-send policy).
+    send/request_changes put a message in the run's outbox."""
+    state = run_state(settings, run_id)
+    if state["status"] == "queued":
+        raise FileNotFoundError(run_id)
+    existing = read_decision(settings, run_id)
+    if existing is not None:
+        raise ValueError("already decided")
+    kind = pending_kind(state, existing)
+    if kind is None:
+        raise ValueError("this run is not waiting for a human decision")
+    if decision not in DECISIONS[kind]:
+        raise InvalidDecision(f"decision must be one of {DECISIONS[kind]} for {kind}")
+    out_msg = None
+    if decision == "send":
+        out_msg = message or draft_for(state["view"])
+    elif decision == "request_changes":
+        out_msg = message or requested_changes_message(state["view"])
+    if out_msg:
+        with (settings.runs_dir / run_id / "outbox.jsonl").open("a", encoding="utf-8") as f:
+            rec = {
+                "ts": time.time(),
+                "kind": "counterparty",
+                "doc_id": state["view"]["doc_id"],
+                "message": out_msg,
+                "by": by,
+            }
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    rec = {
+        "decision": decision,
+        "kind": kind,
+        "note": note,
+        "message": out_msg,
+        "by": by,
+        "at": time.time(),
+    }
+    (settings.runs_dir / run_id / "decision.json").write_text(
+        json.dumps(rec, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    return rec
+
+
+# --- Batch queue ---------------------------------------------------------------------------------
+
+
+class BatchRunner:
+    """Runs many reviews in parallel in the API process. Manifests live in runs/batches/."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        provider_factory: Callable[[], Provider] | None = None,
+        workers: int = 3,
+    ):
+        self.settings = settings
+        self.provider_factory = provider_factory
+        self.pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="batch")
+        self.lock = threading.Lock()
+        self.pending: set[str] = set()  # run ids queued or running in this process
+
+    @property
+    def dir(self) -> Path:
+        return self.settings.runs_dir / "batches"
+
+    def start(self, doc_ids: list[str], auto_send: bool) -> dict[str, Any]:
+        if not doc_ids:
+            raise ValueError("no contracts selected")
+        if len(doc_ids) > 50:
+            raise ValueError("max 50 contracts per batch")
+        dirs = [self.settings.contracts_dir, self.settings.uploads_dir]
+        for d in doc_ids:
+            C.load_contract(dirs, d)  # raises for unknown/unsafe ids before anything starts
+        batch_id = "b" + time.strftime("%m%d%H%M%S") + uuid.uuid4().hex[:4]
+        items = [
+            {"doc_id": d, "run_id": f"{batch_id}-{re.sub(r'[^A-Za-z0-9_-]', '', d)[:45]}-{i}"}
+            for i, d in enumerate(doc_ids)
+        ]
+        manifest = {
+            "batch_id": batch_id,
+            "created": time.time(),
+            "auto_send": auto_send,
+            "items": items,
+        }
+        self.dir.mkdir(parents=True, exist_ok=True)
+        (self.dir / f"{batch_id}.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        run_settings = self.settings.model_copy(update={"approve_writes": auto_send})
+        for it in items:
+            with self.lock:
+                self.pending.add(it["run_id"])
+            self.pool.submit(self._run_one, run_settings, it)
+        return manifest
+
+    def _run_one(self, settings: Settings, item: dict[str, str]) -> None:
+        try:
+            provider = self.provider_factory() if self.provider_factory else None
+            run_task(
+                f"Review contract {item['doc_id']} and route it.",
+                settings,
+                provider=provider,
+                run_id=item["run_id"],
+            )
+        except Exception:
+            pass  # the agent wrote an error + run_end into the trace; the batch view shows it
+        else:
+            # Auto-send policy: if the route says negotiate but the model never sent the redline,
+            # the workflow sends it (composed from the recorded redlines) and records that it did.
+            state = run_state(settings, item["run_id"])
+            if settings.approve_writes and pending_kind(state, None) == "approve_send":
+                decide(settings, item["run_id"], "send", by="workflow (auto-send policy)")
+        finally:
+            with self.lock:
+                self.pending.discard(item["run_id"])
+
+    def list(self) -> list[dict[str, Any]]:
+        if not self.dir.is_dir():
+            return []
+        files = sorted(self.dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+        return [self.status(p.stem) for p in files[:20]]
+
+    def status(self, batch_id: str) -> dict[str, Any]:
+        path = self.dir / f"{batch_id}.json"
+        if not re.fullmatch(r"[A-Za-z0-9]{1,32}", batch_id) or not path.is_file():
+            raise FileNotFoundError(batch_id)
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+        items, routes = [], {"approve": 0, "negotiate": 0, "escalate": 0}
+        cost = agent_s = 0.0
+        needs_human = done = errors = 0
+        for it in manifest["items"]:
+            st = run_state(self.settings, it["run_id"])
+            decision = read_decision(self.settings, it["run_id"])
+            kind = pending_kind(st, decision)
+            end = st["end"] or {}
+            if st["status"] == "done":
+                done += 1
+                if st["route"] in routes:
+                    routes[st["route"]] += 1
+            errors += st["status"] == "error"
+            needs_human += kind is not None
+            cost += end.get("cost_usd") or 0.0
+            agent_s += end.get("latency_s") or 0.0
+            v = st["view"] or {}
+            items.append(
+                {
+                    **it,
+                    "status": st["status"],
+                    "route": st["route"],
+                    "risk_score": v.get("risk_score"),
+                    "counts": v.get("counts"),
+                    "pending": kind,
+                    "decision": decision["decision"] if decision else None,
+                    "decided_by": decision.get("by", "human") if decision else None,
+                    "sent": any(
+                        a["kind"] == "counterparty" and not a["dry_run"]
+                        for a in v.get("actions", [])
+                    ),
+                    "cost_usd": end.get("cost_usd"),
+                    "priced": end.get("priced"),
+                    "latency_s": end.get("latency_s"),
+                }
+            )
+        s = self.settings
+        finished = [i for i in items if i["status"] in ("done", "error")]
+        human_min = routes["escalate"] * s.legal_minutes_per_escalation
+        return {
+            "batch_id": manifest["batch_id"],
+            "created": manifest["created"],
+            "auto_send": manifest["auto_send"],
+            "total": len(items),
+            "done": done,
+            "errors": errors,
+            "routes": routes,
+            "needs_human": needs_human,
+            "cost_usd": round(cost, 4),
+            # False when any finished run used a model with no known price (e.g. a local model).
+            "priced": all(i["priced"] for i in finished) if finished else None,
+            "agent_minutes": round(agent_s / 60, 2),
+            "estimate": {
+                "manual_hours": round(done * s.manual_minutes_per_contract / 60, 2),
+                "human_hours_with_agent": round(human_min / 60, 2),
+                "hours_saved": round((done * s.manual_minutes_per_contract - human_min) / 60, 2),
+                "assumptions": f"{s.manual_minutes_per_contract:g} min manual review per contract; "
+                f"{s.legal_minutes_per_escalation:g} min lawyer time per escalation",
+            },
+            "items": items,
+        }
+
+
+# --- Proof: saved eval results -------------------------------------------------------------------
+
+
+def eval_results(settings: Settings) -> list[dict[str, Any]]:
+    """Per model (and `summary.variant`, e.g. "before red-flag tripwires"), the most complete saved
+    eval of the current contract suite (ties: newest). The curated, git-tracked `proof_dir` is the
+    published set; the local `results_dir` is only used when no proof files exist."""
+    files = sorted(settings.proof_dir.glob("*.json")) if settings.proof_dir.is_dir() else []
+    if not files and settings.results_dir.is_dir():
+        files = sorted(settings.results_dir.glob("*.json"))
+    known = {p.stem for p in settings.contracts_dir.glob("*.md")}
+    best: dict[tuple[str, str], tuple[int, float, dict[str, Any], Path]] = {}
+    for p in files:
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            continue
+        cases = data.get("cases", [])
+        if (
+            not cases
+            or not all(c["id"] in known for c in cases)
+            or "route_accuracy" not in data.get("summary", {})
+        ):
+            continue
+        model = (data["summary"]["model"], data["summary"].get("variant") or "")
+        key = (len(cases), p.stat().st_mtime)
+        if model not in best or key > best[model][:2]:
+            best[model] = (*key, data, p)
+    out = []
+    order = sorted(
+        best.items(), key=lambda kv: (-kv[1][2]["summary"].get("route_accuracy", 0), kv[0])
+    )
+    for (model, variant), (_, mtime, data, p) in order:
+        out.append(
+            {
+                "model": model,
+                "variant": variant or None,
+                "file": p.name,
+                "date": mtime,
+                "summary": data["summary"],
+                "cases": [
+                    {
+                        k: c.get(k)
+                        for k in (
+                            "id",
+                            "passed",
+                            "expected_route",
+                            "got_route",
+                            "cost_usd",
+                            "latency_s",
+                            "labelled_rules",
+                            "recorded_rules",
+                        )
+                    }
+                    for c in data["cases"]
+                ],
+            }
+        )
+    return out
