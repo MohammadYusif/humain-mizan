@@ -32,6 +32,17 @@ function fileSize(n: number) {
 /** How a scanned contract was read, and whether its text can be trusted for automatic action. */
 export function OcrNote({ ocr }: { ocr: OcrSource }) {
   const pages = ocr.pages_ocr?.length ?? 0
+  if (ocr.kind === "unread") {
+    return (
+      <div className="flex flex-col gap-1 text-sm">
+        <span className="flex items-center gap-2 text-muted-foreground">
+          <ScanText className="size-4 shrink-0" aria-hidden />
+          {plural(ocr.pages_unread?.length ?? 0, "page")} had no readable text and could not be read here
+        </span>
+        {ocr.doubt ? <span className="font-medium text-escalate">{ocr.doubt}.</span> : null}
+      </div>
+    )
+  }
   return (
     <div className="flex flex-col gap-1 text-sm">
       <span className="flex items-center gap-2 text-muted-foreground">

@@ -3,6 +3,7 @@ import {
   CircleCheck,
   CircleDashed,
   CircleX,
+  FileSearch,
   FlaskConical,
   RotateCcw,
   Server,
@@ -34,6 +35,10 @@ const RED_FLAG_LIMIT =
 const GUARANTEES: { text: string; note?: string }[] = [
   { text: "A critical finding never auto-approves: the route is computed by code, not by the model." },
   { text: "Approval requires every page read, every clause typed, and liability and governing-law clauses present." },
+  {
+    text: "Approval also needs the words that cap our own liability, quoted and verified. A clause about the supplier's liability does not count.",
+    note: "Added after the first run on real contracts approved five that left our liability uncapped.",
+  },
   { text: "Every finding must quote the contract verbatim; a quote that is not in the clause is rejected." },
   {
     text: "Instructions written inside a contract, once a pattern or the model detects them, force an escalation instead of being followed.",
@@ -610,6 +615,119 @@ function HeldOut({ models, contracts }: { models: EvalModel[]; contracts: Contra
   )
 }
 
+/** What a real-world result can and cannot claim; shown with the numbers, not in a footnote. */
+const REAL_LIMITS = [
+  "Outside annotators mark where a clause is (CUAD) or that it is unfair to a consumer (CLAUDETTE). Whether it breaks our buyer playbook, and every route label, is our own judgement.",
+  "Governing law is left out of the scores: every SEC contract is under US law, so that finding is always right and proves nothing.",
+  "No public source has labelled risky contracts in Arabic, so Arabic recall is still measured only on our own test contracts. The Saudi government contracts test false alarms and long, real Arabic documents.",
+  "A small sample, not a benchmark.",
+]
+
+/** Public contracts we did not write: the closest test to real use. */
+function RealWorld({ models, contracts }: { models: EvalModel[]; contracts: ContractSummary[] | null }) {
+  const ids = new Set(models.flatMap((m) => m.cases.map((c) => c.id)))
+  const current = models[0]
+  const rules = Object.entries(current.summary.per_rule ?? {})
+  return (
+    <section className="flex flex-col gap-5" aria-labelledby="real-h">
+      <Card className="gap-4">
+        <CardHeader>
+          <CardTitle id="real-h" className="flex flex-wrap items-center gap-2 text-lg font-semibold">
+            <FileSearch className="size-5 text-primary" aria-hidden />
+            Real contracts
+            <Badge variant="outline" className="rounded-md font-normal">
+              {plural(ids.size, "contract")}
+            </Badge>
+          </CardTitle>
+          <CardDescription>
+            Contracts we did not write: company contracts filed with the US SEC, with clauses marked by CUAD&apos;s
+            lawyer-reviewed annotators; terms of service whose unfair clauses CLAUDETTE annotators tagged; Saudi-law
+            contracts filed with the SEC; and Saudi government model contracts in Arabic, read by OCR.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <ul className="flex flex-col divide-y rounded-lg border bg-background/60">
+            {models.map((m) => {
+              const s = m.summary
+              const ind = s.independent_labels ?? 0
+              const found = Math.round((s.independent_recall ?? 0) * ind)
+              const r = safety(m)
+              return (
+                <li key={keyOf(m)} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-sm">
+                  <span className="font-medium">{modelName(m.model)}</span>
+                  <VariantLabel m={m} />
+                  <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular sm:ms-auto">
+                    {ind ? (
+                      <span>
+                        found <span className="font-semibold">{found} of {ind}</span> issues marked by outside annotators
+                      </span>
+                    ) : null}
+                    <span>
+                      route accuracy <span className="font-semibold">{percent(s.route_accuracy)}</span>
+                    </span>
+                    <span className={notSafe(r) ? "font-semibold text-escalate" : "text-approve"}>
+                      false auto-approve {s.false_auto_approve}
+                    </span>
+                    <span>{money(m, s.cost_usd)} total</span>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+          {models
+            .filter((m) => m.variant !== null && safety(m).approved > 0)
+            .map((m) => (
+              <div key={keyOf(m)} className="flex flex-col gap-1.5 rounded-lg border border-dashed p-3 text-sm leading-relaxed">
+                <p>
+                  The first run approved {plural(safety(m).approved, "contract")} that our playbook sends to a
+                  lawyer. On buyer-friendly paper the agent took clauses about the supplier&apos;s liability for the
+                  liability clause and accepted that nothing capped ours.
+                </p>
+                <p className="text-muted-foreground">
+                  Approval now needs the words that cap our own liability, quoted and verified by code. The re-run uses
+                  the same contracts, so unlike the first run it is not blind.
+                </p>
+              </div>
+            ))}
+          {rules.length ? (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="ps-3">Rule</TableHead>
+                  <TableHead className="text-end">Labelled issues</TableHead>
+                  <TableHead className="text-end">Found</TableHead>
+                  <TableHead className="pe-3 text-end">Flagged beyond the labels</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rules.map(([rule, v]) => (
+                  <TableRow key={rule}>
+                    <TableCell className="ps-3 font-mono text-[0.8rem]">{rule}</TableCell>
+                    <TableCell className="text-end tabular">{v.labelled}</TableCell>
+                    <TableCell className={cn("text-end tabular", v.found < v.labelled && "text-escalate")}>
+                      {v.found}
+                    </TableCell>
+                    <TableCell className="pe-3 text-end tabular">{v.extra}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : null}
+          <ul className="flex flex-col gap-1.5 text-sm leading-relaxed text-muted-foreground">
+            {REAL_LIMITS.map((t) => (
+              <li key={t} className="flex gap-2">
+                <span aria-hidden className="mt-2 size-1 shrink-0 rounded-full bg-muted-foreground/60" />
+                {t}
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+      <CaseMatrix models={models} contracts={contracts} title="Real contracts, every run" />
+    </section>
+  )
+}
+
 export function ProofView({ contracts }: { contracts: ContractSummary[] | null }) {
   const { data, error } = useResource("evals", loadEvals)
 
@@ -629,7 +747,8 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
     )
   }
 
-  if (data.filter((m) => m.suite !== "held-out").length === 0) {
+  const isMain = (m: EvalModel) => m.suite !== "held-out" && m.suite !== "real"
+  if (data.filter(isMain).length === 0) {
     return (
       <Empty className="border bg-card py-16">
         <EmptyHeader>
@@ -644,8 +763,9 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
 
   // Safe models first, then by pass rate; local models are discussed in their own note.
   // Kept in the API's order: current configuration first, then route accuracy, then cost.
-  const models = data.filter((m) => m.suite !== "held-out")
+  const models = data.filter(isMain)
   const heldOut = data.filter((m) => m.suite === "held-out")
+  const real = data.filter((m) => m.suite === "real")
   const local = models.filter(isLocal)
   const anyRegraded = models.some((m) => m.summary.rescored_from)
 
@@ -675,6 +795,7 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
       {models.length > 1 ? <Comparison models={models} /> : null}
       <CaseMatrix models={models} contracts={contracts} />
       {heldOut.length ? <HeldOut models={heldOut} contracts={contracts} /> : null}
+      {real.length ? <RealWorld models={real} contracts={contracts} /> : null}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card className="gap-4">

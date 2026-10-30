@@ -1,0 +1,1803 @@
+{
+  "summary": {
+    "model": "claude-sonnet-5-5",
+    "provider": "anthropic",
+    "cases": 15,
+    "passed": 2,
+    "pass_rate": 0.1333,
+    "route_accuracy": 0.5714,
+    "false_auto_approve": "5/14",
+    "recall": 0.75,
+    "precision": 0.9375,
+    "latency_p50_s": 36.174,
+    "latency_p95_s": 67.699,
+    "input_tokens": 3729958,
+    "output_tokens": 92059,
+    "cost_usd": 3.4679,
+    "cost_per_pass_usd": 1.734,
+    "independent_recall": 1.0,
+    "independent_labels": 7,
+    "per_rule": {
+      "ASSIGN": {
+        "labelled": 1,
+        "found": 1,
+        "extra": 0
+      },
+      "AUTO-RENEW": {
+        "labelled": 4,
+        "found": 4,
+        "extra": 0
+      },
+      "CONF-TERM": {
+        "labelled": 8,
+        "found": 4,
+        "extra": 0
+      },
+      "INDEMNITY": {
+        "labelled": 3,
+        "found": 3,
+        "extra": 0
+      },
+      "INTEREST": {
+        "labelled": 4,
+        "found": 4,
+        "extra": 0
+      },
+      "IP-OWN": {
+        "labelled": 2,
+        "found": 1,
+        "extra": 0
+      },
+      "LIAB-CAP": {
+        "labelled": 7,
+        "found": 5,
+        "extra": 0
+      },
+      "NONCOMPETE": {
+        "labelled": 2,
+        "found": 2,
+        "extra": 0
+      },
+      "PAY-TERMS": {
+        "labelled": 5,
+        "found": 2,
+        "extra": 0
+      },
+      "TERM-CONV": {
+        "labelled": 4,
+        "found": 4,
+        "extra": 2
+      }
+    },
+    "max_turns": 40,
+    "budget_usd": 4.0,
+    "effort": "medium",
+    "suite": "real",
+    "variant": "first run, before the liability-cap check"
+  },
+  "cases": [
+    {
+      "id": "etimad-it",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": false,
+          "detail": "CONF-TERM ['c15'] recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "ASSIGN recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "DATA-PROT recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "GOV-LAW recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "PAY-TERMS recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "TERM-CONV recorded=[]"
+        },
+        {
+          "type": "route",
+          "passed": false,
+          "detail": "expected escalate, got approve"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 6,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "clear_tripwire",
+        "clear_tripwire",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs"
+      ],
+      "input_tokens": 303866,
+      "output_tokens": 5361,
+      "cost_usd": 0.28246,
+      "latency_s": 33.567,
+      "run_id": "eval-etimad-it-b3acb134",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "approve",
+      "labelled_rules": [
+        "CONF-TERM"
+      ],
+      "recorded_rules": [],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "DATA-PROT",
+        "GOV-LAW",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LANG-PREC",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": []
+    },
+    {
+      "id": "etimad-services",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "CONF-TERM ['c19'] recorded=[('c19', 'CONF-TERM')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "ASSIGN recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "DATA-PROT recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "GOV-LAW recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "PAY-TERMS recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "TERM-CONV recorded=['CONF-TERM']"
+        },
+        {
+          "type": "route",
+          "passed": false,
+          "detail": "expected escalate, got approve"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 6,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "clear_tripwire",
+        "clear_tripwire",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs"
+      ],
+      "input_tokens": 268746,
+      "output_tokens": 5626,
+      "cost_usd": 0.258067,
+      "latency_s": 38.256,
+      "run_id": "eval-etimad-services-2725c371",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "approve",
+      "labelled_rules": [
+        "CONF-TERM"
+      ],
+      "recorded_rules": [
+        "CONF-TERM"
+      ],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "DATA-PROT",
+        "GOV-LAW",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LANG-PREC",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": []
+    },
+    {
+      "id": "etimad-supply",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "CONF-TERM ['c21'] recorded=[('c21', 'CONF-TERM')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "ASSIGN recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "DATA-PROT recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "GOV-LAW recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "PAY-TERMS recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "TERM-CONV recorded=['CONF-TERM']"
+        },
+        {
+          "type": "route",
+          "passed": false,
+          "detail": "expected escalate, got approve"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 6,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "clear_tripwire",
+        "clear_tripwire",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs"
+      ],
+      "input_tokens": 253890,
+      "output_tokens": 5304,
+      "cost_usd": 0.243053,
+      "latency_s": 36.174,
+      "run_id": "eval-etimad-supply-08bcd14b",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "approve",
+      "labelled_rules": [
+        "CONF-TERM"
+      ],
+      "recorded_rules": [
+        "CONF-TERM"
+      ],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "DATA-PROT",
+        "GOV-LAW",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LANG-PREC",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": []
+    },
+    {
+      "id": "expro-it",
+      "passed": true,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "CONF-TERM ['c33', 'c102'] recorded=[('c33', 'CONF-TERM')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "ASSIGN recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "DATA-PROT recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "GOV-LAW recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "PAY-TERMS recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "TERM-CONV recorded=['CONF-TERM']"
+        },
+        {
+          "type": "route",
+          "passed": true,
+          "detail": "expected escalate, got escalate"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 8,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "clear_tripwire",
+        "clear_tripwire",
+        "clear_tripwire",
+        "record_finding",
+        "clear_tripwire",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs",
+        "escalate_to_legal"
+      ],
+      "input_tokens": 717470,
+      "output_tokens": 7969,
+      "cost_usd": 0.500074,
+      "latency_s": 51.478,
+      "run_id": "eval-expro-it-f41e272d",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "escalate",
+      "labelled_rules": [
+        "CONF-TERM"
+      ],
+      "recorded_rules": [
+        "CONF-TERM"
+      ],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "DATA-PROT",
+        "GOV-LAW",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LANG-PREC",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": []
+    },
+    {
+      "id": "expro-cleaning",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "CONF-TERM ['c25', 'c100'] recorded=[('c25', 'CONF-TERM')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "ASSIGN recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "DATA-PROT recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "GOV-LAW recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "PAY-TERMS recorded=['CONF-TERM']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "TERM-CONV recorded=['CONF-TERM']"
+        },
+        {
+          "type": "route",
+          "passed": false,
+          "detail": "expected escalate, got approve"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 6,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "clear_tripwire",
+        "clear_tripwire",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs"
+      ],
+      "input_tokens": 457026,
+      "output_tokens": 6956,
+      "cost_usd": 0.420895,
+      "latency_s": 48.349,
+      "run_id": "eval-expro-cleaning-9bd6dca2",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "approve",
+      "labelled_rules": [
+        "CONF-TERM"
+      ],
+      "recorded_rules": [
+        "CONF-TERM"
+      ],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "DATA-PROT",
+        "GOV-LAW",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LANG-PREC",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": []
+    },
+    {
+      "id": "edgar-lucid-mof",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": false,
+          "detail": "LIAB-CAP ['c101'] recorded=[]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "TERM-CONV ['c79', 'c80', 'c26'] recorded=[('c26', 'TERM-CONV')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "ASSIGN recorded=['CONF-TERM', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=['CONF-TERM', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "DATA-PROT recorded=['CONF-TERM', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "GOV-LAW recorded=['CONF-TERM', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=['CONF-TERM', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=['CONF-TERM', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=['CONF-TERM', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['CONF-TERM', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['CONF-TERM', 'TERM-CONV']"
+        },
+        {
+          "type": "route",
+          "passed": false,
+          "detail": "expected escalate, got negotiate"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 8,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "clear_tripwire",
+        "record_finding",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs",
+        "send_to_counterparty"
+      ],
+      "input_tokens": 229987,
+      "output_tokens": 8235,
+      "cost_usd": 0.220624,
+      "latency_s": 52.061,
+      "run_id": "eval-edgar-lucid-mof-7e7feadd",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "negotiate",
+      "labelled_rules": [
+        "LIAB-CAP",
+        "TERM-CONV"
+      ],
+      "recorded_rules": [
+        "CONF-TERM",
+        "TERM-CONV"
+      ],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "DATA-PROT",
+        "GOV-LAW",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LANG-PREC",
+        "LIAB-CAP",
+        "NONCOMPETE",
+        "TERM-CONV"
+      ],
+      "independent_rules": []
+    },
+    {
+      "id": "edgar-aramco-po",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": false,
+          "detail": "LIAB-CAP ['c121'] recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "ASSIGN recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "GOV-LAW recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "PAY-TERMS recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "TERM-CONV recorded=[]"
+        },
+        {
+          "type": "route",
+          "passed": false,
+          "detail": "expected escalate, got approve"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 6,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs"
+      ],
+      "input_tokens": 233854,
+      "output_tokens": 5233,
+      "cost_usd": 0.228558,
+      "latency_s": 35.939,
+      "run_id": "eval-edgar-aramco-po-ca957b40",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "approve",
+      "labelled_rules": [
+        "LIAB-CAP"
+      ],
+      "recorded_rules": [],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "GOV-LAW",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LIAB-CAP",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": []
+    },
+    {
+      "id": "cuad-americasshoppingmall",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "ASSIGN ['c60'] recorded=[('c60', 'ASSIGN')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "AUTO-RENEW ['c24'] recorded=[('c24', 'AUTO-RENEW')]"
+        },
+        {
+          "type": "finding",
+          "passed": false,
+          "detail": "CONF-TERM ['c65', 'c48', 'c50', 'c51'] recorded=[]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "NONCOMPETE ['c37'] recorded=[('c37', 'NONCOMPETE')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=['ASSIGN', 'AUTO-RENEW', 'GOV-LAW', 'NONCOMPETE', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=['ASSIGN', 'AUTO-RENEW', 'GOV-LAW', 'NONCOMPETE', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['ASSIGN', 'AUTO-RENEW', 'GOV-LAW', 'NONCOMPETE', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "PAY-TERMS recorded=['ASSIGN', 'AUTO-RENEW', 'GOV-LAW', 'NONCOMPETE', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": false,
+          "detail": "TERM-CONV recorded=['ASSIGN', 'AUTO-RENEW', 'GOV-LAW', 'NONCOMPETE', 'TERM-CONV']"
+        },
+        {
+          "type": "route",
+          "passed": true,
+          "detail": "expected escalate, got escalate"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 6,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs",
+        "escalate_to_legal"
+      ],
+      "input_tokens": 83183,
+      "output_tokens": 4859,
+      "cost_usd": 0.109674,
+      "latency_s": 31.816,
+      "run_id": "eval-cuad-americasshoppingmall-17ca6e15",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "escalate",
+      "labelled_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "NONCOMPETE"
+      ],
+      "recorded_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "GOV-LAW",
+        "NONCOMPETE",
+        "TERM-CONV"
+      ],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "INDEMNITY",
+        "INTEREST",
+        "LANG-PREC",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": [
+        "AUTO-RENEW"
+      ]
+    },
+    {
+      "id": "cuad-corio",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": false,
+          "detail": "IP-OWN ['c64', 'c65'] recorded=[]"
+        },
+        {
+          "type": "finding",
+          "passed": false,
+          "detail": "PAY-TERMS ['c83'] recorded=[]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "TERM-CONV ['c53', 'c54'] recorded=[('c53', 'TERM-CONV')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "ASSIGN recorded=['GOV-LAW', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=['GOV-LAW', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=['GOV-LAW', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=['GOV-LAW', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['GOV-LAW', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LIAB-CAP recorded=['GOV-LAW', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['GOV-LAW', 'TERM-CONV']"
+        },
+        {
+          "type": "route",
+          "passed": true,
+          "detail": "expected negotiate, got negotiate"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 8,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "record_finding",
+        "record_finding",
+        "clear_tripwire",
+        "submit_clause_map",
+        "score_contract",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs",
+        "send_to_counterparty"
+      ],
+      "input_tokens": 216723,
+      "output_tokens": 7293,
+      "cost_usd": 0.20082,
+      "latency_s": 44.823,
+      "run_id": "eval-cuad-corio-bbda1d57",
+      "error": "",
+      "expected_route": "negotiate",
+      "got_route": "negotiate",
+      "labelled_rules": [
+        "IP-OWN",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "recorded_rules": [
+        "GOV-LAW",
+        "TERM-CONV"
+      ],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LANG-PREC",
+        "LIAB-CAP",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": []
+    },
+    {
+      "id": "cuad-vitalibis",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "AUTO-RENEW ['c54'] recorded=[('c54', 'AUTO-RENEW')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "INTEREST ['c30'] recorded=[('c30', 'INTEREST')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "IP-OWN ['c35'] recorded=[('c35', 'IP-OWN')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "LIAB-CAP ['c49', 'c48'] recorded=[('c49', 'LIAB-CAP')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "PAY-TERMS ['c138', 'c88'] recorded=[('c138', 'PAY-TERMS')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "ASSIGN recorded=['AUTO-RENEW', 'DATA-PROT', 'GOV-LAW', 'INTEREST', 'IP-OWN', 'LIAB-CAP', 'PAY-TERMS', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "CONF-TERM recorded=['AUTO-RENEW', 'DATA-PROT', 'GOV-LAW', 'INTEREST', 'IP-OWN', 'LIAB-CAP', 'PAY-TERMS', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=['AUTO-RENEW', 'DATA-PROT', 'GOV-LAW', 'INTEREST', 'IP-OWN', 'LIAB-CAP', 'PAY-TERMS', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['AUTO-RENEW', 'DATA-PROT', 'GOV-LAW', 'INTEREST', 'IP-OWN', 'LIAB-CAP', 'PAY-TERMS', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['AUTO-RENEW', 'DATA-PROT', 'GOV-LAW', 'INTEREST', 'IP-OWN', 'LIAB-CAP', 'PAY-TERMS', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": false,
+          "detail": "TERM-CONV recorded=['AUTO-RENEW', 'DATA-PROT', 'GOV-LAW', 'INTEREST', 'IP-OWN', 'LIAB-CAP', 'PAY-TERMS', 'TERM-CONV']"
+        },
+        {
+          "type": "route",
+          "passed": true,
+          "detail": "expected escalate, got escalate"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 7,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "clear_tripwire",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs",
+        "escalate_to_legal"
+      ],
+      "input_tokens": 180701,
+      "output_tokens": 8803,
+      "cost_usd": 0.208354,
+      "latency_s": 50.766,
+      "run_id": "eval-cuad-vitalibis-e3e0c429",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "escalate",
+      "labelled_rules": [
+        "AUTO-RENEW",
+        "INTEREST",
+        "IP-OWN",
+        "LIAB-CAP",
+        "PAY-TERMS"
+      ],
+      "recorded_rules": [
+        "AUTO-RENEW",
+        "DATA-PROT",
+        "GOV-LAW",
+        "INTEREST",
+        "IP-OWN",
+        "LIAB-CAP",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LANG-PREC",
+        "LIAB-CAP",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": [
+        "AUTO-RENEW"
+      ]
+    },
+    {
+      "id": "cuad-xacct",
+      "passed": true,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "LIAB-CAP ['c27', 'c28'] recorded=[('c27', 'LIAB-CAP')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=['GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=['GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=['GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=['GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "PAY-TERMS recorded=['GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "TERM-CONV recorded=['GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "route",
+          "passed": true,
+          "detail": "expected escalate, got escalate"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 6,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "record_finding",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs",
+        "escalate_to_legal"
+      ],
+      "input_tokens": 66555,
+      "output_tokens": 2650,
+      "cost_usd": 0.072257,
+      "latency_s": 21.664,
+      "run_id": "eval-cuad-xacct-12936f2b",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "escalate",
+      "labelled_rules": [
+        "LIAB-CAP"
+      ],
+      "recorded_rules": [
+        "GOV-LAW",
+        "LIAB-CAP"
+      ],
+      "checked_rules": [
+        "AUTO-RENEW",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LANG-PREC",
+        "LIAB-CAP",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": []
+    },
+    {
+      "id": "cuad-blackstone",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "AUTO-RENEW ['c3'] recorded=[('c3', 'AUTO-RENEW')]"
+        },
+        {
+          "type": "finding",
+          "passed": false,
+          "detail": "CONF-TERM ['c24', 'c16', 'c17'] recorded=[]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "INDEMNITY ['c8'] recorded=[('c8', 'INDEMNITY')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "INTEREST ['c20'] recorded=[('c20', 'INTEREST')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "LIAB-CAP ['c10', 'c9'] recorded=[('c10', 'LIAB-CAP')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "TERM-CONV ['c14', 'c13', 'c3'] recorded=[('c14', 'TERM-CONV')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "ASSIGN recorded=['AUTO-RENEW', 'GOV-LAW', 'INDEMNITY', 'INTEREST', 'LIAB-CAP', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=['AUTO-RENEW', 'GOV-LAW', 'INDEMNITY', 'INTEREST', 'LIAB-CAP', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['AUTO-RENEW', 'GOV-LAW', 'INDEMNITY', 'INTEREST', 'LIAB-CAP', 'TERM-CONV']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['AUTO-RENEW', 'GOV-LAW', 'INDEMNITY', 'INTEREST', 'LIAB-CAP', 'TERM-CONV']"
+        },
+        {
+          "type": "route",
+          "passed": true,
+          "detail": "expected escalate, got escalate"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 7,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs",
+        "escalate_to_legal"
+      ],
+      "input_tokens": 157876,
+      "output_tokens": 4969,
+      "cost_usd": 0.151814,
+      "latency_s": 33.313,
+      "run_id": "eval-cuad-blackstone-9c647927",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "escalate",
+      "labelled_rules": [
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "INDEMNITY",
+        "INTEREST",
+        "LIAB-CAP",
+        "TERM-CONV"
+      ],
+      "recorded_rules": [
+        "AUTO-RENEW",
+        "GOV-LAW",
+        "INDEMNITY",
+        "INTEREST",
+        "LIAB-CAP",
+        "TERM-CONV"
+      ],
+      "checked_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LANG-PREC",
+        "LIAB-CAP",
+        "NONCOMPETE",
+        "TERM-CONV"
+      ],
+      "independent_rules": [
+        "AUTO-RENEW"
+      ]
+    },
+    {
+      "id": "cuad-ofg",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "AUTO-RENEW ['c5'] recorded=[('c5', 'AUTO-RENEW')]"
+        },
+        {
+          "type": "finding",
+          "passed": false,
+          "detail": "CONF-TERM ['c40', 'c59'] recorded=[]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "INDEMNITY ['c34', 'c121'] recorded=[('c15', 'INDEMNITY'), ('c34', 'INDEMNITY')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "INTEREST ['c18', 'c13'] recorded=[('c18', 'INTEREST')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "NONCOMPETE ['c23'] recorded=[('c23', 'NONCOMPETE')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "PAY-TERMS ['c18', 'c6'] recorded=[('c6', 'PAY-TERMS')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "TERM-CONV ['c26', 'c116', 'c22'] recorded=[('c26', 'TERM-CONV')]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "LANG-PREC recorded=['ASSIGN', 'AUTO-RENEW', 'DATA-PROT', 'GOV-LAW', 'INDEMNITY', 'INTEREST', 'LIAB-CAP', 'NONCOMPETE', 'PAY-TERMS', 'TERM-CONV']"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 7,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "clear_tripwire",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs",
+        "escalate_to_legal"
+      ],
+      "input_tokens": 372215,
+      "output_tokens": 10631,
+      "cost_usd": 0.353995,
+      "latency_s": 67.699,
+      "run_id": "eval-cuad-ofg-fa9a7379",
+      "error": "",
+      "expected_route": null,
+      "got_route": "escalate",
+      "labelled_rules": [
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "INDEMNITY",
+        "INTEREST",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "recorded_rules": [
+        "ASSIGN",
+        "AUTO-RENEW",
+        "DATA-PROT",
+        "GOV-LAW",
+        "INDEMNITY",
+        "INTEREST",
+        "LIAB-CAP",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "checked_rules": [
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "INDEMNITY",
+        "INTEREST",
+        "LANG-PREC",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": [
+        "AUTO-RENEW",
+        "NONCOMPETE"
+      ]
+    },
+    {
+      "id": "claudette-zoom",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "INDEMNITY ['c26'] recorded=[('c26', 'INDEMNITY')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "INTEREST ['c14'] recorded=[('c14', 'INTEREST')]"
+        },
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "LIAB-CAP ['c27', 'c9', 'c10'] recorded=[('c27', 'LIAB-CAP')]"
+        },
+        {
+          "type": "finding",
+          "passed": false,
+          "detail": "PAY-TERMS ['c14'] recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=['GOV-LAW', 'INDEMNITY', 'INTEREST', 'LANG-PREC', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "CONF-TERM recorded=['GOV-LAW', 'INDEMNITY', 'INTEREST', 'LANG-PREC', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=['GOV-LAW', 'INDEMNITY', 'INTEREST', 'LANG-PREC', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['GOV-LAW', 'INDEMNITY', 'INTEREST', 'LANG-PREC', 'LIAB-CAP']"
+        },
+        {
+          "type": "route",
+          "passed": true,
+          "detail": "expected escalate, got escalate"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 6,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "get_clauses",
+        "get_clauses",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs",
+        "escalate_to_legal"
+      ],
+      "input_tokens": 108571,
+      "output_tokens": 4342,
+      "cost_usd": 0.122988,
+      "latency_s": 29.628,
+      "run_id": "eval-claudette-zoom-452b816b",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "escalate",
+      "labelled_rules": [
+        "INDEMNITY",
+        "INTEREST",
+        "LIAB-CAP",
+        "PAY-TERMS"
+      ],
+      "recorded_rules": [
+        "GOV-LAW",
+        "INDEMNITY",
+        "INTEREST",
+        "LANG-PREC",
+        "LIAB-CAP"
+      ],
+      "checked_rules": [
+        "AUTO-RENEW",
+        "CONF-TERM",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LIAB-CAP",
+        "NONCOMPETE",
+        "PAY-TERMS"
+      ],
+      "independent_rules": [
+        "LIAB-CAP"
+      ]
+    },
+    {
+      "id": "claudette-dropbox",
+      "passed": false,
+      "checks": [
+        {
+          "type": "finding",
+          "passed": true,
+          "detail": "LIAB-CAP ['c30', 'c27', 'c29', 'c26', 'c28'] recorded=[('c30', 'LIAB-CAP')]"
+        },
+        {
+          "type": "finding",
+          "passed": false,
+          "detail": "PAY-TERMS ['c15'] recorded=[]"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "AUTO-RENEW recorded=['ASSIGN', 'GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INDEMNITY recorded=['ASSIGN', 'GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "INTEREST recorded=['ASSIGN', 'GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "IP-OWN recorded=['ASSIGN', 'GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "NONCOMPETE recorded=['ASSIGN', 'GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "no_finding",
+          "passed": true,
+          "detail": "TERM-CONV recorded=['ASSIGN', 'GOV-LAW', 'LIAB-CAP']"
+        },
+        {
+          "type": "route",
+          "passed": true,
+          "detail": "expected escalate, got escalate"
+        }
+      ],
+      "final_text": "",
+      "stop_reason": "end_turn",
+      "turns": 6,
+      "tool_calls": [
+        "load_contract",
+        "list_playbook",
+        "get_clauses",
+        "clear_tripwire",
+        "record_finding",
+        "record_finding",
+        "record_finding",
+        "submit_clause_map",
+        "score_contract",
+        "render_outputs",
+        "escalate_to_legal"
+      ],
+      "input_tokens": 79295,
+      "output_tokens": 3828,
+      "cost_usd": 0.094295,
+      "latency_s": 25.733,
+      "run_id": "eval-claudette-dropbox-ee384524",
+      "error": "",
+      "expected_route": "escalate",
+      "got_route": "escalate",
+      "labelled_rules": [
+        "LIAB-CAP",
+        "PAY-TERMS"
+      ],
+      "recorded_rules": [
+        "ASSIGN",
+        "GOV-LAW",
+        "LIAB-CAP"
+      ],
+      "checked_rules": [
+        "AUTO-RENEW",
+        "INDEMNITY",
+        "INTEREST",
+        "IP-OWN",
+        "LIAB-CAP",
+        "NONCOMPETE",
+        "PAY-TERMS",
+        "TERM-CONV"
+      ],
+      "independent_rules": [
+        "LIAB-CAP"
+      ]
+    }
+  ]
+}

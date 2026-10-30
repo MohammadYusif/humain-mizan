@@ -20,7 +20,8 @@ export interface Health {
 
 /** How a contract's text was obtained when it was read from a scan (local OCR). */
 export interface OcrSource {
-  kind: "ocr" | "unknown"
+  kind: "ocr" | "unread" | "unknown"
+  pages_unread?: number[]
   engine?: string
   reason?: string
   pages_total?: number
@@ -37,7 +38,7 @@ export interface ContractSummary {
   title: string
   clauses: number
   languages: Lang[]
-  source: "sample" | "held-out" | "upload"
+  source: "sample" | "held-out" | "real" | "upload"
   ocr?: OcrSource | null
 }
 
@@ -297,6 +298,11 @@ export interface EvalSummary {
   cost_per_pass_usd: number | null
   /** Set when the run was re-graded against corrected labels from its saved traces (no new model calls). */
   rescored_from?: string
+  /** Recall against labels made by outside annotators only (real-world suite). */
+  independent_recall?: number | null
+  independent_labels?: number
+  /** Per rule: labelled issues, how many were found, and in-scope findings beyond the labels. */
+  per_rule?: Record<string, { labelled: number; found: number; extra: number }>
 }
 
 export interface EvalCase {
@@ -308,6 +314,10 @@ export interface EvalCase {
   latency_s: number | null
   labelled_rules: string[] | null
   recorded_rules: string[] | null
+  /** Rules the labels cover (real-world cases are only partly labelled); null = every rule. */
+  checked_rules?: string[] | null
+  /** Labelled by outside annotators (CUAD lawyers, CLAUDETTE), not by us. */
+  independent_rules?: string[] | null
 }
 
 export interface EvalModel {
@@ -315,7 +325,7 @@ export interface EvalModel {
   /** null = the current agent (with red-flag checks); otherwise e.g. "before red-flag tripwires". */
   variant: string | null
   /** main: the suite the patterns were developed on; held-out: blind contracts written separately. */
-  suite?: "main" | "held-out"
+  suite?: "main" | "held-out" | "real"
   file: string
   date: number
   summary: EvalSummary

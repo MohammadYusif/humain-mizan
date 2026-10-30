@@ -56,7 +56,8 @@ function ContractOption({ c }: { c: ContractSummary }) {
 }
 
 export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUpload, busy }: Props) {
-  const samples = contracts?.filter((c) => c.source !== "upload") ?? []
+  const samples = contracts?.filter((c) => c.source === "sample" || c.source === "held-out") ?? []
+  const real = contracts?.filter((c) => c.source === "real") ?? []
   const uploads = contracts?.filter((c) => c.source === "upload") ?? []
   const selected = contracts?.find((c) => c.doc_id === docId) ?? null
   const title = selected ? contractTitle(selected.title) : null
@@ -88,6 +89,17 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
                     <SelectGroup>
                       <SelectLabel>Your uploads</SelectLabel>
                       {uploads.map((c) => (
+                        <ContractOption key={c.doc_id} c={c} />
+                      ))}
+                    </SelectGroup>
+                    <SelectSeparator />
+                  </>
+                ) : null}
+                {real.length > 0 ? (
+                  <>
+                    <SelectGroup>
+                      <SelectLabel>Real contracts (public sources)</SelectLabel>
+                      {real.map((c) => (
                         <ContractOption key={c.doc_id} c={c} />
                       ))}
                     </SelectGroup>
