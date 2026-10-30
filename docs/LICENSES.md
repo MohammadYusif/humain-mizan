@@ -19,6 +19,7 @@ No copyleft (GPL/AGPL/LGPL/SSPL). Re-run `uv run python scripts/check_licenses.p
 | React, Vite, TypeScript | MIT / MIT / Apache-2.0 | web UI | none |
 | Tailwind CSS, shadcn/ui, Radix UI, lucide-react, sonner | MIT / MIT / MIT / ISC / MIT | web UI components and styling | none |
 | DM Sans, IBM Plex Sans Arabic, IBM Plex Mono (via @fontsource) | SIL OFL 1.1 | self-hosted fonts | keep the licence with the fonts; no selling fonts alone |
+| playwright-core, PyAV (local tools for `docs/submission/motion/`, not app dependencies) | Apache-2.0 / BSD-3-Clause | rendering the motion video frame by frame and encoding it with the GPU's H.264 encoder (not libx264) | none |
 | Qwen3 14B (local comparison only, via Ollama) | Apache-2.0 | sovereign-mode experiment | model licence terms |
 | Claude models (Anthropic API) | commercial API terms | the agent's model | API terms of use |
 

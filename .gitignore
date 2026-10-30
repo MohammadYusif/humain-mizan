@@ -25,3 +25,6 @@ evals/results/
 # Web UI: dependencies and build output (built from frontend/)
 frontend/node_modules/
 web/
+
+# Motion video frames (render.mjs output)
+docs/submission/motion/frames/
