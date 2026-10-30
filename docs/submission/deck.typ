@@ -11,7 +11,6 @@
 
 #let author = "Mohammad Albeladi"
 #let role = "AI trainer, SDAIA Academy and KAUST"
-#let demo-url = "Demo video link"
 #let redaction-result = "12/12 routes right and 0/9 risky contracts approved on the main suite, the same as with names shown"
 
 #set document(title: "Mizan", author: author)
@@ -151,7 +150,7 @@
       #note(d, size: 16pt)
     ]))
   #v(0.7cm)
-  #note(size: 16pt)[Also built: a lawyers' inbox that holds only escalations, a batch queue with an auto-send policy, redline and memo PDFs typeset from data, a Proof screen with every result, Mizan's own sign-in, and a guided demo that replays recorded runs.]
+  #note(size: 16pt)[Also built: a lawyers' inbox that holds only escalations, a batch queue with an auto-send policy, redline and memo PDFs typeset from data, a Proof screen with every result, Mizan's own sign-in (lowering a label takes the signed-in account and a fixed answer per finding; one review at a time per contract; Restricted contracts and their reviews open only for Legal), and a guided demo that replays recorded runs.]
 ]
 
 // 6. Testing and results
@@ -252,20 +251,19 @@
     ])
 ]
 
-// 9. Conclusion and demo
-#slide[Conclusion and demo][The model reads. Code decides. Anything uncertain goes to a lawyer.][
+// 9. Conclusion
+#slide[Conclusion][The model reads. Code decides. Anything uncertain goes to a lawyer.][
   #grid(columns: (1.3fr, 1fr), column-gutter: 1.6cm, align: horizon,
     [
       #set text(size: 17pt)
       - Beyond the main suite, 47 contracts, 27 of them real: the current version gets 45 of 46 routes right and approves 0 of 40 risky ones, including the newest 12, run once and blind.
       - Arabic, English and bilingual, typed or scanned, up to 101 pages read by OCR.
       - Another buyer's rules from a file, a local model option, and confidential contracts that never leave.
-      - The main suite gives the same result in 4 runs; 118 tests with no API calls; every number here is reproducible from the repo and on the Proof screen.
+      - The main suite gives the same result in 4 runs; 126 tests with no API calls; every number here is reproducible from the repo and on the Proof screen.
     ],
     card-box(inset: 22pt)[
-      #head[Demo]
-      #block(below: 0.6em, text(font: "IBM Plex Mono", size: 15pt, fill: primary, demo-url))
-      #note(size: 16pt)[About four minutes: upload, the findings with their quotes, the route, the lawyers' inbox and Proof.
-      The guided demo replays four recorded runs, labelled Replay, with no key and no network.]
+      #head[In the app]
+      #note(size: 16pt)[Sign in with your own account. Guided demo replays four recorded runs, labelled Replay, with no key and no network.
+      Proof shows every result above, run by run. Upload your own contract to see its label, its findings and its route.]
     ])
 ]

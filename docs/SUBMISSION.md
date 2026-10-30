@@ -147,6 +147,14 @@ Decisions and their trade-offs:
   evals can be re-graded from it.
 - Limits on every run: turn cap, USD budget, loop guard (an identical tool call is not repeated a third
   time). Outward sends need approval or an explicit auto-send policy.
+- One review at a time per contract: a second person (or a batch) asking for a contract under review
+  gets "being reviewed by <name> since <time>" and nothing starts; its label is locked meanwhile.
+  Lowering a label below what the text calls for is signed with the signed-in account, never a typed
+  name, and needs one answer per finding from fixed choices (no free text); the server rejects
+  anything else.
+- Roles (`HACK_AUTH_ROLES`, e.g. `sara:legal,omar:procurement`): a Restricted contract and every
+  review of it open only for Legal, on every endpoint, not just on screen. Anyone allowed to read a
+  contract sees its latest finished review and who ran it, so nobody reviews it twice.
 - Private deployment ready (Railway, Mizan's own sign-in: scrypt hashes, signed HttpOnly cookie, rate
   limit, fails closed) but **not deployed**. Secrets live only in `.env` / the host's variables.
 - Third-party components and their licences: `docs/LICENSES.md`. Real-contract texts are not in git;

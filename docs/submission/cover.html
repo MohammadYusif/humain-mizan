@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- The submission's background image (1920×1080). Render: node docs/submission/render-cover.mjs -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mizan cover</title>
+<style>
+@font-face { font-family: "DM Sans"; src: url(motion/fonts/dm-sans-latin-opsz-normal.woff2) format("woff2"); font-weight: 100 1000; font-display: block; }
+@font-face { font-family: "Plex Arabic"; src: url(motion/fonts/IBMPlexSansArabic-Regular.ttf); font-weight: 400; font-display: block; }
+@font-face { font-family: "Plex Arabic"; src: url(motion/fonts/IBMPlexSansArabic-SemiBold.ttf); font-weight: 600 700; font-display: block; }
+@font-face { font-family: "Plex Mono"; src: url(motion/fonts/IBMPlexMono-Regular.ttf); font-display: block; }
+:root {
+  --ink: oklch(0.3 0.045 166);
+  --ink-fg: oklch(0.96 0.016 86);
+  --ink-muted: oklch(0.8 0.03 140);
+  --paper: oklch(0.987 0.008 86);
+  --fg: oklch(0.235 0.018 62);
+  --muted-fg: oklch(0.45 0.022 64);
+  --border: oklch(0.872 0.02 80);
+  --brass: oklch(0.78 0.1 80);
+  --highlight: oklch(0.9 0.075 88);
+  --negotiate: oklch(0.49 0.105 64);
+  --negotiate-soft: oklch(0.94 0.05 80);
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; }
+body { background: var(--ink); color: var(--ink-fg); font-family: "DM Sans", "Plex Arabic", sans-serif; position: relative; }
+.mark { position: absolute; right: -170px; bottom: -150px; width: 980px; height: 980px; opacity: 0.07; }
+.left { position: absolute; left: 140px; top: 150px; width: 820px; }
+.brand { display: flex; align-items: center; gap: 26px; }
+.brand .name { font-size: 76px; font-weight: 650; letter-spacing: -0.02em; line-height: 1; }
+.brand .ar { font-family: "Plex Arabic"; font-size: 44px; color: var(--brass); line-height: 1; margin-left: 4px; }
+h1 { max-width: 780px; margin-top: 84px; font-size: 76px; line-height: 1.08; font-weight: 650; letter-spacing: -0.025em; }
+.routes { margin-top: 64px; display: flex; gap: 44px; font-size: 28px; }
+.routes li { list-style: none; display: flex; align-items: center; gap: 14px; font-weight: 600; }
+.routes i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+.foot { position: absolute; left: 140px; bottom: 90px; font-size: 24px; color: var(--ink-muted); }
+.card { position: absolute; right: 140px; top: 250px; width: 760px; background: var(--paper); color: var(--fg);
+  border-radius: 14px; overflow: hidden; }
+.card .top, .card .bot { display: flex; justify-content: space-between; align-items: center; padding: 22px 34px;
+  font-size: 22px; color: var(--muted-fg); }
+.card .top { border-bottom: 2px solid var(--border); }
+.card .bot { border-top: 2px solid var(--border); }
+.mono { font-family: "Plex Mono", monospace; }
+.chip { background: var(--negotiate-soft); color: var(--negotiate); border-radius: 6px; padding: 4px 12px; font-weight: 600; }
+.body { padding: 34px 34px 30px; }
+.ar-text { font-family: "Plex Arabic"; direction: rtl; font-size: 34px; line-height: 1.85; }
+mark { background: var(--highlight); color: var(--fg); border-radius: 5px; padding: 0 8px; }
+dl { display: grid; grid-template-columns: 150px 1fr; gap: 14px 20px; margin-top: 30px; font-size: 26px; line-height: 1.35; }
+dt { color: var(--muted-fg); }
+.stamp { transform: rotate(-4deg); border: 4px solid var(--negotiate); color: var(--negotiate); border-radius: 6px;
+  padding: 4px 16px; font-size: 26px; font-weight: 600; letter-spacing: 0.06em; }
+</style>
+</head>
+<body>
+  <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+    <g fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M16 9.5V23.5M11.5 23.5h9M6.5 10.5h19M8 10.5 5.2 17.2M8 10.5l2.8 6.7M24 10.5l-2.8 6.7M24 10.5l2.8 6.7"/>
+      <path d="M4.6 17.2h6.8a3.4 3.4 0 0 1-6.8 0zM20.6 17.2h6.8a3.4 3.4 0 0 1-6.8 0z"/>
+      <circle cx="16" cy="9.6" r="1.9"/>
+    </g>
+  </svg>
+
+  <div class="left">
+    <div class="brand">
+      <svg width="104" height="104" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="var(--ink-fg)"/>
+        <g fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 9.5V23.5M11.5 23.5h9M6.5 10.5h19M8 10.5 5.2 17.2M8 10.5l2.8 6.7M24 10.5l-2.8 6.7M24 10.5l2.8 6.7"/>
+        </g>
+        <path d="M4.6 17.2h6.8a3.4 3.4 0 0 1-6.8 0zM20.6 17.2h6.8a3.4 3.4 0 0 1-6.8 0z" fill="var(--ink)"/>
+        <circle cx="16" cy="9.6" r="1.9" fill="oklch(0.6 0.105 76)"/>
+      </svg>
+      <span class="name">Mizan</span><span class="ar" lang="ar">ميزان</span>
+    </div>
+    <h1>Every clause checked against your playbook, in Arabic and English.</h1>
+    <ul class="routes" style="padding:0">
+      <li><i style="background:oklch(0.8 0.12 152)"></i>Approve</li>
+      <li><i style="background:oklch(0.83 0.12 78)"></i>Negotiate</li>
+      <li><i style="background:oklch(0.75 0.13 35)"></i>Escalate</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="top"><span class="mono">Services agreement · c4</span><span class="chip">Major</span></div>
+    <div class="body">
+      <p class="ar-text" lang="ar">المادة الرابعة: في حال التأخر في السداد، يستحق مقدم الخدمة <mark>فائدة بنسبة 2% شهرياً</mark> على المبالغ المتأخرة.</p>
+      <dl>
+        <dt>Playbook</dt><dd>No recurring interest on late payment.</dd>
+        <dt>Redline</dt><dd>A one-time fee of no more than 1% of the overdue amount.</dd>
+      </dl>
+    </div>
+    <div class="bot"><span>Route, computed by code from the findings</span><span class="stamp mono">NEGOTIATE</span></div>
+  </div>
+
+  <div class="foot">HUMAIN Future AI Builders Hackathon · Challenge 3</div>
+</body>
+</html>

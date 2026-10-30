@@ -68,6 +68,37 @@ body.render { display: block; background: var(--background); }
 .chip.ink { background: var(--muted); color: var(--foreground); }
 .chip.major { background: var(--negotiate-soft); color: var(--negotiate); }
 .chip.critical { background: var(--escalate-soft); color: var(--escalate); }
+.real { color: var(--escalate); font-weight: 700; }
+.opt { display: flex; align-items: flex-start; gap: 10px; padding: 7px 4px; font-size: 18px; line-height: 1.35; border-radius: 6px; }
+.opt i { flex: none; width: 18px; height: 18px; margin-top: 2px; border-radius: 50%; border: 1.5px solid var(--line); box-sizing: border-box; }
+.opt.on i { border: 5.5px solid var(--primary); }
+.opt.on { background: var(--muted); }
+.twin { width: 490px; height: 392px; padding: 0 24px 22px; box-sizing: border-box; overflow: hidden; border-width: 2.5px; }
+.twin.sara { border-color: var(--primary); }
+.twin.omar { border-color: var(--brass); }
+.twin .who { display: flex; align-items: center; gap: 14px; margin: 0 -24px; padding: 14px 24px; }
+.twin.sara .who { background: oklch(0.93 0.035 166); }
+.twin.omar .who { background: var(--brass-soft); }
+.twin .av { flex: none; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: var(--paper); letter-spacing: 0.02em; }
+.twin.sara .av { background: var(--primary); }
+.twin.omar .av { background: var(--brass-ink); }
+.twin .nm { font-size: 21px; font-weight: 650; line-height: 1.2; }
+.twin .rl { font-size: 16px; color: var(--muted-fg); }
+.twin .si { margin-left: auto; font-size: 15px; color: var(--muted-fg); text-align: right; line-height: 1.3; }
+.twin .ttl { font-weight: 650; font-size: 25px; margin-top: 18px; }
+.twin .go { margin-top: 22px; height: 48px; border-radius: 6px; display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--primary); color: var(--primary-fg); font-size: 19px; font-weight: 600; }
+.twin .go.off { background: var(--muted); color: var(--faint); }
+.twin .go.done { background: var(--approve-soft); color: var(--approve); }
+.twin .res { border: 1.5px solid var(--border); background: var(--background); border-radius: 6px; padding: 10px 14px;
+  font-size: 18px; line-height: 1.45; }
+.twin .note { margin-top: 14px; font-size: 19px; color: var(--muted-fg); }
+.twin .ban, .twin .res { position: absolute; left: 24px; right: 24px; top: 280px; }
+.twin .ban { border: 1.5px solid oklch(0.49 0.105 64 / 0.4); background: var(--negotiate-soft);
+  border-radius: 6px; padding: 10px 14px; font-size: 18px; line-height: 1.4; }
+.tagcur { display: flex; align-items: flex-start; }
+.tagcur span { margin: 30px 0 0 -6px; font-size: 15px; font-weight: 600; padding: 2px 7px; border-radius: 4px; }
 .chip.ok { background: var(--approve-soft); color: var(--approve); }
 .chip.brass { background: var(--brass-soft); color: var(--brass-ink); }
 .label { font-size: 18px; color: var(--muted-fg); font-weight: 500; }
@@ -157,21 +188,15 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
     <div class="cap" id="c1"><div class="num">01</div><h2>Upload</h2>
       <p>A PDF, Word file, scan or phone photo, in Arabic, English or both.</p></div>
     <div id="s1files"></div>
-    <div class="card" id="s1doc" style="left:800px; top:220px; width:450px; height:330px; padding:26px 28px">
-      <div style="font-size:22px; font-weight:650; line-height:1.2">Logistics services agreement</div>
-      <div class="label" style="margin-top:8px">English · 14 pages · PDF</div>
-      <div class="doc-lines" style="margin-top:28px">
-        <i style="width:92%"></i><i style="width:84%"></i><i style="width:96%"></i><i style="width:60%"></i>
-        <i style="width:0; height:10px"></i>
-        <i style="width:90%"></i><i style="width:94%"></i><i style="width:72%"></i>
-      </div>
-    </div>
+    <!-- Filled at load with a copy of the Label scene's card (#s2a), so the contract that forms
+         here is the same one the next scene scans: no swap at the cut. -->
+    <div class="card" id="s1doc" style="left:800px; top:220px; width:450px; padding:26px 28px 92px; font-size:21px; line-height:1.75; overflow:hidden"></div>
   </section>
 
   <!-- S2: label, then the data policy -->
   <section class="scene" id="s2">
     <div class="cap" id="c2"><div class="num">02</div><h2>Label</h2>
-      <p>Mizan reads every contract on this server, before any model sees it, and suggests who may see it. Then the data policy decides what may leave.</p></div>
+      <p>Mizan reads every contract on this server, before any model sees it, and suggests who may see it. Loosening it takes a signed-in person and an answer for each thing it found.</p></div>
     <div id="s2gate" class="abs" style="left:1318px; top:200px; width:4px; height:760px"></div>
     <div id="s2in" class="abs label" style="left:800px; top:160px; font-size:20px">Inside your network</div>
     <div id="s2out" class="abs label" style="left:1350px; top:160px; font-size:20px">External model</div>
@@ -210,6 +235,82 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
     <div id="s2bnote" class="abs" style="left:1350px; top:450px; width:450px">
       <div style="font-size:30px; font-weight:650; color:var(--escalate)">Stopped at the boundary</div>
       <div style="font-size:21px; line-height:1.45; color:var(--muted-fg); margin-top:8px">No model call. It goes to a lawyer with the reason: marked “Strictly confidential”.</div>
+    </div>
+
+    <!-- D: a person lowers the label: signed in, one fixed answer per finding, on the record. -->
+    <div class="card" id="s2dlg" style="left:1350px; top:230px; width:470px; padding:24px 26px; box-shadow:0 14px 34px oklch(0.3 0.02 60 / 0.16)">
+      <div style="font-size:24px; font-weight:650; line-height:1.25">Set to Internal instead of Restricted?</div>
+      <div style="font-size:18px; color:var(--muted-fg); margin-top:10px; line-height:1.45">For each thing Mizan found, pick why it no longer applies. Nothing to type.</div>
+      <div style="margin-top:14px; border:1.5px solid var(--border); border-radius:8px; padding:12px 14px 6px">
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap"><span style="font-size:18px; font-weight:600">1. Its classification marking</span>
+          <span class="mono" style="font-size:14px; background:var(--highlight); padding:2px 6px; border-radius:4px">STRICTLY CONFIDENTIAL</span></div>
+        <div class="opt" id="s2opt1"><i></i><span>The owner has since released it at this level</span></div>
+        <div class="opt"><i></i><span>The marking belongs to a template header</span></div>
+        <div class="opt"><i></i><span>Applied by mistake, confirmed with its owner</span></div>
+      </div>
+      <div style="margin-top:12px; font-size:17px; color:var(--muted-fg)">Signed off as <span style="color:var(--foreground); font-weight:600">Sara Ahmed</span>, the account signed in</div>
+      <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:18px">
+        <span class="chip" style="border:1.5px solid var(--border); height:42px; padding:0 16px">Keep Restricted</span>
+        <span id="s2sign" class="chip" style="background:var(--primary); color:var(--primary-fg); height:42px; padding:0 16px">Sign off: set to Internal</span>
+      </div>
+    </div>
+    <div id="s2rec" class="abs" style="left:800px; top:735px; width:480px; font-size:19px; line-height:1.5">
+      <div style="display:flex; align-items:center; gap:10px"><span class="chip brass" style="height:32px">Internal</span>
+        <span style="font-weight:600">Set by Sara Ahmed on 30 Oct 2026</span></div>
+      <div style="color:var(--muted-fg); margin-top:6px">Its classification marking: the owner has since released it at this level. Detected: Restricted.</div>
+    </div>
+    <div id="s2rule" class="abs" style="left:1350px; top:560px; width:470px">
+      <div style="font-size:28px; font-weight:650; line-height:1.25">Looser only when signed in, with an answer for each finding.</div>
+      <div style="font-size:21px; line-height:1.45; color:var(--muted-fg); margin-top:10px">Fixed choices, checked by the server: nothing typed, nothing made up. Stricter is one click.</div>
+    </div>
+    <svg id="s2cur" class="abs" style="left:0; top:0; z-index:10" width="30" height="42" viewBox="0 0 30 42">
+      <path d="M3 2 L3 33 L11 26 L16.5 38.5 L22 36 L16.5 24 L27 24 Z" fill="var(--primary)" stroke="var(--paper)" stroke-width="2.2" stroke-linejoin="round"/>
+    </svg>
+
+    <!-- E: two people open the same contract. The first review holds it; the second is told who. -->
+    <div class="cap" id="c2b"><div class="num">02</div><h2>One at a time</h2>
+      <p>Two people open the same contract. The first review holds it; the second sees who has it, then opens that result. What each may open depends on their role.</p></div>
+    <div id="s2two" class="abs label" style="left:800px; top:172px; font-size:20px">Two people, two computers, the same contract</div>
+    <div class="card twin sara" id="s2p1" style="left:800px; top:220px">
+      <div class="who"><span class="av">SA</span><span><div class="nm">Sara Ahmed</div><div class="rl">Legal counsel</div></span>
+        <span class="si">Signed in<br>on her laptop</span></div>
+      <div class="ttl">Logistics services agreement</div>
+      <div class="doc-lines" style="margin-top:14px"><i style="width:88%"></i><i style="width:70%"></i><i style="width:80%"></i></div>
+      <div class="go" id="s2go1">Review contract</div>
+      <div class="note" id="s2hold"></div>
+    </div>
+    <div class="card twin omar" id="s2p2" style="left:1330px; top:220px">
+      <div class="who"><span class="av">OK</span><span><div class="nm">Omar Khalid</div><div class="rl">Procurement</div></span>
+        <span class="si">Signed in<br>on his laptop</span></div>
+      <div class="ttl">Logistics services agreement</div>
+      <div class="doc-lines" style="margin-top:14px"><i style="width:88%"></i><i style="width:70%"></i><i style="width:80%"></i></div>
+      <div class="go" id="s2go2">Review contract</div>
+      <div class="res" id="s2res"><div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap"><b>Reviewed by <span style="color:var(--primary)">Sara Ahmed</span> at 10:46</b>
+        <span class="chip major" style="height:28px; font-size:16px">Negotiate</span></div>
+        <div id="s2restxt" style="color:var(--muted-fg)">2 changes requested. Open her result: no second review.</div></div>
+      <div class="ban" id="s2ban"><b>Being reviewed by <span style="color:var(--primary)">Sara Ahmed</span> since 10:44.</b> One review at a time per contract: you can review it when hers ends.</div>
+    </div>
+    <div id="s2srv" class="abs" style="left:800px; top:650px; width:1020px; font-size:21px; line-height:1.45">
+      <span class="chip critical mono" style="height:32px; font-size:16px">409 · nothing started</span>
+      <span style="color:var(--muted-fg); margin-left:10px">The lock is on the server: a second browser, a batch or a direct call gets the same answer.</span>
+    </div>
+    <div id="s2free" class="abs" style="left:800px; top:650px; width:1020px; font-size:24px; font-weight:600">
+      Sara’s review ends. Omar opens her result instead of reviewing it again.
+    </div>
+    <div id="s2lock" class="abs" style="left:800px; top:650px; width:1020px">
+      <div style="display:flex; align-items:center; gap:14px; border:1.5px solid oklch(0.49 0.145 33 / 0.45); background:var(--escalate-soft); border-radius:8px; padding:16px 20px">
+        <svg style="flex:none" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--escalate)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <div style="font-size:21px; line-height:1.45"><b>Omar opens “Board-level supply agreement”: Restricted.</b>
+          <span style="color:var(--muted-fg)">Only Legal can open it and its reviews, whoever reviewed it. His role is procurement, so nothing of it reaches his screen.</span></div>
+      </div>
+    </div>
+    <div id="s2cS" class="abs tagcur" style="left:0; top:0; z-index:10">
+      <svg width="30" height="42" viewBox="0 0 30 42"><path d="M3 2 L3 33 L11 26 L16.5 38.5 L22 36 L16.5 24 L27 24 Z" fill="var(--primary)" stroke="var(--paper)" stroke-width="2.2" stroke-linejoin="round"/></svg>
+      <span style="background:var(--primary); color:var(--paper)">Sara Ahmed</span>
+    </div>
+    <div id="s2cO" class="abs tagcur" style="left:0; top:0; z-index:10">
+      <svg width="30" height="42" viewBox="0 0 30 42"><path d="M3 2 L3 33 L11 26 L16.5 38.5 L22 36 L16.5 24 L27 24 Z" fill="var(--brass-ink)" stroke="var(--paper)" stroke-width="2.2" stroke-linejoin="round"/></svg>
+      <span style="background:var(--brass-ink); color:var(--paper)">Omar Khalid</span>
     </div>
   </section>
 
@@ -345,7 +446,10 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
         </div>
       </div>
     </div>
-    <svg id="s6cursor" class="abs" style="left:0; top:0" width="30" height="42" viewBox="0 0 30 42">
+    <svg id="s6cur2" class="abs" style="left:0; top:0; z-index:10; opacity:0" width="30" height="42" viewBox="0 0 30 42">
+      <path d="M3 2 L3 33 L11 26 L16.5 38.5 L22 36 L16.5 24 L27 24 Z" fill="var(--foreground)" stroke="var(--paper)" stroke-width="2.2" stroke-linejoin="round"/>
+    </svg>
+    <svg id="s6cursor" class="abs" style="left:0; top:0; z-index:10" width="30" height="42" viewBox="0 0 30 42">
       <path d="M3 2 L3 33 L11 26 L16.5 38.5 L22 36 L16.5 24 L27 24 Z" fill="var(--foreground)" stroke="var(--paper)" stroke-width="2.2" stroke-linejoin="round"/>
     </svg>
     <div class="label abs" id="s6other" style="left:1330px; top:170px; font-size:20px">Another contract, escalated</div>
@@ -371,11 +475,11 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
   <!-- S7: proof -->
   <section class="scene" id="s7">
     <div class="cap" id="c7"><div class="num">07</div><h2>Proof</h2>
-      <p>59 contracts, 27 of them real. Every answer key was written before Mizan saw the contract, by reviewers that never saw its output.</p></div>
+      <p>59 contracts, <strong class="real">27 of them real</strong>. Every answer key was written before Mizan saw the contract, by reviewers that never saw its output.</p></div>
     <div id="s7method" class="abs" style="left:800px; top:180px; width:1000px; height:110px"></div>
     <div id="s7rows" class="abs" style="left:800px; top:330px; width:1000px"></div>
     <div id="s7foot" class="abs" style="left:800px; top:900px; width:1000px; font-size:22px; color:var(--muted-fg)">
-      Plus 118 automated tests with no API calls. 4 to 23 cents a contract, depending on its length.
+      Plus 126 automated tests with no API calls. 4 to 23 cents a contract, depending on its length.
     </div>
   </section>
 
@@ -391,10 +495,14 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
 </div>
 
 <script>
-const DUR = 63;
+const DUR = 89.26;
+window.DUR = DUR; // render.mjs reads the length from here
 const STEPS = ["Upload", "Label", "Read", "Check", "Route", "Act", "Proof"];
-// Scene windows [start, end] in seconds. The total stays 63 s: add_music.py fits the music to it.
-const S = [[0, 5], [5, 9.5], [9.5, 21], [21, 27.5], [27.5, 35], [35, 42.5], [42.5, 51.5], [51.5, 59], [59, 63]];
+// Scene windows [start, end] in seconds. add_music.py fits the music to the total.
+const S = [[0, 5], [5, 9.5], [9.5, 44.97], [44.97, 50.47], [50.47, 57.91], [57.91, 64.41], [64.41, 74.41], [74.41, 85.2], [85.2, 89.26]];
+// Scenes timed for a longer window play faster: local time = (t - start) * K. Read, Check, Route
+// and Act gave up 3.5 s to the label sign-off.
+const K = [1, 1, 1, 6.5 / 5.5, 7.5 / 7.44, 7.5 / 6.5, 1, 1, 1];
 
 const $ = (id) => document.getElementById(id);
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -415,7 +523,7 @@ function show(el, t, a, b = 1e9, rise = 22, d = 0.6) {
 function scene(i, t) {
   const [a, b] = S[i];
   $("s" + i).style.visibility = t >= a - 0.01 && t <= b + 0.01 ? "visible" : "hidden";
-  return t - a;
+  return (t - a) * K[i];
 }
 
 /* ---------- build repeated DOM ---------- */
@@ -425,6 +533,15 @@ STEPS.forEach((s, i) => {
   el.innerHTML = `<span class="mono" style="font-size:17px; margin-right:8px">0${i + 1}</span>${s}`;
   $("track").appendChild(el);
 });
+
+// The upload's contract is a copy of the Label scene's card, without its scan line, stamp,
+// highlights or placeholders, so it reads as the same document when the next step starts.
+{
+  const copy = $("s2a").cloneNode(true);
+  copy.querySelectorAll(".scanline, .stamp").forEach((el) => el.remove());
+  copy.querySelectorAll(".tok").forEach((tk) => tk.replaceWith(tk.querySelector(".a").textContent));
+  $("s1doc").innerHTML = copy.innerHTML;
+}
 
 const FILES = [
   ["PDF", "Services agreement", false, -3],
@@ -566,8 +683,8 @@ METHOD.forEach((m, i) => {
 const SUITES = [
   ["Main suite, run 4 times", false, "12 × 4", "48/48", "0/36"],
   ["Blind sets written by another agent", false, "20", "20/20", "0/14"],
-  ["Real: SEC filings, Saudi government, terms of service", true, "15", "14/14", "0/14"],
-  ["Real, second batch, blind", true, "12", "11/12", "0/12"],
+  ["SEC filings, Saudi government, terms of service", true, "15", "14/14", "0/14"],
+  ["Second batch, blind", true, "12", "11/12", "0/12"],
   ["Names hidden from the model", false, "12", "12/12", "0/9"],
   ["Another company’s playbook", false, "8", "8/8", "0/5"],
 ];
@@ -580,7 +697,7 @@ SUITES.forEach(([name, real, n, routes, risky]) => {
   const el = document.createElement("div");
   el.className = "row";
   el.style.cssText = "position:relative; display:grid; grid-template-columns:1fr 120px 200px 170px; gap:20px; align-items:center; padding:17px 0; border-bottom:1.5px solid var(--border); font-size:23px";
-  el.innerHTML = `<span style="display:flex; align-items:center; gap:12px">${name}${real ? '<span class="chip ok" style="height:28px; font-size:16px">Real</span>' : ""}</span>
+  el.innerHTML = `<span style="display:flex; align-items:center; gap:12px">${real ? '<span class="chip critical" style="height:30px; font-size:18px; font-weight:700; flex:none">Real</span>' : ""}<span>${name}</span></span>
     <span class="mono" style="text-align:right">${n}</span>
     <span class="mono" style="text-align:right">${routes}</span>
     <span class="mono risky" style="text-align:right; font-weight:600; color:var(--approve); font-size:26px">${risky}</span>`;
@@ -601,6 +718,22 @@ function measureTrack() {
   });
   $("s2a")._h = $("s2a").offsetHeight;
   $("s2b")._h = $("s2b").offsetHeight;
+  const cap = $("s6btn"); // "Ask for the cap": the lawyer's cursor aims at its centre
+  cap._x = 1330 + cap.offsetLeft + cap.offsetWidth / 2 - 4;
+  cap._y = 210 + cap.offsetTop + cap.offsetHeight / 2 - 6;
+  const sb = $("s2sign"); // the sign-off button's centre, for the cursor
+  sb._x = 1350 + sb.offsetLeft + sb.offsetWidth / 2 - 4;
+  sb._y = 230 + sb.offsetTop + sb.offsetHeight / 2 - 6;
+  const o1 = $("s2opt1"), dlg = $("s2dlg"); // the first choice's radio, inside the dialog's box
+  const radio = o1.querySelector("i"); // aim at the radio button itself
+  o1._x = 1350 + radio.offsetLeft + radio.offsetWidth / 2 - 4;
+  o1._y = 230 + radio.offsetTop + radio.offsetHeight / 2 - 6;
+  [["s2go1", 800], ["s2go2", 1330]].forEach(([id, left]) => {
+    const g = $(id); // the Review buttons' centres, for the two cursors
+    g._x = left + g.offsetLeft + g.offsetWidth / 2 - 4;
+    g._y = 220 + g.offsetTop + g.offsetHeight / 2 - 6;
+  });
+  void dlg;
   // The send button's centre and the message card's centre, in stage pixels.
   const card = $("s6b"), btn = $("s6send");
   card._bx = 800 + btn.offsetLeft + btn.offsetWidth / 2;
@@ -618,7 +751,7 @@ function measureTrack() {
 }
 
 function chrome(t) {
-  const on = eo(p(t, 4.2, 0.8)) * (1 - eio(p(t, 58.5, 0.5)));
+  const on = eo(p(t, 4.2, 0.8)) * (1 - eio(p(t, S[8][0] - 0.5, 0.5)));
   $("hdr").style.opacity = on;
   $("track").style.opacity = on;
   $("trackbar").style.opacity = on;
@@ -671,12 +804,12 @@ function s1(t) {
     });
   });
   const d = eo(p(l, 2.2, 0.6));
-  tf($("s1doc"), { o: d * (1 - eio(p(l, 4.05, 0.45))), s: lerp(0.9, 1, d) });
+  tf($("s1doc"), { o: d, s: lerp(0.9, 1, d) }); // stays: the Label scene picks it up as is
 }
 
 function s2(t) {
   const l = scene(2, t);
-  show($("c2"), l, 0.2, 11.0);
+  show($("c2"), l, 0.2, 19.5);
   const a = $("s2a"), b = $("s2b");
   const H = a._h || 280;
 
@@ -719,10 +852,10 @@ function s2(t) {
   const gateColor = stopped ? "var(--escalate)" : "var(--brass)";
   gate.style.background = `repeating-linear-gradient(to bottom, ${gateColor} 0 14px, transparent 14px 24px)`;
   gate.style.clipPath = `inset(0 0 ${(1 - g) * 100}% 0)`;
-  gate.style.opacity = 1 - eio(p(l, 11.05, 0.45));
-  show($("s2in"), l, 5.5, 11.5, 10);
-  show($("s2out"), l, 5.5, 11.5, 10);
-  const ain = eo(p(l, 0.2, 0.6));
+  gate.style.opacity = 1 - eio(p(l, 19.05, 0.45));
+  show($("s2in"), l, 5.5, 19.5, 10);
+  show($("s2out"), l, 5.5, 19.5, 10);
+  const ain = 1; // already on screen: the same card the upload formed
   const cross = eio(p(l, 5.8, 1.2));
   tf(a, { o: ain * (1 - eio(p(l, 8.0, 0.4))), x: cross * 548, y: (1 - ain) * 20 + jolt });
   toks.forEach((tk, i) => {
@@ -741,8 +874,8 @@ function s2(t) {
   const mB = eo(p(l, 8.1, 0.5));
   const swing = eio(p(l, 8.85, 0.6));
   const settle = l > 9.45 ? -0.05 * Math.exp(-(l - 9.45) * 7) * Math.sin((l - 9.45) * 22) : 0;
-  const outC = 1 - eio(p(l, 11.05, 0.45));
-  meter("s2meterB", clamp(swing + settle, 0, 1.03), mB * outC);
+  const outC = 1 - eio(p(l, 19.05, 0.45)); // card B stays for the sign-off
+  meter("s2meterB", clamp(swing + settle, 0, 1.03), mB * (1 - eio(p(l, 11.2, 0.4))));
   $("s2meterB").style.transform = `translateY(${(1 - mB) * 18}px)`;
   const bin = eo(p(l, 8.2, 0.5));
   const scanB = p(l, 8.5, 0.6);
@@ -751,10 +884,73 @@ function s2(t) {
   b.querySelector(".hl").style.transform = `scaleX(${eo(p(l, 8.6, 0.3))})`;
   const joltB = stamp($("s2stampB"), b, l, 9.65, -7);
   const go = p(l, 9.95, 0.5);
-  const bx = 48 * Math.sin(Math.min(go, 1) * Math.PI / 2);
+  const back = eio(p(l, 11.3, 0.4)); // eases back from the boundary for the sign-off
+  const bx = 48 * Math.sin(Math.min(go, 1) * Math.PI / 2) * (1 - back);
   const bounce = l > 10.45 ? -16 * Math.exp(-(l - 10.45) * 6) * Math.sin((l - 10.45) * 18) : 0;
-  tf(b, { o: bin * outC, x: bx + bounce, y: (1 - bin) * 20 + joltB });
-  show($("s2bnote"), l, 10.5, 11.5, 14);
+  tf(b, { o: bin * outC, x: bx + bounce * (1 - back), y: (1 - bin) * 20 + joltB });
+  show($("s2bnote"), l, 10.5, 11.7, 14);
+
+  /* D: a person lowers it. The dialog asks one fixed question per finding; no typing. */
+  const cur = $("s2cur");
+  const sb = $("s2sign"), o1 = $("s2opt1");
+  const signX = sb._x || 1700, signY = sb._y || 640;
+  const optX = o1._x || 1390, optY = o1._y || 420;
+  const toStamp = eio(p(l, 11.3, 0.5)), toOpt = eio(p(l, 12.55, 0.5)), toSign = eio(p(l, 14.2, 0.45));
+  const cx = lerp(lerp(lerp(1560, 1150, toStamp), optX, toOpt), signX, toSign);
+  const cy = lerp(lerp(lerp(930, 650, toStamp), optY, toOpt), signY, toSign);
+  const tap = (a) => 0.12 * Math.sin(p(l, a, 0.18) * Math.PI);
+  cur.style.opacity = eo(p(l, 11.3, 0.2)) * (1 - p(l, 14.95, 0.2));
+  cur.style.transform = `translate(${cx}px, ${cy}px) scale(${1 - tap(11.85) - tap(13.15) - tap(14.75)})`;
+  const din = eo(p(l, 11.9, 0.3)), dout = eio(p(l, 14.85, 0.25));
+  tf($("s2dlg"), { o: din * (1 - dout), y: (1 - din) * 16, s: lerp(0.97, 1, din) * lerp(1, 0.96, dout) });
+  o1.classList.toggle("on", l > 13.2);
+  const press = p(l, 14.75, 0.18);
+  sb.style.transform = `scale(${1 - 0.07 * Math.sin(press * Math.PI)})`;
+  sb.style.filter = press > 0 && press < 1 ? "brightness(1.25)" : "none";
+  sb.style.opacity = l > 13.2 ? 1 : 0.45; // enabled once every finding has an answer
+  // Signed off: the stamp gives way, the record appears under the contract.
+  if (l > 14.9) $("s2stampB").style.opacity = lerp(0.92, 0.28, eio(p(l, 14.9, 0.3))) * outC;
+  show($("s2rec"), l, 14.9, 19.5, 12, 0.4);
+  show($("s2rule"), l, 15.05, 19.5, 14, 0.4);
+
+  /* E: two people, one contract. Sara starts; Omar is told who has it, then opens her result;
+     a Restricted contract does not open for him at all. */
+  const E = 19.6;
+  show($("c2b"), l, E + 0.1, 35.47);
+  show($("s2two"), l, E + 0.1, 35.47, 10);
+  show($("s2p1"), l, E + 0.2, 35.47, 18);
+  show($("s2p2"), l, E + 0.4, 35.47, 18);
+  const g1 = $("s2go1"), g2 = $("s2go2");
+  const cS = $("s2cS"), cO = $("s2cO");
+  const sMove = eio(p(l, E + 0.9, 0.6));
+  cS.style.opacity = eo(p(l, E + 0.8, 0.2)) * (1 - p(l, E + 2.1, 0.3));
+  cS.style.transform = `translate(${lerp(1000, g1._x || 1045, sMove)}px, ${lerp(930, g1._y || 430, sMove)}px) scale(${1 - 0.12 * Math.sin(p(l, E + 1.55, 0.18) * Math.PI)})`;
+  const reviewing = l > E + 1.65 && l < E + 8.82;
+  const dots = ".".repeat(1 + (((Math.floor(l * 3) % 3) + 3) % 3));
+  g1.textContent = l > E + 8.82 ? "Reviewed" : reviewing ? `Reviewing${dots}` : "Review contract";
+  g1.classList.toggle("done", l > E + 8.82);
+  $("s2hold").textContent = l > E + 8.82 ? "Done at 10:46: Negotiate, 2 changes." : "Started 10:44. Holding this contract.";
+  show($("s2hold"), l, E + 1.75, 35.47, 8, 0.3);
+  const oMove = eio(p(l, E + 2.2, 0.7));
+  cO.style.opacity = eo(p(l, E + 2.1, 0.2)) * (1 - p(l, E + 10.6, 0.3));
+  const shake = l > E + 3.05 && l < E + 3.45 ? 7 * Math.sin((l - E - 3.05) * 50) * (1 - (l - E - 3.05) / 0.4) : 0;
+  cO.style.transform = `translate(${lerp(1640, g2._x || 1575, oMove)}px, ${lerp(940, g2._y || 430, oMove)}px) scale(${1 - 0.12 * Math.sin(p(l, E + 2.95, 0.18) * Math.PI) - 0.12 * Math.sin(p(l, E + 10.05, 0.18) * Math.PI)})`;
+  const blocked = l > E + 3.05 && l < E + 9.17;
+  g2.classList.toggle("off", blocked);
+  g2.style.transform = `translateX(${shake}px)`;
+  g2.textContent = l > E + 10.1 ? "Sara’s review is open" : l > E + 9.17 ? "Open her review" : "Review contract";
+  g2.classList.toggle("done", l > E + 10.1);
+  const ban = $("s2ban");
+  const bi = eo(p(l, E + 3.1, 0.4)), bo = eio(p(l, E + 8.92, 0.35));
+  tf(ban, { o: bi * (1 - bo), y: (1 - bi) * 12 });
+  show($("s2srv"), l, E + 3.5, E + 9.12, 12);
+  const ri = eo(p(l, E + 9.2, 0.4));
+  tf($("s2res"), { o: ri, y: (1 - ri) * 12 });
+  $("s2restxt").textContent = l > E + 10.1
+    ? "Opened: her findings, redlines and route. Nobody reviews it twice."
+    : "2 changes requested. Open her result: no second review.";
+  show($("s2free"), l, E + 9.4, E + 12.6, 12);
+  show($("s2lock"), l, E + 12.8, 35.47, 14);
 }
 
 function s3(t) {
@@ -838,8 +1034,8 @@ function s5(t) {
 
 function s6(t) {
   const l = scene(6, t);
-  show($("c6"), l, 0.2, 8.5);
-  show($("s6a"), l, 0.4, 8.5);
+  show($("c6"), l, 0.2, 9.5);
+  show($("s6a"), l, 0.4, 9.5);
   // Strike, then insert.
   const s1 = p(l, 1.0, 0.3), i1 = eo(p(l, 1.3, 0.4)), s2 = p(l, 1.6, 0.3), i2 = eo(p(l, 1.9, 0.4));
   $("s6s1").style.textDecoration = s1 > 0.5 ? "line-through" : "none";
@@ -908,22 +1104,30 @@ function s6(t) {
   $("s6av").style.background = dl > 0.5 ? "var(--approve)" : "var(--primary)";
   // The Sent card takes the letter's place.
   const r = eo(p(l, 5.35, 0.45));
-  tf($("s6receipt"), { o: r * (1 - eio(p(l, 8.05, 0.45))), y: (1 - r) * 18, s: lerp(0.96, 1, r) });
+  tf($("s6receipt"), { o: r * (1 - eio(p(l, 9.05, 0.45))), y: (1 - r) * 18, s: lerp(0.96, 1, r) });
   $("s6rtick").style.strokeDashoffset = 26 * (1 - eo(p(l, 5.6, 0.35)));
 
-  show($("s6other"), l, 6.15, 8.5, 10);
+  show($("s6other"), l, 6.15, 9.5, 10);
   const cl = eo(p(l, 6.2, 0.6));
-  tf($("s6c"), { o: cl * (1 - eio(p(l, 8.05, 0.45))), x: (1 - cl) * 60 });
-  const pressL = p(l, 6.95, 0.25);
-  $("s6btn").style.transform = `scale(${1 - 0.06 * Math.sin(pressL * Math.PI)})`;
-  $("s6arr").style.strokeDashoffset = 110 * (1 - eo(p(l, 7.1, 0.45)));
-  $("s6arrow").style.opacity = 1 - eio(p(l, 8.05, 0.45));
-  show($("s6d"), l, 7.3, 8.5);
+  tf($("s6c"), { o: cl * (1 - eio(p(l, 9.05, 0.45))), x: (1 - cl) * 60 });
+  // A lawyer's cursor comes in and presses "Ask for the cap"; the decision becomes a playbook change.
+  const btn = $("s6btn");
+  const lc = $("s6cur2");
+  const mvL = eio(p(l, 6.75, 0.6));
+  const bx2 = btn._x || 1450, by2 = btn._y || 380;
+  const pressL = p(l, 7.45, 0.22);
+  lc.style.opacity = eo(p(l, 6.7, 0.25)) * (1 - p(l, 7.9, 0.25));
+  lc.style.transform = `translate(${lerp(1640, bx2, mvL)}px, ${lerp(560, by2, mvL)}px) scale(${1 - 0.12 * Math.sin(pressL * Math.PI)})`;
+  btn.style.transform = `scale(${1 - 0.07 * Math.sin(pressL * Math.PI)})`;
+  btn.style.filter = pressL > 0 && pressL < 1 ? "brightness(1.25)" : "none";
+  $("s6arr").style.strokeDashoffset = 110 * (1 - eo(p(l, 7.65, 0.45)));
+  $("s6arrow").style.opacity = 1 - eio(p(l, 9.05, 0.45));
+  show($("s6d"), l, 7.85, 9.5);
 }
 
 function s7(t) {
   const l = scene(7, t);
-  const END = 7.5;
+  const END = S[7][1] - S[7][0];
   show($("c7"), l, 0.2, END);
   // The method: each step appears, then the line to the next one draws.
   [...$("s7method").children].forEach((el) => {

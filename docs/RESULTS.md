@@ -2,7 +2,7 @@
 
 ## Everything we tested, at a glance
 
-59 different contracts, 27 of them real public contracts we did not write, plus 118 automated tests that make no API calls. Every answer key was written before Mizan saw the contract, by reviewers that never saw its output; the blind sets' keys were committed to git before their only run. Claude Sonnet 5.5, effort medium.
+59 different contracts, 27 of them real public contracts we did not write, plus 126 automated tests that make no API calls. Every answer key was written before Mizan saw the contract, by reviewers that never saw its output; the blind sets' keys were committed to git before their only run. Claude Sonnet 5.5, effort medium.
 
 | Test set | Contracts | Routes right | Risky contracts approved | Finding recall / precision |
 |---|---|---|---|---|

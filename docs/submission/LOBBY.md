@@ -13,4 +13,4 @@ How we test: the answer key is written first, by reviewers who never saw Mizan's
 
 Where it is weak: on real contracts it finds about two thirds of the issues (66-73% recall). It reliably catches liability, interest, indemnity and non-compete problems and misses many termination and payment-term ones. So it is a safe router that never approves what it should not, but its issue list is not complete. We report that rather than tune it away.
 
-Also 118 automated tests with no API calls, and every run's traces are saved so the grading can be repeated without the model.
+Also 126 automated tests with no API calls, and every run's traces are saved so the grading can be repeated without the model.
