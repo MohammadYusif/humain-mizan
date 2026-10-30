@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -31,6 +32,8 @@ def _cmd_eval(args: argparse.Namespace) -> int:
         rep = run_eval(load_cases(Path(args.cases)), s, provider=provider, workers=args.workers)
         # The limits a run had are part of its result (long contracts need more turns and budget).
         extra = {"max_turns": s.max_turns, "budget_usd": s.budget_usd, "effort": s.effort}
+        if os.environ.get("HACK_PLAYBOOK"):
+            extra["playbook"] = os.environ["HACK_PLAYBOOK"]  # a policy other than the default
         if args.suite:
             extra["suite"] = args.suite
         path = save_report(rep, Path(args.out), extra)
