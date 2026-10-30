@@ -4,7 +4,10 @@ Rules are illustrative demo defaults, NOT legal advice; a lawyer must validate t
 ones) before any real use. Severity is owned by the rule (code), not chosen by the model.
 """
 
-from dataclasses import asdict, dataclass
+import json
+import os
+from dataclasses import asdict, dataclass, replace
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -132,6 +135,30 @@ PLAYBOOK: tuple[Rule, ...] = (
     ),
 )
 
+
+def _with_policy(rules: tuple[Rule, ...]) -> tuple[Rule, ...]:
+    """Another company's rules without code changes: HACK_PLAYBOOK names a JSON file of per-rule edits,
+    e.g. {"PAY-TERMS": {"required": "...", "hint": "..."}}. A critical rule can never be relaxed."""
+    path = os.environ.get("HACK_PLAYBOOK")
+    if not path:
+        return rules
+    edits = json.loads(Path(path).read_text(encoding="utf-8"))
+    out = []
+    for r in rules:
+        e = edits.get(r.id, {})
+        unknown = set(e) - {"required", "fallback", "hint", "severity"}
+        if unknown:
+            raise ValueError(f"{r.id}: unknown fields {sorted(unknown)}")
+        if r.severity == "critical" and e.get("severity", "critical") != "critical":
+            raise ValueError(f"{r.id} is critical and cannot be relaxed")
+        out.append(replace(r, **e))
+    missing = set(edits) - {r.id for r in rules}
+    if missing:
+        raise ValueError(f"unknown rules in {path}: {sorted(missing)}")
+    return tuple(out)
+
+
+PLAYBOOK = _with_policy(PLAYBOOK)
 BY_ID = {r.id: r for r in PLAYBOOK}
 
 

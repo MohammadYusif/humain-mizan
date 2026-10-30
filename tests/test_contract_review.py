@@ -615,3 +615,26 @@ def test_model_reported_instruction_escalates_even_when_the_regex_misses_it(tmp_
     assert not ok.is_error
     out = j(call(reg, "score_contract", doc_id="x"))
     assert out["route"] == "escalate" and out["injected"] == ["c3"]
+
+
+def test_another_companys_policy_loads_without_code_changes(tmp_path, monkeypatch):
+    """HACK_PLAYBOOK swaps rule wording; a critical rule can never be relaxed."""
+    import importlib
+
+    import hack.challenge.playbook as pb
+
+    monkeypatch.setenv("HACK_PLAYBOOK", "evals/policy/other-buyer.json")
+    importlib.reload(pb)
+    assert (
+        "60 days" in pb.BY_ID["PAY-TERMS"].required and pb.BY_ID["LIAB-CAP"].severity == "critical"
+    )
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps({"LIAB-CAP": {"severity": "minor"}}))
+    monkeypatch.setenv("HACK_PLAYBOOK", str(bad))
+    import pytest
+
+    with pytest.raises(ValueError, match="cannot be relaxed"):
+        importlib.reload(pb)
+    monkeypatch.delenv("HACK_PLAYBOOK")
+    importlib.reload(pb)
+    assert "30 days" in pb.BY_ID["PAY-TERMS"].required

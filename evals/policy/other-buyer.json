@@ -1,0 +1,12 @@
+{
+  "PAY-TERMS": {
+    "required": "Customer pays undisputed invoices no sooner than 60 days after receipt; no prepayment above 30%.",
+    "fallback": "None: shorter terms or larger prepayments are not acceptable.",
+    "hint": "Major if payment is due in fewer than 60 days (for example 30 or 45 days) or the supplier requires more than 30% prepayment. A term of 60 days or longer is not a finding."
+  },
+  "TERM-CONV": {
+    "required": "On a term longer than 12 months the customer may terminate for convenience on <= 60 days' notice. On a term of 12 months or less no customer convenience right is needed, and the supplier may terminate for convenience on at least 30 days' notice.",
+    "fallback": "Mutual termination for convenience on <= 90 days' notice.",
+    "hint": "Major only if the customer has no convenience termination right on a term longer than 12 months, or the supplier may terminate for convenience on less than 30 days' notice. A supplier-only right with 30+ days' notice on a 12-month term is acceptable (not a finding)."
+  }
+}
