@@ -21,7 +21,7 @@ import { cn } from "cn"
 import { useState } from "react"
 import { toast } from "sonner"
 
-import { RichText } from "@/components/rich-text"
+import { MessageText, RichText } from "@/components/rich-text"
 import { TwoDetectors } from "@/components/two-detectors"
 import { SeverityBadge } from "@/components/tone-badges"
 import { ARRIVE, REVEAL, useArrivals } from "@/hooks/use-arrivals"
@@ -233,9 +233,7 @@ function ActionItem({ a }: { a: WriteAction }) {
           </Badge>
         )}
       </div>
-      <p dir="auto" lang={langOf(a.text)} className="text-sm leading-relaxed whitespace-pre-line text-foreground/90">
-        {a.text}
-      </p>
+      <MessageText text={a.text} className="text-sm leading-relaxed text-foreground/90" />
     </li>
   )
 }
@@ -327,9 +325,7 @@ function DecidedAction({ decision, actions }: { decision: DecisionRecord; action
                 <p className="mb-1 text-xs font-semibold text-muted-foreground">
                   {a.kind === "legal" ? "Agent's question for legal" : "Agent's draft to the counterparty"}
                 </p>
-                <p dir="auto" lang={langOf(a.text)} className="text-sm leading-relaxed whitespace-pre-line text-muted-foreground">
-                  {a.text}
-                </p>
+                <MessageText text={a.text} className="text-sm leading-relaxed text-muted-foreground" />
               </div>
             ))}
           </CollapsibleContent>

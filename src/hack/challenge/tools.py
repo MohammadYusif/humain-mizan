@@ -105,7 +105,12 @@ class RenderArgs(BaseModel):
 class SendArgs(BaseModel):
     doc_id: str
     message: str = Field(
-        description="Message to the counterparty summarising the requested changes"
+        description=(
+            "Plain-text message to the counterparty. One opening line ('Requested changes to <contract "
+            "title>'), a blank line, then one numbered line per change: '1. <the contract's own article or "
+            "clause number and heading>: <what to remove and the wording we propose>'. Cite the contract's "
+            "numbering, never our clause ids (c4). No markdown, no headings."
+        )
     )
 
 

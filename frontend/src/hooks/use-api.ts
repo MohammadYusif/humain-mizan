@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import { api, ApiError, type BatchStatus, type Contract, type ReviewView, type TraceEvent } from "@/lib/api"
-import { smoothly } from "@/lib/transition"
 
 // What was last loaded for each key. A view that is opened again shows it at once (no skeleton) and
 // refreshes in the background, so moving between areas and runs never flashes an empty state.
@@ -179,8 +178,8 @@ interface RunState {
  * Polling stops when the review reports status "done", or once `live` drops and a final fetch is made.
  *
  * Opening another run never blanks the screen: a run loaded before (or prefetched) shows at once;
- * otherwise the previous run stays on screen, marked stale, until the new one arrives and replaces it
- * with a crossfade. The returned runId is the run the data belongs to.
+ * otherwise the previous run stays on screen, marked stale, until the new one arrives and replaces it.
+ * The returned runId is the run the data belongs to.
  */
 export function useRunData(runId: string | null, live: boolean) {
   const [state, setState] = useState<RunState>(() => {
@@ -191,10 +190,6 @@ export function useRunData(runId: string | null, live: boolean) {
   })
   const liveRef = useRef(live)
   const kick = useRef<() => void>(() => {})
-  const shownRef = useRef(state.runId)
-  useEffect(() => {
-    shownRef.current = state.runId
-  }, [state.runId])
 
   useEffect(() => {
     const wasLive = liveRef.current
@@ -208,14 +203,7 @@ export function useRunData(runId: string | null, live: boolean) {
     let timer: ReturnType<typeof setTimeout> | undefined
     let inflight = false
     let early404 = 0 // a demo replay has no trace file until its first event (under 2 s)
-    // With a cached copy the right run is already on screen; otherwise the first data swaps runs.
-    const swapping = !runCache.has(runId)
-
-    const show = (next: RunState) => {
-      const apply = () => setState(next)
-      if (swapping && shownRef.current !== runId) smoothly(apply)
-      else apply()
-    }
+    const show = (next: RunState) => setState(next)
 
     const load = async () => {
       if (inflight) return

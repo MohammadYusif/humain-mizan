@@ -72,7 +72,7 @@ export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
           </Label>
         </CardAction>
       </CardHeader>
-      <CardContent className="min-h-0 flex-1 px-0">
+      <CardContent className="flex min-h-0 flex-1 flex-col px-0">
         {!reviews ? (
           <div className="flex flex-col gap-2 px-4">
             {Array.from({ length: 5 }, (_, i) => (
@@ -87,7 +87,9 @@ export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
             </EmptyHeader>
           </Empty>
         ) : (
-          <ScrollArea className="h-80 lg:h-full">
+          // On wide screens the list fills what the sticky column leaves: the viewport is pinned to the
+          // area's edges, because a percentage height does not resolve inside a max-height column.
+          <ScrollArea className="h-80 lg:h-auto lg:min-h-40 lg:flex-1" viewportClassName="lg:absolute lg:inset-0">
             <ul className="flex flex-col gap-1 px-2 pb-1">
               {reviews.map((r) => {
                 const active = r.run_id === selectedId

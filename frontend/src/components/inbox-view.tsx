@@ -3,6 +3,7 @@ import { cn } from "cn"
 import { useId, useRef, useState } from "react"
 import { toast } from "sonner"
 
+import { MessageText } from "@/components/rich-text"
 import { RouteBadge, SeverityBadge } from "@/components/tone-badges"
 import { ARRIVE, useArrivals } from "@/hooks/use-arrivals"
 import { RedFlagSummary } from "@/components/two-detectors"
@@ -343,16 +344,15 @@ function InboxCard({
                 ? "Drafted from the recorded redlines"
                 : "Drafted message to the counterparty"}
           </h3>
-          <p
-            dir="auto"
-            lang={item.agent_text ? langOf(item.agent_text) : undefined}
-            className="rounded-lg border bg-background/60 p-3 text-sm leading-relaxed whitespace-pre-line"
-          >
-            {item.agent_text ||
-              (unrouted
+          {item.agent_text ? (
+            <MessageText text={item.agent_text} className="rounded-lg border bg-background/60 p-4 text-sm leading-relaxed" />
+          ) : (
+            <p className="rounded-lg border bg-background/60 p-3 text-sm leading-relaxed">
+              {unrouted
                 ? "No route was computed and no question was prepared: review the whole contract."
-                : "The agent did not write a message.")}
-          </p>
+                : "The agent did not write a message."}
+            </p>
+          )}
         </div>
       </div>
 

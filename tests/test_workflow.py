@@ -150,7 +150,7 @@ def test_batch_auto_send_needs_no_human_and_escalations_reach_legal(tmp_path):
     legal = [i for i in W.inbox(s) if i["kind"] == "legal_review"]
     assert len(legal) == 1 and "missing" in legal[0]["reasons"][0]
     rec = W.decide(s, legal[0]["run_id"], "request_changes")
-    assert rec["message"].startswith("Requested changes to nda-en-01")
+    assert rec["message"].startswith("Requested changes to Mutual Non-Disclosure Agreement")
 
 
 def test_batch_rejects_unknown_or_unsafe_docs(tmp_path):
@@ -352,7 +352,10 @@ def test_nudges_are_bounded_and_the_workflow_owns_the_follow_up(tmp_path):
     ]
     assert len([e for e in tr if e["type"] == "nudge"]) == 2  # MAX_NUDGES, then it gives up
     inbox_item = next(i for i in W.inbox(s) if i["run_id"] == item["run_id"])
-    assert inbox_item["agent_text"].startswith("Requested changes to services-en-01")
+    draft = inbox_item["agent_text"]
+    assert draft.startswith("Requested changes to Consulting Services Agreement")
+    # cited by the contract's own numbering, not our clause id c3
+    assert "\n1. Clause 3 (Termination): Either party may terminate" in draft
     # auto-send mode: the workflow sends the composed redline itself and says so
     s2 = settings(tmp_path / "auto")
     _, st2 = run_batch(s2, stops_after_scoring, ["services-en-01"], True)

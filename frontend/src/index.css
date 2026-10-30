@@ -221,12 +221,6 @@ h3:lang(ar) {
 /* Motion marks a change of state, nothing else: switching an area or tab, something arriving while a
    run is live (see hooks/use-arrivals.ts), an item leaving the inbox. Short, and off for anyone who
    asks their system for less motion. */
-/* Switching an area, a tab or a run crossfades the old view into the new one (lib/transition.ts). */
-::view-transition-old(root),
-::view-transition-new(root) {
-  animation-duration: 200ms;
-  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
-}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -235,10 +229,5 @@ h3:lang(ar) {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*) {
-    animation: none !important;
   }
 }

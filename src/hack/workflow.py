@@ -107,10 +107,10 @@ def pending_kind(state: dict[str, Any], decision: dict[str, Any] | None) -> str 
     return None
 
 
-def draft_for(view: dict[str, Any]) -> str:
+def draft_for(view: dict[str, Any], settings: Settings | None = None) -> str:
     """The agent's drafted counterparty message, or one composed from the redlines if it wrote none."""
     agent = next((a["text"] for a in view["actions"] if a["kind"] == "counterparty"), "")
-    return agent or requested_changes_message(view)
+    return agent or requested_changes_message(view, settings)
 
 
 # --- Legal inbox ---------------------------------------------------------------------------------
@@ -131,7 +131,7 @@ def inbox(settings: Settings) -> list[dict[str, Any]]:
             continue
         v = state["view"]
         if kind == "approve_send":
-            agent_text = draft_for(v)
+            agent_text = draft_for(v, settings)
         else:
             agent_text = next((a["text"] for a in v["actions"] if a["kind"] == "legal"), "")
         items.append(
@@ -154,11 +154,40 @@ def inbox(settings: Settings) -> list[dict[str, Any]]:
     return items
 
 
-def requested_changes_message(view: dict[str, Any]) -> str:
-    lines = [f"Requested changes to {view['doc_id']}:"]
-    for f in view["findings"]:
-        if f["severity"] in ("critical", "major"):
-            lines.append(f"- Clause {f['clause_id']} ({f['clause_type']}): {f['redline']}")
+_REF_AR = re.compile(r"^\s*((?:المادة|البند)\s+[^\s:،.\-–]+(?:\s+[^\s:،.\-–]+)?)")
+_REF_EN = re.compile(
+    r"^\s*((?:article|section|clause)\s+\d+(?:\.\d+)*|\d+(?:\.\d+)*)[.):]?\s*(?:[-–—]\s*)?([A-Z][^.:\n]{1,48}?)[.:]",
+    re.I,
+)
+
+
+def clause_ref(text: str, fallback: str) -> str:
+    """How the counterparty knows a clause: the contract's own number and heading ("Clause 3
+    (Termination)", "المادة الرابعة"), never our internal clause id."""
+    if m := _REF_AR.match(text):
+        return m.group(1).strip()
+    if m := _REF_EN.match(text):
+        num, heading = m.group(1).strip(), m.group(2).strip()
+        label = num[:1].upper() + num[1:] if num[0].isalpha() else f"Clause {num}"
+        return f"{label} ({heading})"
+    return fallback
+
+
+def requested_changes_message(view: dict[str, Any], settings: Settings | None = None) -> str:
+    """The counterparty message composed from the recorded redlines when the agent wrote none:
+    an opening line, then one numbered change per finding, cited by the contract's own numbering."""
+    title, texts = view["doc_id"], {}
+    if settings is not None and view.get("doc_id"):
+        try:
+            contract = C.load_contract(settings.contract_dirs(), view["doc_id"])
+            title, texts = contract.title or title, {c.id: c.text for c in contract.clauses}
+        except (FileNotFoundError, ValueError):
+            pass
+    lines = [f"Requested changes to {title}", ""]
+    changes = [f for f in view["findings"] if f["severity"] in ("critical", "major")]
+    for n, f in enumerate(changes, 1):
+        ref = clause_ref(texts.get(f["clause_id"], ""), f.get("clause_type") or f["clause_id"])
+        lines.append(f"{n}. {ref}: {f['redline'].strip()}")
     return "\n".join(lines)
 
 
@@ -185,9 +214,9 @@ def decide(
         raise InvalidDecision(f"decision must be one of {DECISIONS[kind]} for {kind}")
     out_msg = None
     if decision == "send":
-        out_msg = message or draft_for(state["view"])
+        out_msg = message or draft_for(state["view"], settings)
     elif decision == "request_changes":
-        out_msg = message or requested_changes_message(state["view"])
+        out_msg = message or requested_changes_message(state["view"], settings)
     if out_msg:
         with (settings.runs_dir / run_id / "outbox.jsonl").open("a", encoding="utf-8") as f:
             rec = {

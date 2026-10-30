@@ -13,7 +13,6 @@ import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { useContracts, useInbox, usePolled, useResource, useRuns } from "@/hooks/use-api"
 import { api, errorMessage, type DemoScene } from "@/lib/api"
 import { go, parseHash, type Area, type Loc } from "@/lib/route"
-import { smoothly } from "@/lib/transition"
 
 const loadHealth = () => api.health()
 const loadPlaybook = () => api.playbook()
@@ -38,14 +37,16 @@ export default function App() {
 
   // The hash is the single source of truth for where we are; back/forward and pasted links just work.
   useEffect(() => {
-    const onHash = () =>
-      smoothly(() => {
-        const l = parseHash(window.location.hash)
-        setLoc(l)
-        if (l.area === "review") setLastRun(l.runId)
-        if (l.area === "queue" && l.batchId) setLastBatch(l.batchId)
-        window.scrollTo({ top: 0 })
-      })
+    let area = parseHash(window.location.hash).area
+    const onHash = () => {
+      const l = parseHash(window.location.hash)
+      setLoc(l)
+      if (l.area === "review") setLastRun(l.runId)
+      if (l.area === "queue" && l.batchId) setLastBatch(l.batchId)
+      // A new area starts at the top; opening another run keeps your place (the run view handles it).
+      if (l.area !== area) window.scrollTo({ top: 0 })
+      area = l.area
+    }
     window.addEventListener("hashchange", onHash)
     return () => window.removeEventListener("hashchange", onHash)
   }, [])

@@ -22,14 +22,18 @@ import { useContract, useRunData } from "@/hooks/use-api"
 import { api, errorMessage, newRunId, type ContractSummary, type PlaybookRule, type RunSummary } from "@/lib/api"
 import { ROUTE_LABEL, seconds, usd } from "@/lib/format"
 import { go } from "@/lib/route"
-import { smoothly } from "@/lib/transition"
 
 type Tab = "review" | "contract" | "trace" | "playbook"
 
-/** On narrow screens the workspace sits below the side panel: bring it into view after choosing a run. */
+/** After choosing a run, show the start of it. On narrow screens the workspace sits below the side
+ * panel, so scroll down to it; on wide screens only scroll if you were further down the page. */
 function revealWorkspace() {
-  if (!window.matchMedia("(max-width: 1023px)").matches) return
-  requestAnimationFrame(() => document.getElementById("workspace")?.scrollIntoView({ behavior: "smooth", block: "start" }))
+  requestAnimationFrame(() => {
+    const ws = document.getElementById("workspace")
+    if (!ws) return
+    if (window.matchMedia("(max-width: 1023px)").matches) ws.scrollIntoView({ behavior: "smooth", block: "start" })
+    else if (ws.getBoundingClientRect().top < 0) ws.scrollIntoView({ block: "start" })
+  })
 }
 
 interface Props {
@@ -86,10 +90,8 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
   }, [])
 
   const jumpToClause = useCallback((clauseId: string) => {
-    smoothly(() => {
-      setTab("contract")
-      setFocus({ id: clauseId, nonce: Date.now() })
-    })
+    setTab("contract")
+    setFocus({ id: clauseId, nonce: Date.now() })
   }, [])
 
   const startReview = useCallback(
@@ -129,7 +131,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
         open={panelOpen || !runId}
         onOpenChange={setPanelOpen}
         className={cn(
-          "flex min-w-0 flex-col gap-3 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7.5rem)] lg:gap-6 lg:self-start",
+          "flex min-w-0 flex-col gap-3 lg:sticky lg:top-24 lg:h-[calc(100dvh-7.5rem)] lg:gap-6 lg:self-start",
           runId && "max-lg:order-last"
         )}
       >
@@ -175,8 +177,8 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
         aria-busy={stale || undefined}
         className={cn(
           "flex min-w-0 scroll-mt-36 flex-col gap-5 transition-opacity duration-200",
-          // Only a slow load dims the previous run (after 150 ms); a fast one just crossfades.
-          stale && "pointer-events-none opacity-55 delay-150"
+          // Only a slow load dims the previous run (after 300 ms); a normal one swaps straight away.
+          stale && "pointer-events-none opacity-60 delay-300"
         )}
       >
         {shownRunId ? (
@@ -186,7 +188,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
           </>
         ) : null}
 
-        <Tabs value={tab} onValueChange={(v) => smoothly(() => setTab(v as Tab))} className="gap-5">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="gap-5">
           <TabsList className="grid h-10! w-full grid-cols-4 sm:inline-flex sm:w-fit">
             <TabsTrigger value="review" className="px-3">
               <ScrollText aria-hidden className="hidden sm:block" />
