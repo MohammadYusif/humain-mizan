@@ -1,4 +1,4 @@
-import { LoaderCircle, Play, Upload } from "lucide-react"
+import { LoaderCircle, Play, ScanText, Upload } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -48,6 +48,7 @@ function ContractOption({ c }: { c: ContractSummary }) {
       <span className="flex w-full min-w-0 items-center gap-2">
         <span className="truncate font-mono text-[0.8rem]">{c.doc_id}</span>
         <LangChips languages={c.languages} />
+        {c.ocr ? <ScanText className="size-3.5 text-muted-foreground" aria-label="Scan read by OCR" /> : null}
         <span className="text-xs text-muted-foreground tabular">{c.clauses} cl.</span>
       </span>
     </SelectItem>
@@ -70,7 +71,7 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
         <Button variant="outline" className="h-10 w-full justify-start bg-background" onClick={onUpload}>
           <Upload aria-hidden />
           Use your own contract
-          <span className="ms-auto text-xs font-normal text-muted-foreground">PDF, Word or text</span>
+          <span className="ms-auto text-xs font-normal text-muted-foreground">PDF, Word, text or scan</span>
         </Button>
         <div className="flex flex-col gap-2">
           <label htmlFor="contract-select" className="text-xs font-medium text-muted-foreground">
@@ -111,7 +112,14 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="tabular">{plural(selected.clauses, "clause")}</span>
               <LangChips languages={selected.languages} />
+              {selected.ocr ? (
+                <span className="inline-flex items-center gap-1">
+                  <ScanText className="size-3.5" aria-hidden />
+                  Scan, OCR {Math.round(selected.ocr.mean_conf ?? 0)}%
+                </span>
+              ) : null}
             </div>
+            {selected.ocr?.doubt ? <p className="text-xs font-medium text-escalate">{selected.ocr.doubt}.</p> : null}
             <p dir="auto" lang={langOf(title.primary)} className="line-clamp-3 text-sm text-foreground">
               {title.primary}
             </p>

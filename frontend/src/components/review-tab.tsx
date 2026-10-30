@@ -4,7 +4,6 @@ import {
   Inbox,
   UserRoundCheck,
   FileDown,
-  Printer,
   Workflow,
   Check,
   ChevronDown,
@@ -365,28 +364,20 @@ function Documents({ runId }: { runId: string }) {
     <Card className="gap-3">
       <CardHeader>
         <CardTitle className="font-heading text-lg font-semibold">Documents</CardTitle>
-        <CardDescription>For the lawyer's file and the counterparty.</CardDescription>
+        <CardDescription>PDFs for the lawyer's file and the counterparty.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
         <Button asChild variant="outline" className="h-auto justify-start py-2 text-start whitespace-normal">
-          <a href={exportUrl(runId, "redline.docx")} download>
+          <a href={exportUrl(runId, "redline.pdf")} download>
             <FileDown aria-hidden />
-            Download redline (.docx, tracked changes)
+            Download redline (PDF)
           </a>
         </Button>
         <Button asChild variant="outline" className="h-auto justify-start py-2 text-start whitespace-normal">
-          <a href={exportUrl(runId, "memo.docx")} download>
+          <a href={exportUrl(runId, "memo.pdf")} download>
             <FileDown aria-hidden />
-            Download memo (.docx)
+            Download memo (PDF)
           </a>
-        </Button>
-        <Button
-          variant="ghost"
-          className="justify-start"
-          onClick={() => window.open(`${window.location.pathname}#print=${runId}`, "_blank", "noopener")}
-        >
-          <Printer aria-hidden />
-          Print memo or save as PDF
         </Button>
       </CardContent>
     </Card>

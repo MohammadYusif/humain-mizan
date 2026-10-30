@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import type { Contract, Finding, Lang, Severity, Tripwire } from "@/lib/api"
 import { contractTitle, langOf, plural, SEVERITY_ORDER } from "@/lib/format"
 import { SEVERITY_TONE } from "@/lib/tones"
+import { OcrNote } from "@/components/upload-contract-dialog"
 
 export interface ClauseFocus {
   id: string
@@ -131,6 +132,11 @@ export function ContractTab({ contract, loading, error, findings, clauseMap, foc
           <p dir="auto" lang={langOf(title.secondary)} className="mt-2 font-heading text-lg text-muted-foreground">
             {title.secondary}
           </p>
+        ) : null}
+        {contract.ocr ? (
+          <div className="mt-4">
+            <OcrNote ocr={contract.ocr} />
+          </div>
         ) : null}
       </header>
       <ol className="divide-y">

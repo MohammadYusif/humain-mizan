@@ -5,7 +5,6 @@ import { AppHeader, AreaNav } from "@/components/app-header"
 import { DemoBar, type DemoState } from "@/components/demo-bar"
 import { InboxView } from "@/components/inbox-view"
 import { InsightsView } from "@/components/insights-view"
-import { PrintMemo } from "@/components/print-memo"
 import { ProofView } from "@/components/proof-view"
 import { QueueView } from "@/components/queue-view"
 import { ReviewArea } from "@/components/review-area"
@@ -13,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { useContracts, useInbox, usePolled, useResource, useRuns } from "@/hooks/use-api"
 import { api, errorMessage, type DemoScene } from "@/lib/api"
-import { go, parseHash, printRunFromHash, type Area, type Loc } from "@/lib/route"
+import { go, parseHash, type Area, type Loc } from "@/lib/route"
 
 const loadHealth = () => api.health()
 const loadPlaybook = () => api.playbook()
@@ -33,7 +32,6 @@ export default function App() {
   const { runs, refresh: refreshRuns } = useRuns(posting || demo !== null)
 
   const [loc, setLoc] = useState<Loc>(() => parseHash(window.location.hash))
-  const [printRun, setPrintRun] = useState<string | null>(() => printRunFromHash(window.location.hash))
   const [lastRun, setLastRun] = useState<string | null>(loc.runId)
   const [lastBatch, setLastBatch] = useState<string | null>(loc.batchId)
 
@@ -41,7 +39,6 @@ export default function App() {
   useEffect(() => {
     const onHash = () => {
       const l = parseHash(window.location.hash)
-      setPrintRun(printRunFromHash(window.location.hash))
       setLoc(l)
       if (l.area === "review") setLastRun(l.runId)
       if (l.area === "queue" && l.batchId) setLastBatch(l.batchId)
@@ -126,12 +123,11 @@ export default function App() {
     }
   }, [lastRun, loc, refreshInbox, refreshRuns])
 
-  // Tab title per area (the print memo view sets its own and restores this on unmount).
+  // Tab title per area.
   useEffect(() => {
-    if (printRun) return
     const names: Record<Area, string> = { review: "Review", queue: "Queue", inbox: "Inbox", insights: "Insights", proof: "Proof" }
     document.title = `Mizan · ${names[loc.area]}`
-  }, [loc.area, printRun])
+  }, [loc.area])
 
   useEffect(() => {
     if (!demo) return
@@ -146,8 +142,6 @@ export default function App() {
 
   const demoRun = demo?.runId ? runs?.find((r) => r.run_id === demo.runId) : undefined
   const demoFinished = !!demoRun && demoRun.status !== "running"
-
-  if (printRun) return <PrintMemo runId={printRun} contracts={contracts.data} />
 
   return (
     <Tabs value={loc.area} onValueChange={(v) => openArea(v as Area)} className="min-h-dvh gap-0">

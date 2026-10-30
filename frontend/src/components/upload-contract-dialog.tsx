@@ -1,4 +1,4 @@
-import { CircleCheck, FileText, LoaderCircle, Play, TriangleAlert, Upload, X } from "lucide-react"
+import { CircleCheck, FileText, LoaderCircle, Play, ScanText, TriangleAlert, Upload, X } from "lucide-react"
 import { cn } from "cn"
 import { useId, useState, type DragEvent, type FormEvent } from "react"
 import { toast } from "sonner"
@@ -18,10 +18,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { api, errorMessage, type ContractSummary } from "@/lib/api"
+import { api, errorMessage, type ContractSummary, type OcrSource } from "@/lib/api"
 import { contractTitle, langOf, plural } from "@/lib/format"
 
-const ACCEPT = [".pdf", ".docx", ".txt", ".md"]
+const ACCEPT = [".pdf", ".docx", ".txt", ".md", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp"]
 const MAX_BYTES = 5_000_000
 const MAX_CHARS = 300_000 // same as the server's MAX_CHARS
 
@@ -29,9 +29,23 @@ function fileSize(n: number) {
   return n < 1_000_000 ? `${Math.max(1, Math.round(n / 1000))} KB` : `${(n / 1_000_000).toFixed(1)} MB`
 }
 
+/** How a scanned contract was read, and whether its text can be trusted for automatic action. */
+export function OcrNote({ ocr }: { ocr: OcrSource }) {
+  const pages = ocr.pages_ocr?.length ?? 0
+  return (
+    <div className="flex flex-col gap-1 text-sm">
+      <span className="flex items-center gap-2 text-muted-foreground">
+        <ScanText className="size-4 shrink-0" aria-hidden />
+        Read by OCR: {plural(pages, "page")}, {Math.round(ocr.mean_conf ?? 0)}% average word confidence
+      </span>
+      {ocr.doubt ? <span className="font-medium text-escalate">{ocr.doubt}.</span> : null}
+    </div>
+  )
+}
+
 function checkFile(f: File): string | null {
   const ext = f.name.slice(f.name.lastIndexOf(".")).toLowerCase()
-  if (!ACCEPT.includes(ext)) return `“${f.name}” is not supported. Use a PDF, Word (.docx), .txt or .md file.`
+  if (!ACCEPT.includes(ext)) return `“${f.name}” is not supported. Use a PDF, Word (.docx), .txt or .md file, or a scan (.png, .jpg, .tif).`
   if (f.size > MAX_BYTES) return `“${f.name}” is ${fileSize(f.size)}; the limit is 5 MB.`
   if (f.size === 0) return `“${f.name}” is empty.`
   return null
@@ -144,6 +158,7 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
                 <span className="tabular">{plural(added.clauses, "clause")}</span>
                 <LangChips languages={added.languages} />
               </div>
+              {added.ocr ? <OcrNote ocr={added.ocr} /> : null}
             </div>
             <p className="text-sm text-muted-foreground">
               If the clause count looks wrong, the text may need clearer numbering or paragraph breaks.
@@ -199,7 +214,7 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
                   <span className="text-sm font-semibold">
                     Drop a contract here, or <span className="text-primary underline underline-offset-4">browse</span>
                   </span>
-                  <span className="text-xs text-muted-foreground">PDF, Word (.docx), .txt or .md · up to 5 MB</span>
+                  <span className="text-xs text-muted-foreground">PDF, Word, .txt or .md, or a scan or photo · up to 5 MB</span>
                   <input
                     id={inputId}
                     type="file"
@@ -221,7 +236,8 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
                   </div>
                 ) : null}
                 <p className="text-xs text-muted-foreground">
-                  Scanned PDFs that contain only images cannot be read; export the text or paste it instead.
+                  Scans, photos and Arabic PDFs are read by OCR on this server, a few seconds a page. If the scan reads
+                  with low confidence, the contract always goes to a lawyer.
                 </p>
               </TabsContent>
 

@@ -15,6 +15,21 @@ export interface Health {
   provider: string
   model: string
   approve_writes?: boolean
+  ocr?: { available: boolean; detail: string }
+}
+
+/** How a contract's text was obtained when it was read from a scan (local OCR). */
+export interface OcrSource {
+  kind: "ocr" | "unknown"
+  engine?: string
+  reason?: string
+  pages_total?: number
+  pages_ocr?: number[]
+  words?: number
+  mean_conf?: number
+  low_conf_share?: number
+  /** Why the text is not reliable enough for automatic action; null when it is. */
+  doubt?: string | null
 }
 
 export interface ContractSummary {
@@ -22,7 +37,8 @@ export interface ContractSummary {
   title: string
   clauses: number
   languages: Lang[]
-  source: "sample" | "upload"
+  source: "sample" | "held-out" | "upload"
+  ocr?: OcrSource | null
 }
 
 export interface Clause {
@@ -35,6 +51,7 @@ export interface Contract {
   doc_id: string
   title: string
   clauses: Clause[]
+  ocr?: OcrSource | null
 }
 
 export interface PlaybookRule {
@@ -419,7 +436,7 @@ export const api = {
     request<{ id: string; status: string }>(`/insights/proposals/${enc(id)}`, post({ action, note: note ?? "" })),
 }
 
-export const exportUrl = (runId: string, kind: "redline.docx" | "memo.docx") => `/runs/${enc(runId)}/export/${kind}`
+export const exportUrl = (runId: string, kind: "redline.pdf" | "memo.pdf") => `/runs/${enc(runId)}/export/${kind}`
 
 /** Client-chosen run id so the UI can poll the trace while POST /run blocks. Matches ^[A-Za-z0-9_-]{1,64}$. */
 export function newRunId(): string {

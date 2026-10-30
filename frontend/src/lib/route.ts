@@ -22,12 +22,6 @@ export function parseHash(hash: string): Loc {
   return { area: "review", runId: null, batchId: null }
 }
 
-/** #print=<run id>: a print-friendly memo page (no app chrome), for Save as PDF. */
-export function printRunFromHash(hash: string): string | null {
-  const m = new RegExp(`^#print=(${ID})$`).exec(hash)
-  return m ? m[1] : null
-}
-
 export function toHash(loc: Loc): string {
   if (loc.area === "review") return loc.runId ? `#run=${loc.runId}` : "#review"
   if (loc.area === "queue") return loc.batchId ? `#batch=${loc.batchId}` : "#queue"
