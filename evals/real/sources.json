@@ -163,5 +163,137 @@
   "licence_note": "nlp-unibo/Multilingual-Unfair-Clause-Detection repo, CC BY 4.0 (annotations); ToS text belongs to Dropbox.",
   "notes": "Same inline-tag format as Zoom; strip the tags before review.",
   "group": "claudette"
+ },
+ {
+  "id": "cuad2-ritterpharmaceuticalsinc",
+  "title": "RitterPharmaceuticalsInc_20200313_S-4A_EX-10.54_12055220_EX-10.54_Development Agreement (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_II/RitterPharmaceuticalsInc_20200313_S-4A_EX-10.54_12055220_EX-10.54_Development%20Agreement.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "55591b926b7dd5047ba98179de7513692f1f57241b70e8bdcbd9fca01889b6fb",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-webhelpcominc",
+  "title": "WEBHELPCOMINC_03_22_2000-EX-10.8-HOSTING AGREEMENT (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_II/WEBHELPCOMINC_03_22_2000-EX-10.8-HOSTING%20AGREEMENT.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "2d4e106b0139dbc3fa27478071905b7edae86ff3d0277c29ebb770a904216e10",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-integrityfunds",
+  "title": "IntegrityFunds_20200121_485BPOS_EX-99.E UNDR CONTR_11948727_EX-99.E UNDR CONTR_Service Agreement (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_I/IntegrityFunds_20200121_485BPOS_EX-99.E%20UNDR%20CONTR_11948727_EX-99.E%20UNDR%20CONTR_Service%20Agreement.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "2135a565bb91e5f7a162f64ff162e18cb9e1235993c1874be87ccdf5060e0f04",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-wppplc",
+  "title": "WPPPLC_04_30_2020-EX-4.28-SERVICE AGREEMENT (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_II/WPPPLC_04_30_2020-EX-4.28-SERVICE%20AGREEMENT.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "7a5fbb1185c660bdcdcbdb340f92b50048a49f708ba3ab1051b40c700c0a00a6",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-inktomicorp",
+  "title": "INKTOMICORP_06_08_1998-EX-10.14-SOFTWARE HOSTING AGREEMENT (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_I/INKTOMICORP_06_08_1998-EX-10.14-SOFTWARE%20HOSTING%20AGREEMENT.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "820cfe8bb69728583765fbaeb586194a485ebebe5375d5a166812a6938e41d0f",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-slovakwirelessfinancecobv",
+  "title": "SLOVAKWIRELESSFINANCECOBV_03_28_2001-EX-4.(B)(II).3-Maintenance and support contract for SICAP(R) modules (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_II/SLOVAKWIRELESSFINANCECOBV_03_28_2001-EX-4.%28B%29%28II%29.3-Maintenance%20and%20support%20contract%20for%20SICAP%28R%29%20modules.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "a02a8b8ce5b8ecf0e5f8cdb5ed8cbdd475452c087348f1d34fa54f97eec54f5a",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-pareteumcorp",
+  "title": "PareteumCorp_20081001_8-K_EX-99.1_2654808_EX-99.1_Hosting Agreement (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_II/PareteumCorp_20081001_8-K_EX-99.1_2654808_EX-99.1_Hosting%20Agreement.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "9c66eef9725257be89d3735e03bde9a00c307f60d1668d177cc88b42c35d4edc",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-reynoldsconsumerproductsinc",
+  "title": "ReynoldsConsumerProductsInc_20200121_S-1A_EX-10.22_11948918_EX-10.22_Service Agreement (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_II/ReynoldsConsumerProductsInc_20200121_S-1A_EX-10.22_11948918_EX-10.22_Service%20Agreement.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "0ddc8b40e5ad7b4f6b1a9d2a921cc7ab2e5d4076a4dcd2575b10b59fc2e6f6d2",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-verticalnetinc",
+  "title": "VERTICALNETINC_04_01_2002-EX-10.19-MAINTENANCE AND SUPPORT AGREEMENT (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_II/VERTICALNETINC_04_01_2002-EX-10.19-MAINTENANCE%20AND%20SUPPORT%20AGREEMENT.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "07ea8cb475970f1bf20abd998524a9e0c4a5b808b7699fd71050287f4863e97f",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-vertexenergyinc",
+  "title": "VERTEXENERGYINC_08_14_2014-EX-10.24-OPERATION AND MAINTENANCE AGREEMENT (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_II/VERTEXENERGYINC_08_14_2014-EX-10.24-OPERATION%20AND%20MAINTENANCE%20AGREEMENT.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "4b2cb71fad30b513054df0fcbe35d333dfb5b0b2267ff0733589427ad5e7327c",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-etonpharmaceuticalsinc",
+  "title": "EtonPharmaceuticalsInc_20191114_10-Q_EX-10.1_11893941_EX-10.1_Development Agreement (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_I/EtonPharmaceuticalsInc_20191114_10-Q_EX-10.1_11893941_EX-10.1_Development%20Agreement.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "b6332d4edff49352cf0187da49df2c5b680625b248423d4dae8c7bc603f7a358",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
+ },
+ {
+  "id": "cuad2-conformisinc",
+  "title": "ConformisInc_20191101_10-Q_EX-10.6_11861402_EX-10.6_Development Agreement (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_I/ConformisInc_20191101_10-Q_EX-10.6_11861402_EX-10.6_Development%20Agreement.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "e5e4c32e2b01ec4d236572293a310d2cb96743d3e13f652cfe8c2d42df251844",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Second real batch: picked by scripts/select_cuad_batch.py, not by hand.",
+  "group": "cuad-2"
  }
 ]
