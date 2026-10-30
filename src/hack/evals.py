@@ -17,6 +17,12 @@ Case format (one JSON object per line):
 Metrics beyond pass rate come from the labels: route accuracy, false auto-approve rate (a case labelled
 non-approve that the agent approved or never routed), finding recall and precision (labels are assumed to
 list every seeded issue, so an accepted finding outside them counts against precision).
+
+Real-world cases are only partly labelled, so two optional fields keep the metrics honest:
+  "scope": ["LIAB-CAP", ...]   rules the labels cover; findings under other rules are neither right nor
+                               wrong and are left out of precision.
+  "by" on a check              who made the label, e.g. "CUAD" or "CLAUDETTE" (independent annotators) or
+                               "team"; recall against independent labels is reported on its own.
 """
 
 from __future__ import annotations
@@ -38,6 +44,9 @@ from .llm import Provider, build_provider
 from .service import run_task
 from .tools import ToolRegistry
 from .tracing import read_trace
+
+# Label sources made by outside annotators (not by us); see "by" in the module docstring.
+INDEPENDENT = ("CUAD", "CLAUDETTE")
 
 
 @dataclass
@@ -66,6 +75,11 @@ class CaseResult:
     got_route: str | None = None
     labelled_rules: list[str] = field(default_factory=list)
     recorded_rules: list[str] = field(default_factory=list)
+    checked_rules: list[str] | None = None  # the case's "scope"; None = labels cover every rule
+    independent_rules: list[str] = field(default_factory=list)  # labelled by outside annotators
+
+    def in_scope(self, rules: list[str]) -> set[str]:
+        return set(rules) if self.checked_rules is None else set(rules) & set(self.checked_rules)
 
 
 @dataclass
@@ -82,8 +96,16 @@ class Report:
         routed = [c for c in self.cases if c.expected_route]
         non_approve = [c for c in routed if c.expected_route != "approve"]
         labelled = sum(len(c.labelled_rules) for c in self.cases)
-        recorded = sum(len(c.recorded_rules) for c in self.cases)
+        recorded = sum(len(c.in_scope(c.recorded_rules)) for c in self.cases)
         tp = sum(len(set(c.labelled_rules) & set(c.recorded_rules)) for c in self.cases)
+        ind = sum(len(c.independent_rules) for c in self.cases)
+        ind_tp = sum(len(set(c.independent_rules) & set(c.recorded_rules)) for c in self.cases)
+        extra: dict[str, Any] = {}
+        if ind:
+            extra["independent_recall"] = _ratio(ind_tp, ind)
+            extra["independent_labels"] = ind
+        if any(c.checked_rules is not None for c in self.cases):
+            extra["per_rule"] = _per_rule(self.cases)
         return {
             "model": self.model,
             "provider": self.provider,
@@ -102,7 +124,35 @@ class Report:
             "output_tokens": sum(c.output_tokens for c in self.cases),
             "cost_usd": round(cost, 4),
             "cost_per_pass_usd": round(cost / passed, 4) if passed else None,
+            **extra,
         }
+
+
+def _per_rule(cases: list[CaseResult]) -> dict[str, dict[str, int]]:
+    """Per rule: labelled issues, how many the agent found, and in-scope findings beyond the labels."""
+    out: dict[str, dict[str, int]] = {}
+    for c in cases:
+        found = set(c.recorded_rules)
+        for r in c.labelled_rules:
+            row = out.setdefault(r, {"labelled": 0, "found": 0, "extra": 0})
+            row["labelled"] += 1
+            row["found"] += r in found
+        for r in c.in_scope(c.recorded_rules) - set(c.labelled_rules):
+            out.setdefault(r, {"labelled": 0, "found": 0, "extra": 0})["extra"] += 1
+    return dict(sorted(out.items()))
+
+
+def _labels(case: dict[str, Any]) -> dict[str, Any]:
+    """Label-derived fields of a CaseResult."""
+    checks = case.get("checks", [])
+    return {
+        "expected_route": next((c["value"] for c in checks if c["type"] == "route"), None),
+        "labelled_rules": sorted({c["value"] for c in checks if c["type"] == "finding"}),
+        "checked_rules": sorted(case["scope"]) if "scope" in case else None,
+        "independent_rules": sorted(
+            {c["value"] for c in checks if c["type"] == "finding" and c.get("by") in INDEPENDENT}
+        ),
+    }
 
 
 def _ratio(num: int, den: int) -> float | None:
@@ -263,6 +313,7 @@ def run_eval(
                 0.0,
                 rid,
                 f"{type(e).__name__}: {e}",
+                **_labels(case),  # a crash still counts against route accuracy and recall
             )
         trace = read_trace(settings.runs_dir, r.run_id)
         checks = run_checks(case.get("checks", []), r, judge, case["input"], trace)
@@ -281,14 +332,9 @@ def run_eval(
             cost_usd=r.cost_usd,
             latency_s=r.latency_s,
             run_id=r.run_id,
-            expected_route=next(
-                (c["value"] for c in case.get("checks", []) if c["type"] == "route"), None
-            ),
             got_route=final_route(trace),
-            labelled_rules=sorted(
-                {c["value"] for c in case.get("checks", []) if c["type"] == "finding"}
-            ),
             recorded_rules=sorted({rule for _, rule in recorded_findings(trace)}),
+            **_labels(case),
         )
 
     with ThreadPoolExecutor(max_workers=max(1, workers)) as pool:
@@ -323,14 +369,9 @@ def rescore(path: Path, cases: list[dict[str, Any]], settings: Settings) -> Repo
                     **old,
                     "checks": checks,
                     "passed": all(c.passed for c in checks),
-                    "expected_route": next(
-                        (c["value"] for c in case["checks"] if c["type"] == "route"), None
-                    ),
                     "got_route": final_route(trace),
-                    "labelled_rules": sorted(
-                        {c["value"] for c in case["checks"] if c["type"] == "finding"}
-                    ),
                     "recorded_rules": sorted({rule for _, rule in recorded_findings(trace)}),
+                    **_labels(case),
                 }
             )
         )

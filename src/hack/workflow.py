@@ -20,7 +20,7 @@ from .challenge import contracts as C
 from .challenge.tripwires import scan
 from .challenge.view import review_view
 from .config import Settings
-from .evals import final_route
+from .evals import final_route, load_cases
 from .llm import Provider
 from .service import run_task
 from .tracing import read_trace
@@ -381,6 +381,9 @@ def eval_results(settings: Settings) -> list[dict[str, Any]]:
     if not files and settings.results_dir.is_dir():
         files = sorted(settings.results_dir.glob("*.json"))
     known = {p.stem for d in settings.contract_dirs() for p in d.glob("*.md")}
+    # Real-world contracts are not shipped (third-party text), but their labelled ids are.
+    if settings.real_cases.is_file():
+        known |= {c["id"] for c in load_cases(settings.real_cases)}
     best: dict[tuple[str, str], tuple[int, float, dict[str, Any], Path]] = {}
     for p in files:
         try:
@@ -407,7 +410,7 @@ def eval_results(settings: Settings) -> list[dict[str, Any]]:
     order = sorted(
         best.items(),
         key=lambda kv: (
-            bool(kv[0][2]),  # main suite before held-out
+            bool(kv[0][2]),  # main suite before held-out and real-world
             bool(kv[0][1]),
             -kv[1][2]["summary"].get("route_accuracy", 0),
             kv[1][2]["summary"].get("cost_usd") or 0,
@@ -435,6 +438,8 @@ def eval_results(settings: Settings) -> list[dict[str, Any]]:
                             "latency_s",
                             "labelled_rules",
                             "recorded_rules",
+                            "checked_rules",
+                            "independent_rules",
                         )
                     }
                     for c in data["cases"]

@@ -280,6 +280,7 @@ def create_app(
         sources = (
             ("sample", cfg.contracts_dir),
             ("held-out", cfg.heldout_dir),
+            ("real", cfg.real_dir),
             ("upload", cfg.uploads_dir),
         )
         for source, d in sources:

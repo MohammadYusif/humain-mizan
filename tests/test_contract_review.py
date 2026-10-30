@@ -503,6 +503,35 @@ def test_heldout_cases_reference_real_clauses():
                 assert all(contract.clause(cl) is not None for cl in cls), (case["id"], chk)
 
 
+def test_real_world_labels_are_consistent():
+    """Every label names a real rule, sits inside the case's scope, has a source, and (where the
+    third-party text has been fetched locally) points at clauses that exist."""
+    from pathlib import Path
+
+    from hack.challenge.playbook import BY_ID
+
+    s = Settings(provider="fake")
+    sources = {x["id"]: x for x in json.loads(Path("evals/real/sources.json").read_text("utf-8"))}
+    cases = load_cases(s.real_cases)
+    assert {c["id"] for c in cases} == set(sources)
+    for case in cases:
+        scope = set(case["scope"])
+        assert scope <= set(BY_ID), case["id"]
+        local = (s.real_dir / f"{case['id']}.md").is_file()
+        contract = load_contract(s.real_dir, case["id"]) if local else None
+        for chk in case["checks"]:
+            assert chk.get("by") in ("CUAD", "CLAUDETTE", "team"), (case["id"], chk)
+            if chk["type"] in ("finding", "no_finding"):
+                assert chk["value"] in scope, (case["id"], chk)
+            if chk["type"] == "finding" and contract is not None:
+                assert all(contract.clause(cl) is not None for cl in chk["clause"]), (
+                    case["id"],
+                    chk,
+                )
+        rules = [c["value"] for c in case["checks"] if c["type"] in ("finding", "no_finding")]
+        assert sorted(rules) == sorted(scope), case["id"]  # each scoped rule labelled exactly once
+
+
 def test_model_reported_instruction_escalates_even_when_the_regex_misses_it(tmp_path):
     cdir = tmp_path / "contracts"
     cdir.mkdir()

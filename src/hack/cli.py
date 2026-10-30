@@ -29,7 +29,10 @@ def _cmd_eval(args: argparse.Namespace) -> int:
     for model in args.model or [s.model]:
         provider = build_provider(s, model)
         rep = run_eval(load_cases(Path(args.cases)), s, provider=provider, workers=args.workers)
-        extra = {"suite": args.suite} if args.suite else None
+        # The limits a run had are part of its result (long contracts need more turns and budget).
+        extra = {"max_turns": s.max_turns, "budget_usd": s.budget_usd, "effort": s.effort}
+        if args.suite:
+            extra["suite"] = args.suite
         path = save_report(rep, Path(args.out), extra)
         print(f"{model}: saved {path}", file=sys.stderr)
         for c in rep.cases:

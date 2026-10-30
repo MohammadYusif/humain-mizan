@@ -1,0 +1,167 @@
+[
+ {
+  "id": "etimad-it",
+  "title": "نموذج عقد تقنية المعلومات (MoF/Etimad unified model contract: Information Technology, 2020)",
+  "url": "https://www.etimad.sa/Content/img/files/Contract2020Content/%D8%AA%D9%82%D9%86%D9%8A%D8%A9%20%D9%85%D8%B9%D9%84%D9%88%D9%85%D8%A7%D8%AA.docx",
+  "format": "docx",
+  "lang": "ar",
+  "sha256": "b8a7b77ddfe02521b2c00f92acef86fec45ebd1d90986bac96d4e9d72776e8f2",
+  "licence_note": "No licence stated; page footer reads 'جميع الحقوق محفوظة لوزارة المالية' (all rights reserved, Ministry of Finance). Internal evaluation only; do not modify or redistribute. Index: https://www.etimad.sa/LandingPage/Contract2020Content",
+  "notes": "Government is the buyer (matches our perspective). DOCX 10.7 MB gives clean Arabic text; PDF (54 pp, 580 KB) has a text layer but lam-alef extraction artefacts (e.g. 'الحاالت'). Template with bracketed placeholders ([يوم/أسبوع/شهر] etc.) that read as unclear. Expected: KSA law + Saudi courts, Arabic prevails, public-interest termination on 30 days, confidentiality survives without limit (CONF-TERM minor).",
+  "group": "saudi-government"
+ },
+ {
+  "id": "etimad-services",
+  "title": "نموذج عقد خدمات عام (MoF/Etimad unified model contract: General Services, 2020)",
+  "url": "https://www.etimad.sa/Content/img/files/Contract2020Content/%D8%AE%D8%AF%D9%85%D8%A7%D8%AA%20%D8%B9%D8%A7%D9%85.docx",
+  "format": "docx",
+  "lang": "ar",
+  "sha256": "02c6c34886ddd962861972c33ec9cc5e43089c64a5fe375f6aa18e0ca1bf2100",
+  "licence_note": "No licence stated; all rights reserved, Ministry of Finance. Internal evaluation only; do not modify or redistribute.",
+  "notes": "10.9 MB DOCX, ~78k chars of clean Arabic text (no embedded media). The mof.gov.sa copy (real-contracts/mof-services/a.pdf) is a 404 HTML page, not a PDF; ignore it. Same expectations and placeholder caveat as etimad-it.",
+  "group": "saudi-government"
+ },
+ {
+  "id": "etimad-supply",
+  "title": "نموذج عقد توريد عام (MoF/Etimad unified model contract: General Supply, 2020)",
+  "url": "https://www.etimad.sa/Content/img/files/Contract2020Content/%D8%AA%D9%88%D8%B1%D9%8A%D8%AF%20%D8%B9%D8%A7%D9%85.docx",
+  "format": "docx",
+  "lang": "ar",
+  "sha256": "5d7d826c52cb0770139a548181c9f5cc18ffc4fae09ab14e976b985f30414109",
+  "licence_note": "No licence stated; all rights reserved, Ministry of Finance. Internal evaluation only; do not modify or redistribute.",
+  "notes": "PDF alt is 46 pp with a text layer (lam-alef artefacts). Exercises PAY-TERMS / advance-payment wording. Template placeholders as above.",
+  "group": "saudi-government"
+ },
+ {
+  "id": "expro-it",
+  "title": "الاتفاقية الإطارية الموحدة لتوريد أجهزة تقنية المعلومات (EXPRO unified framework agreement: IT devices, 1444H)",
+  "url": "https://expro.gov.sa/api/uploads/%D8%A7%D9%84%D8%A7%D8%AA%D9%81%D8%A7%D9%82%D9%8A%D8%A9%20%D8%A7%D9%84%D8%A7%D8%B7%D8%A7%D8%B1%D9%8A%D8%A9%20%D8%A7%D9%84%D9%85%D9%88%D8%AD%D8%AF%D8%A9%20%D8%B9%D9%82%D8%AF%20%D8%AA%D9%82%D9%86%D9%8A%D8%A9%20%D8%A7%D9%84%D9%85%D8%B9%D9%84%D9%88%D9%85%D8%A7%D8%AA.pdf",
+  "format": "pdf",
+  "lang": "ar",
+  "sha256": "dc5c04d96c50b4a04a76a0d98ceac7cf38c3ff7d9da0223724f8cdecb3ccfa7c",
+  "licence_note": "EXPRO terms https://expro.gov.sa/terms-conditions: one printed copy / excerpts for personal use, no modification, commercial use needs EXPRO licence, acknowledge EXPRO's rights. Internal evaluation only.",
+  "notes": "79 pp, ~164k chars, text layer present but Arabic ligatures mangled in extraction ('االتفاقية اإلطارية'). EXPRO (buyer side, for government entities) vs supplier. KSA law, Saudi administrative courts, Arabic prevails, public-interest termination on 30 days. Older 1444H version; EXPRO says the agreement was renewed.",
+  "group": "saudi-government"
+ },
+ {
+  "id": "expro-cleaning",
+  "title": "الاتفاقية الإطارية الموحدة لتوريد أدوات ومستهلكات النظافة (EXPRO unified framework agreement: cleaning supplies, EXP-AN0-TP-000040)",
+  "url": "https://expro.gov.sa/api/uploads/17175876881072_d7cae0ef69.pdf",
+  "format": "pdf",
+  "lang": "ar",
+  "sha256": "9f68bf23d210b8171c6f8210eb5fcb2f9f9e8425dad2c4af1f50f33aa3713aff",
+  "licence_note": "EXPRO terms https://expro.gov.sa/terms-conditions: personal-use copy/excerpts, no modification, commercial use needs licence. Internal evaluation only.",
+  "notes": "101 pp, ~165k chars, same ligature artefacts. Same clause skeleton as expro-it (governing law clause 30, disputes 31, language 14, confidentiality 19 with open-ended survival). Chosen because the cloud-hosting agreement text was not found (expro.gov.sa/api/uploads/17169910148712_9c13af102f.pdf is a 17-page, mostly-image guide, not the agreement).",
+  "group": "saudi-government"
+ },
+ {
+  "id": "edgar-lucid-mof",
+  "title": "Electric Vehicles Purchase Agreement, Government of KSA (Ministry of Finance) and Lucid L.L.C., 7 Aug 2023 (Lucid Group 10-Q Q3 2023, EX-10.1)",
+  "url": "https://www.sec.gov/Archives/edgar/data/1811210/000162828023037354/q3fy2310q-ex101.htm",
+  "format": "html",
+  "lang": "en",
+  "sha256": "ee65952f9c324e303926acfa5de54359f25d8e70387175b92d9809d696cba0f9",
+  "licence_note": "Public SEC EDGAR filing; contract text belongs to the parties, no licence. Internal evaluation only.",
+  "notes": "SEC returns 403 to a default Python-urllib UA; it returned 200 with a declared bot UA (SEC policy asks for contact info in the UA; set the team's own). MoF is Purchaser. KSA law, Saudi courts, Arabic prevails (Arabic text omitted from filing). Redactions are HTML entities '&#91;***&#93;', not literal '[***]', covering pricing and payment periods.",
+  "group": "saudi-law-sec"
+ },
+ {
+  "id": "edgar-aramco-po",
+  "title": "Form of Purchase Order Agreement between OMS (Saudi) and Saudi Aramco, incl. Aramco Conditions of Purchase (OMS Energy Technologies F-1, 2024, EX-10.6)",
+  "url": "https://www.sec.gov/Archives/edgar/data/2012219/000121390024094183/ea020001606ex10-6_omsenergy.htm",
+  "format": "html",
+  "lang": "en",
+  "sha256": "cf1864be9bf2e1a23815b51c2bc19af6450b5ceec710e7a053e1318dbb0dcd09",
+  "licence_note": "Public SEC EDGAR filing; text belongs to Saudi Aramco / OMS, no licence. Internal evaluation only.",
+  "notes": "Same UA requirement as above. Aramco is buyer. KSA law + SCCA arbitration in Riyadh; buyer-only termination for convenience; IP in deliverables to buyer; payment 'promptly after delivery' (trips PAY-TERMS literally: needs a labelling decision). Several values blank in the filing. ~111k chars of text.",
+  "group": "saudi-law-sec"
+ },
+ {
+  "id": "cuad-americasshoppingmall",
+  "title": "Site Development and Hosting Agreement, Hanover Direct (HDI) and The Deerskin Companies (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_I/AMERICASSHOPPINGMALLINC_12_10_1999-EX-10.2-SITE%20DEVELOPMENT%20AND%20HOSTING%20AGREEMENT.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "800a8e3e69cecab83863c1f6ff97587419bd873245d7f98b59e460a747f03228",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Customer = The Deerskin Companies ('Company'). CUAD: renewal successive 1 year, 90-day notice, NY law, exclusivity + non-compete. CUAD says Cap=Yes, but we found no cap clause; check by hand.",
+  "group": "cuad"
+ },
+ {
+  "id": "cuad-corio",
+  "title": "License and Hosting Agreement, Corio Inc. and Commerce One, Inc. (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_txt/Part_I/CORIOINC_07_20_2000-EX-10.5-LICENSE%20AND%20HOSTING%20AGREEMENT.txt",
+  "format": "txt",
+  "lang": "en",
+  "sha256": "01ce3afc80c5e4c08465c0f361e4c19bf2989d4e9657091af2cb32ecd9aea4c0",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "Customer = Corio: it takes a fee-bearing licence of Commerce One's software (Recital B, s.2.1), which it hosts for its own customers; it is also a reseller/co-marketing deal, so not pure buyer paper. Contains '[*]' redactions. CUAD: renewal 1 year, 30-day notice (AUTO-RENEW negative control), California law, uncapped liability + cap present.",
+  "group": "cuad"
+ },
+ {
+  "id": "cuad-vitalibis",
+  "title": "Services and Hosting Agreement, Vitalibis Inc. (Licensee) and Votocast, Inc. (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_pdf/Part_I/Hosting/VitalibisInc_20180316_8-K_EX-10.2_11100168_EX-10.2_Hosting%20Agreement.pdf",
+  "format": "pdf",
+  "lang": "en",
+  "sha256": "28fcfe953491d7f677b7518e40d934773047e636a9b09fde364e9bc3c0e5bd6f",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "No TXT for this file on Hugging Face (HF hosts only 200 of 510 CUAD TXTs, none of the remaining four); PDF is 14 pp with a text layer. The canonical CUAD text (the one label offsets refer to) is in CUAD_v1/CUAD_v1.json (40.1 MB) or the Zenodo zip (105.9 MB). Customer = Vitalibis. CUAD: successive 1-year renewal, 180-day notice (AUTO-RENEW finding), California law.",
+  "group": "cuad"
+ },
+ {
+  "id": "cuad-xacct",
+  "title": "Support and Maintenance Agreement, XACCT Technologies (DRAFT form, licensee blank) (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_pdf/Part_II/Commercial%20Contracts%20%28Part%20II-A%29/Maintenance/XACCT%20Technologies%2C%20Inc.SUPPORT%20AND%20MAINTENANCE%20AGREEMENT.PDF",
+  "format": "pdf",
+  "lang": "en",
+  "sha256": "4efb5d7e762f53cba7bf984cb496992cc20272c7b99ddca5a00ce3b91687eb21",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "3 pp, text layer. Marked 'DRAFT (Americas) 1/12/00' with blank date and licensee. Customer = Licensee. CUAD: successive 1-year renewal, 30-day notice (AUTO-RENEW negative control), California law, cap present.",
+  "group": "cuad"
+ },
+ {
+  "id": "cuad-blackstone",
+  "title": "Service Agreement for Transfer Agent Services, Blackstone/GSO Long-Short Credit Income Fund (Client) and Mellon Investor Services (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_pdf/Part_II/Commercial%20Contracts%20%28Part%20II-A%29/Service/BLACKSTONEGSOLONG-SHORTCREDITINCOMEFUND_05_11_2020-EX-99.%28K%29%281%29-SERVICE%20AGREEMENT.PDF",
+  "format": "pdf",
+  "lang": "en",
+  "sha256": "26b7b289a90bba6b1bc9a9bbd36b69bee65da41475f580670eb3380c7f8c111e",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "25 pp, text layer. Customer = the Fund ('Client'). CUAD: successive 3-year renewals, 60-day notice (AUTO-RENEW finding on term length), NY law, cap present.",
+  "group": "cuad"
+ },
+ {
+  "id": "cuad-ofg",
+  "title": "Technology Outsourcing Agreement, Oriental Financial Group (Customer) and Melavante Corporation (CUAD)",
+  "url": "https://huggingface.co/datasets/theatticusproject/cuad/resolve/main/CUAD_v1/full_contract_pdf/Part_III/Outsourcing/OFGBANCORP_03_28_2007-EX-10.23-OUTSOURCING%20AGREEMENT.PDF",
+  "format": "pdf",
+  "lang": "en",
+  "sha256": "a42e82a22b576b402cda7a519fbb485b4ca0fc800d02b87a9e1f9d4871d708b5",
+  "licence_note": "CUAD v1 annotations CC BY 4.0 (The Atticus Project); contract is a public SEC filing.",
+  "notes": "47 pp, ~159k chars, text layer. Customer = Oriental Financial Group. CUAD: 12-month renewal, 3-month notice (AUTO-RENEW finding), NY law, exclusivity (check who is bound), termination for convenience present, cap present.",
+  "group": "cuad"
+ },
+ {
+  "id": "claudette-zoom",
+  "title": "Zoom Terms of Service (effective 13 Apr 2022), CLAUDETTE annotated XML",
+  "url": "https://raw.githubusercontent.com/nlp-unibo/Multilingual-Unfair-Clause-Detection/main/corpus/original_xml/en/Zoom.xml",
+  "format": "xml",
+  "lang": "en",
+  "sha256": "e54caf2395e3cfcb57b38b4d0654314c5c59f978e2a3435a651be7485ab1037a",
+  "licence_note": "nlp-unibo/Multilingual-Unfair-Clause-Detection repo, CC BY 4.0 (annotations); ToS text belongs to Zoom.",
+  "notes": "Not well-formed XML: plain text with inline unfairness tags (<ltd2>, <ter3>, <law2>, <ch2>, <cr2>, <j3>, <a2>, <use2>, <pinc2>); strip the tags before feeding the agent and keep them as labels. Tag counts: ltd2 x5, ter3 x2, ter2 x3, law2, cr2 x2, pinc2.",
+  "group": "claudette"
+ },
+ {
+  "id": "claudette-dropbox",
+  "title": "Dropbox Terms of Service (posted 17 Apr 2018), CLAUDETTE annotated XML",
+  "url": "https://raw.githubusercontent.com/nlp-unibo/Multilingual-Unfair-Clause-Detection/main/corpus/original_xml/en/Dropbox.xml",
+  "format": "xml",
+  "lang": "en",
+  "sha256": "de8cc2312b9d5cae9e1ddd280d1c3e683d9b2b4e97cab5db0eb2fc97b7c96a36",
+  "licence_note": "nlp-unibo/Multilingual-Unfair-Clause-Detection repo, CC BY 4.0 (annotations); ToS text belongs to Dropbox.",
+  "notes": "Same inline-tag format as Zoom; strip the tags before review.",
+  "group": "claudette"
+ }
+]

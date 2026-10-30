@@ -18,6 +18,8 @@ services:
       - ./evals:/app/evals
       # Uploaded contracts (confidential: git- and docker-ignored, kept on the host).
       - ./data/uploads:/app/data/uploads
+      # Real-world eval contracts (third-party text, fetched locally by scripts/fetch_real_contracts.py).
+      - ./data/real:/app/data/real
     restart: unless-stopped
 
   ollama:

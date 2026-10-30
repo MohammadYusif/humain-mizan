@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     contracts_dir: Path = Path("evals/contracts")
     # Blind held-out suite: contracts the patterns and prompts were never tuned on.
     heldout_dir: Path = Path("evals/heldout/contracts")
+    # Real-world suite: third-party contracts fetched by scripts/fetch_real_contracts.py. Their text
+    # is not ours to redistribute, so it stays under data/ (git- and docker-ignored); only sources,
+    # checksums and labels are tracked (evals/real/).
+    real_dir: Path = Path("data/real/contracts")
+    real_cases: Path = Path("evals/real/cases.jsonl")
     # User uploads may be confidential: kept under data/ (git- and docker-ignored).
     uploads_dir: Path = Path("data/uploads")
     results_dir: Path = Path("evals/results")
@@ -41,8 +46,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
 
     def contract_dirs(self) -> list[Path]:
-        """Where contracts are looked up, in order: samples, held-out suite, user uploads."""
-        return [self.contracts_dir, self.heldout_dir, self.uploads_dir]
+        """Where contracts are looked up, in order: samples, held-out suite, real-world suite,
+        user uploads."""
+        return [self.contracts_dir, self.heldout_dir, self.real_dir, self.uploads_dir]
 
 
 @lru_cache

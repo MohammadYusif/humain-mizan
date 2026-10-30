@@ -21,3 +21,12 @@ No copyleft (GPL/AGPL/LGPL/SSPL). Re-run `uv run python scripts/check_licenses.p
 | DM Sans, IBM Plex Sans Arabic, IBM Plex Mono (via @fontsource) | SIL OFL 1.1 | self-hosted fonts | keep the licence with the fonts; no selling fonts alone |
 | Qwen3 14B (local comparison only, via Ollama) | Apache-2.0 | sovereign-mode experiment | model licence terms |
 | Claude models (Anthropic API) | commercial API terms | the agent's model | API terms of use |
+
+## Real-world eval contracts (`evals/real/`)
+
+Only the source list (URLs, SHA-256), our labels and results are in git. The contract texts are fetched by `scripts/fetch_real_contracts.py` into `data/real/` (git- and docker-ignored), used for internal evaluation only, unmodified at source and not redistributed. Ask the owners for written permission before publishing any of them.
+
+- **CUAD v1** © The Atticus Project, CC BY 4.0 (Hendrycks et al., NeurIPS 2021, https://zenodo.org/records/4595826; files via https://huggingface.co/datasets/theatticusproject/cuad). The underlying contracts are public SEC EDGAR filings. We selected 6 contracts and mapped CUAD's clause annotations to our playbook rules.
+- **CLAUDETTE ToS corpus**, CC BY 4.0 (Lippi et al. 2019; Galassi et al. 2024, https://github.com/nlp-unibo/Multilingual-Unfair-Clause-Detection). Zoom and Dropbox terms; annotations mapped to our rules. The terms themselves belong to Zoom and Dropbox.
+- **SEC EDGAR exhibits**: Lucid Group (EV purchase agreement with the Saudi Ministry of Finance) and OMS Energy Technologies (Saudi Aramco purchase order terms). Public filings; text © the contracting parties.
+- **Saudi Ministry of Finance unified model contracts** (etimad.sa), all rights reserved to the Ministry of Finance; and **EXPRO unified framework agreements** (expro.gov.sa), used under EXPRO's terms (personal copy and excerpts, no modification). Fetched 2026-10-30.
