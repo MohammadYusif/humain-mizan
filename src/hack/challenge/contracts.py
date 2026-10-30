@@ -191,6 +191,8 @@ def _extract_pdf(data: bytes) -> tuple[str, dict | None]:
     arabic = [i for i, t in enumerate(texts) if i not in scanned and _arabic_share(t) > 0.3]
     if not scanned and not arabic:
         return "\n".join(texts), None
+    if not arabic and len(scanned) * 2 <= len(texts):
+        return _fill_untexted_pages(data, texts, scanned)
     if len(texts) > ocr.MAX_PAGES:
         raise ValueError(f"this PDF needs OCR and has {len(texts)} pages (max {ocr.MAX_PAGES})")
     reason = (
@@ -207,13 +209,44 @@ def _extract_pdf(data: bytes) -> tuple[str, dict | None]:
     except Exception as e:
         raise ValueError("this PDF could not be rendered for OCR (corrupt or encrypted)") from e
     try:
-        pages = {i: ocr.ocr_image(ocr.render_pdf_page(pdf, i)) for i in range(len(texts))}
+        pages = ocr.ocr_pdf_pages(pdf, len(texts))
     finally:
         pdf.close()
     text = join_broken_paragraphs("\n\n".join(pages[i].text for i in sorted(pages)))
     if len(_LETTER.findall(text)) < MIN_PAGE_LETTERS:
         raise ValueError("no readable text found in this PDF, even with OCR")
     return text, ocr.summary(pages, len(texts), reason)
+
+
+def _fill_untexted_pages(
+    data: bytes, texts: list[str], pages: list[int]
+) -> tuple[str, dict | None]:
+    """A text PDF with a few pages that have no text layer: covers, blank pages, or a scanned
+    signature page or exhibit. Those pages alone are OCR'd. Without OCR they cannot be read, and
+    since a clause could be on them, the source records it and the contract escalates."""
+    from . import ocr
+
+    if not ocr.status()["available"]:
+        return "\n".join(texts), {
+            "kind": "unread",
+            "pages_total": len(texts),
+            "pages_unread": [i + 1 for i in pages],
+        }
+    import pypdfium2 as pdfium
+
+    try:
+        pdf = pdfium.PdfDocument(data)
+    except Exception as e:
+        raise ValueError("this PDF could not be rendered for OCR (corrupt or encrypted)") from e
+    try:
+        read = {i: ocr.ocr_image(ocr.render_pdf_page(pdf, i)) for i in pages}
+    finally:
+        pdf.close()
+    texts = [read[i].text if i in read else t for i, t in enumerate(texts)]
+    with_words = {i: p for i, p in read.items() if p.words}
+    if not with_words:  # the pages were blank
+        return "\n".join(texts), None
+    return "\n".join(texts), ocr.summary(with_words, len(texts), "pages without a text layer")
 
 
 def _extract_image(data: bytes) -> tuple[str, dict | None]:
@@ -241,13 +274,44 @@ def _extract_image(data: bytes) -> tuple[str, dict | None]:
     return text, ocr.summary(pages, len(frames), "image upload")
 
 
-def to_contract_markdown(raw: str, title_hint: str) -> str:
+GROUP_ABOVE = (
+    150  # more paragraphs than this: group them, so the reviewer types ~150 clauses, not 800
+)
+_HEADING_MAX = 80
+
+
+def group_paragraphs(paras: list[str], target_clauses: int = 130) -> list[str]:
+    """Long documents (framework agreements, ToS, DOCX with a paragraph per list item or table row)
+    come out as hundreds of short paragraphs. Group consecutive ones into clauses of a few hundred
+    characters. A clause ends once it reaches the target size, or earlier at a heading or numbered
+    item, so sections stay together and nothing is dropped or reordered."""
+    target = max(500, sum(map(len, paras)) // target_clauses)
+    out: list[str] = []
+    cur: list[str] = []
+    size = 0
+    for p in paras:
+        starts = bool(_NUMBERED.match(p) or _CLAUSE_START.match(p)) or (
+            len(p) <= _HEADING_MAX and not _LINE_END.search(p)
+        )
+        if cur and (size >= target or (starts and size >= target // 2)):
+            out.append("\n".join(cur))
+            cur, size = [], 0
+        cur.append(p)
+        size += len(p)
+    if cur:
+        out.append("\n".join(cur))
+    return out
+
+
+def to_contract_markdown(
+    raw: str, title_hint: str, max_chars: int = MAX_CHARS, max_clauses: int = MAX_CLAUSES
+) -> str:
     """Normalise extracted text into '# Title' + one paragraph per clause."""
     text = raw.replace("\r\n", "\n").replace("\r", "\n").strip()
     if not text:
         raise ValueError("the contract is empty")
-    if len(text) > MAX_CHARS:
-        raise ValueError(f"contract too long (max {MAX_CHARS:,} characters)")
+    if len(text) > max_chars:
+        raise ValueError(f"contract too long (max {max_chars:,} characters)")
     paras = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
     if len(paras) < 3:  # PDF-style text: single newlines only -> regroup on clause numbering
         paras, cur = [], []
@@ -260,6 +324,8 @@ def to_contract_markdown(raw: str, title_hint: str) -> str:
             cur.append(line)
         if cur:
             paras.append(" ".join(cur))
+    else:
+        paras = [q for p in paras for q in _split_numbered(p)]
     paras = [re.sub(r"\s*\n\s*", " ", p) for p in paras]  # unwrap hard line breaks
     paras = [p for p in paras if len(_LETTER.findall(p)) >= 3]  # drop "---", page numbers, etc.
     title = title_hint
@@ -271,9 +337,39 @@ def to_contract_markdown(raw: str, title_hint: str) -> str:
         raise ValueError(
             "found fewer than 2 clauses: paste the full contract, one clause per paragraph"
         )
-    if len(paras) > MAX_CLAUSES:
-        raise ValueError(f"too many paragraphs ({len(paras)}); max {MAX_CLAUSES}")
+    if len(paras) > GROUP_ABOVE:
+        paras = group_paragraphs(paras)
+    if len(paras) > max_clauses:
+        raise ValueError(f"too many paragraphs ({len(paras)}); max {max_clauses}")
     return f"# {title}\n\n" + "\n\n".join(paras) + "\n"
+
+
+# Stricter than _CLAUSE_START: a number needs a dot or bracket ("4." / "4.2" / "4)"), so a wrapped
+# line that happens to begin with "30 days" is not taken for a new clause.
+_NUMBERED = re.compile(
+    r"^(\d+(\.\d+)*[.)]\s|\d+(\.\d+)+\s|(article|section|clause)\s+\d+|(المادة|البند)\s|[٠-٩]+[.)-]\s)",
+    re.I,
+)
+_LINE_END = re.compile(r"[.!?:;؛)]$")
+
+
+def _split_numbered(para: str) -> list[str]:
+    """Split a block that holds several numbered clauses (PDF text often has no blank line between
+    them). A new clause starts at a numbered line that follows a finished sentence or a short
+    heading line."""
+    lines = [ln.strip() for ln in para.split("\n") if ln.strip()]
+    if sum(bool(_NUMBERED.match(ln)) for ln in lines) < 2:
+        return [para]
+    out: list[str] = []
+    cur: list[str] = []
+    for ln in lines:
+        if cur and _NUMBERED.match(ln) and (len(cur[-1]) < 80 or _LINE_END.search(cur[-1])):
+            out.append("\n".join(cur))
+            cur = []
+        cur.append(ln)
+    if cur:
+        out.append("\n".join(cur))
+    return out
 
 
 def upload_id(name: str, data: bytes) -> str:

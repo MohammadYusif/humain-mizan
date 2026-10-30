@@ -89,6 +89,9 @@ def _segments(text: str, quotes: list[str]) -> list[dict[str, Any]]:
 def _source_line(source: dict | None) -> str:
     if not source:
         return ""
+    if source.get("kind") == "unread":
+        pages = ", ".join(str(p) for p in source.get("pages_unread", []))
+        return f"PDF page(s) {pages} had no readable text and were not reviewed."
     if source.get("kind") != "ocr":
         return "Text from an unrecognised source: check it against the original."
     pages = source.get("pages_ocr", [])

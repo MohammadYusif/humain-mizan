@@ -27,8 +27,13 @@ OCR_MAX_LOW_SHARE = 0.15
 
 def ocr_doubt(source: dict | None) -> str | None:
     """Why scanned text is not reliable enough to act on without a lawyer, or None."""
-    if not source or source.get("kind") != "ocr":
-        return None if not source else "Text came from an unrecognised source"
+    if not source:
+        return None
+    if source.get("kind") == "unread":
+        pages = ", ".join(str(p) for p in source.get("pages_unread", []))
+        return f"PDF pages without readable text could not be checked (page {pages}): a lawyer must read them"
+    if source.get("kind") != "ocr":
+        return "Text came from an unrecognised source"
     mean, low = source.get("mean_conf", 0.0), source.get("low_conf_share", 1.0)
     if mean >= OCR_MIN_CONF and low <= OCR_MAX_LOW_SHARE:
         return None

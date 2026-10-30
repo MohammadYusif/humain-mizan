@@ -21,8 +21,10 @@ from functools import lru_cache
 LANGS = ("ara", "eng")
 DPI = 300
 LOW_CONF = 60  # a word below this Tesseract confidence counts as "low"
-MAX_PAGES = 30
+MAX_PAGES = 120  # long framework agreements run to ~100 pages
 MAX_SIDE_PX = 4200  # A4 at 300 DPI is 2480 x 3508
+# Pages are OCR'd in parallel, one Tesseract thread each (more efficient than one page with many).
+WORKERS = max(1, min(4, (os.cpu_count() or 2) - 1))
 IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp", ".bmp")
 
 
@@ -137,6 +139,23 @@ def render_pdf_page(pdf, index: int):
     w, h = page.get_size()
     scale = min(DPI / 72, MAX_SIDE_PX / max(w, h, 1))
     return page.render(scale=scale).to_pil()
+
+
+def ocr_pdf_pages(pdf, n_pages: int) -> dict[int, PageText]:
+    """OCR every page of an open pypdfium2 document. PDFium is not thread-safe, so pages are
+    rendered here in order, a batch at a time (bounded memory), and only Tesseract runs in parallel."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    _require()
+    os.environ.setdefault("OMP_THREAD_LIMIT", "1")
+    out: dict[int, PageText] = {}
+    with ThreadPoolExecutor(max_workers=WORKERS) as pool:
+        for start in range(0, n_pages, WORKERS):
+            batch = range(start, min(n_pages, start + WORKERS))
+            images = {i: render_pdf_page(pdf, i) for i in batch}
+            for i, page in zip(batch, pool.map(ocr_image, [images[i] for i in batch]), strict=True):
+                out[i] = page
+    return out
 
 
 def summary(pages: dict[int, PageText], total_pages: int, reason: str) -> dict:

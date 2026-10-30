@@ -14,6 +14,12 @@ from .review import VALID_TYPES, Finding, Review, score, severity_of
 
 
 def _source_note(source: dict | None) -> str:
+    if source and source.get("kind") == "unread":
+        pages = ", ".join(str(p) for p in source.get("pages_unread", []))
+        return (
+            f"PDF page(s) {pages} had no readable text and are not included here; they may hold "
+            "clauses. Say so in the memo."
+        )
     if not source or source.get("kind") != "ocr":
         return ""
     return (

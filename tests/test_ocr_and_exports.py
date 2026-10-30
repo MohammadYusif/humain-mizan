@@ -143,6 +143,52 @@ def test_text_layer_pdf_skips_ocr_but_arabic_and_scanned_pages_need_it(monkeypat
         C.extract("photo.jpg", _jpeg())
 
 
+def with_blank_page(pdf: bytes) -> bytes:
+    from pypdf import PdfWriter
+
+    w = PdfWriter()
+    for part in (pdf, blank_pdf()):
+        w.append(io.BytesIO(part))
+    buf = io.BytesIO()
+    w.write(buf)
+    return buf.getvalue()
+
+
+def test_text_pdf_with_a_page_without_text_ocrs_only_that_page(monkeypatch, fake_ocr):
+    paras = [
+        "Supply Agreement",
+        "1. Supply. The supplier delivers goods monthly.",
+        "2. Law. Saudi law applies.",
+    ]
+    mixed = with_blank_page(typeset_pdf(paras * 4))
+    text, src = C.extract("m.pdf", mixed)
+    assert "supplier delivers" in text and "Kingdom of Saudi Arabia" in text
+    assert src["pages_ocr"] == [2] and len(fake_ocr) == 1  # only the page without text
+    monkeypatch.setattr(ocr, "status", lambda: {"available": False, "langs": [], "detail": "none"})
+    text, src = C.extract("m.pdf", mixed)
+    assert "supplier delivers" in text and src == {
+        "kind": "unread",
+        "pages_total": 2,
+        "pages_unread": [2],
+    }
+    assert "page 2" in ocr_doubt(src)  # a page nobody read cannot be approved
+
+
+def test_numbered_clauses_in_one_pdf_block_are_split():
+    raw = (
+        "Support Agreement\n\n1. DEFINITIONS\n1.1 Incident means a fault.\n1.2 Hours are 9 to 5.\n"
+        "2. FEES\nFees are due within 30\ndays of invoice.\n\nSigned."
+    )
+    title, clauses = C.split_clauses(C.to_contract_markdown(raw, "x"))
+    assert [c.text for c in clauses] == [
+        "1. DEFINITIONS",
+        "1.1 Incident means a fault.",
+        "1.2 Hours are 9 to 5.",
+        "2. FEES Fees are due within 30 days of invoice.",
+        "Signed.",
+    ]
+
+
 def _jpeg() -> bytes:
     from PIL import Image
 
