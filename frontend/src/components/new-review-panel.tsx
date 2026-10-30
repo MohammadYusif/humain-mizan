@@ -1,8 +1,9 @@
 import { LoaderCircle, Play, ScanText, Send, Upload } from "lucide-react"
+import { useState } from "react"
 
-import { SensitivityBadge } from "@/components/data-policy"
+import { LabelBasis, LoosenConfirm, SensitivityBadge } from "@/components/data-policy"
 import { useDataPolicy } from "@/hooks/use-data-policy"
-import { blocked, destination, LEVEL_LABEL } from "@/lib/data-policy"
+import { blocked, destination, LEVEL_LABEL, looserThan } from "@/lib/data-policy"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -73,6 +74,13 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
   const title = selected ? contractTitle(selected.title) : null
   const level = selected?.sensitivity
   const toLawyer = blocked(level, policy)
+  // A label looser than the text calls for waits for the person to confirm it.
+  const [pending, setPending] = useState<Sensitivity | null>(null)
+  const relabel = (v: Sensitivity) => {
+    if (!selected || v === level) return
+    if (looserThan(v, selected.label_detected)) setPending(v)
+    else onRelabel(selected.doc_id, v)
+  }
 
   return (
     <Card className="shrink-0 gap-5">
@@ -148,7 +156,7 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
               <div className="mt-1 flex flex-col gap-1.5 rounded-md border bg-background/60 px-2.5 py-2">
                 <div className="flex items-center gap-2">
                   {selected.source === "upload" ? (
-                    <Select value={level} onValueChange={(v) => onRelabel(selected.doc_id, v as Sensitivity)} disabled={busy}>
+                    <Select value={level} onValueChange={(v) => relabel(v as Sensitivity)} disabled={busy}>
                       <SelectTrigger size="sm" aria-label="Who may see this contract" className="h-7 w-auto gap-1.5 bg-background text-xs">
                         <SelectValue />
                       </SelectTrigger>
@@ -165,6 +173,25 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
                   )}
                   <span className="text-xs text-muted-foreground">{selected.source === "upload" ? "Who may see it" : "Sample label"}</span>
                 </div>
+                {selected.source === "upload" ? (
+                  <>
+                    <LabelBasis c={selected} busy={busy} onRestore={(l) => onRelabel(selected.doc_id, l)} />
+                    <p className="text-xs text-muted-foreground">
+                      Making it stricter is one click. Making it looser is recorded as a person’s decision.
+                    </p>
+                    <LoosenConfirm
+                      pending={pending}
+                      detected={selected.label_detected}
+                      reasons={selected.label_reasons}
+                      policy={policy}
+                      onCancel={() => setPending(null)}
+                      onConfirm={() => {
+                        if (pending) onRelabel(selected.doc_id, pending)
+                        setPending(null)
+                      }}
+                    />
+                  </>
+                ) : null}
                 {destination(level, policy) ? (
                   <p className={toLawyer ? "text-xs font-medium text-escalate" : "text-xs text-muted-foreground"}>
                     {destination(level, policy)}

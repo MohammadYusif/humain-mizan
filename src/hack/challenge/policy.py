@@ -42,10 +42,222 @@ def meta_path(contract_path: Path) -> Path:
     return contract_path.with_name(f"{contract_path.stem}.meta.json")
 
 
-def write_label(contract_path: Path, level: str) -> None:
+def write_label(
+    contract_path: Path, level: str, set_by: str = "person", detection: Detection | None = None
+) -> None:
+    """Store a label. set_by is "auto" (from detect_label) or "person"; what was detected is kept
+    when a person changes the label, so the audit shows both."""
     if level not in LEVELS:
         raise ValueError(f"sensitivity must be one of {', '.join(LEVELS)}")
-    meta_path(contract_path).write_text(json.dumps({"sensitivity": level}), encoding="utf-8")
+    meta: dict[str, Any] = {"sensitivity": level, "set_by": set_by}
+    if detection is None:
+        old = read_meta(contract_path)
+        if old.get("detected") in LEVELS:
+            meta["detected"], meta["reasons"] = old["detected"], old.get("reasons", [])
+    else:
+        meta["detected"], meta["reasons"] = detection.level, detection.reasons
+    meta_path(contract_path).write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+
+
+def read_meta(contract_path: Path) -> dict[str, Any]:
+    """The whole label record ({} when there is none or it cannot be read)."""
+    p = meta_path(contract_path)
+    try:
+        meta = json.loads(p.read_text(encoding="utf-8")) if p.is_file() else {}
+    except ValueError:
+        return {}
+    return meta if isinstance(meta, dict) else {}
+
+
+def label_info(settings: Settings, doc_id: str) -> dict[str, Any]:
+    """The label and how it was set, for the API and the audit record."""
+    path = contract_path(settings, doc_id)
+    meta = read_meta(path) if path is not None else {}
+    set_by = meta.get("set_by") if meta.get("set_by") in ("auto", "person") else None
+    if set_by is None and path is not None and read_label(path) is not None:
+        set_by = "person"  # labels stored before detection existed were chosen by a person
+    return {
+        "sensitivity": level_of(settings, doc_id),
+        "label_set_by": set_by,
+        "label_detected": meta.get("detected") if meta.get("detected") in LEVELS else None,
+        "label_reasons": [str(r) for r in meta.get("reasons", [])][:6],
+    }
+
+
+# --- detection ------------------------------------------------------------------------------------
+# Runs on this server, before anything is sent anywhere: a model cannot be asked to label a contract
+# without seeing it. Each rule gives a reason people can check. The highest level found wins.
+
+
+@dataclass
+class Detection:
+    level: str
+    reasons: list[str]
+
+
+# A classification marking: a line that is only the marking ("CONFIDENTIAL", "سري للغاية"),
+# or the marking after "Classification:". A clause heading such as "Confidential Information"
+# is not a marking.
+_MARK_RESTRICTED = (
+    r"(?:strictly|highly|private\s+and)\s+confidential|confidential(?:\s+document)?|top\s+secret|"
+    r"secret|restricted|classified|سري(?:\s+(?:للغاية|جدا|جداً|ومحظور))?|مقيد|محظور"
+)
+_MARK_INTERNAL = r"internal(?:\s+use)?(?:\s+only)?|for\s+internal\s+use(?:\s+only)?|للاستخدام\s+الداخلي(?:\s+فقط)?|داخلي"
+_MARK_LINE = re.compile(rf"^(?:{_MARK_RESTRICTED}|{_MARK_INTERNAL})$", re.I)
+
+
+def _plain(line: str) -> str:
+    """A line without markdown or punctuation, for matching a marking."""
+    return re.sub(r"\s+", " ", re.sub(r"[^\w\s:：-]", " ", line)).strip(" -_\t")
+
+
+def is_marking(line: str) -> bool:
+    """A line that is only a classification marking: never a contract's title or a clause."""
+    p = _plain(line)
+    return bool(p) and len(p) <= 40 and bool(_MARK_LINE.match(p))
+
+
+_MARK_FIELD = re.compile(
+    rf"(?:classification|security\s+classification|sensitivity|marking|التصنيف|درجة\s+السرية)"
+    rf"\s*[:：]\s*({_MARK_RESTRICTED}|{_MARK_INTERNAL}|public|عام)\b",
+    re.I,
+)
+_SAYS_CONFIDENTIAL = re.compile(
+    r"\bthis\s+(?:document|agreement|contract)\s+(?:and\s+its\s+(?:contents|terms)\s+)?"
+    r"(?:is|are)\s+(?:strictly\s+|highly\s+)?confidential\b"
+    r"|\bthe\s+(?:terms|existence)\s+of\s+this\s+(?:agreement|contract)\s+(?:is|are)\s+"
+    r"(?:strictly\s+)?confidential\b"
+    r"|هذ[هاي]\s+(?:الوثيقة|الاتفاقية|العقد|المستند)\s+(?:سري|سرية)",
+    re.I,
+)
+_UNDER_NDA = re.compile(
+    r"\b(?:shared|disclosed|provided|delivered|furnished)\s+(?:to\s+\w+\s+)?(?:under|pursuant\s+to|"
+    r"subject\s+to)\s+(?:the|a|an)\s+(?:[\w\s,]{0,40}?)?"
+    r"(?:(?:non-disclosure|confidentiality)\s+agreement|NDA)\b"
+    r"|\b(?:under|subject\s+to)\s+(?:an\s+|the\s+)?NDA\b"
+    r"|بموجب\s+(?:اتفاقية|اتفاق)\s+(?:عدم\s+الإفصاح|السرية|عدم\s+الافصاح)",
+    re.I,
+)
+_SENSITIVE = [
+    (
+        "health records",
+        re.compile(
+            r"\b(?:medical|health|patient)\s+(?:records?|data|information|files?|histor(?:y|ies))\b"
+            r"|\bprotected\s+health\s+information\b|البيانات\s+الصحية|بيانات\s+صحية|السجلات?\s+الطبية|"
+            r"المعلومات\s+الصحية|بيانات\s+المرضى|الملفات\s+الطبية",
+            re.I,
+        ),
+    ),
+    (
+        "biometric or genetic data",
+        re.compile(
+            r"\b(?:biometric|genetic)\s+(?:data|information|records?|identifiers?)\b"
+            r"|البيانات\s+(?:الحيوية|الجينية|الوراثية)|بيانات\s+(?:حيوية|جينية|وراثية)|البصمات",
+            re.I,
+        ),
+    ),
+    (
+        "criminal records",
+        re.compile(
+            r"\bcriminal\s+(?:records?|histor(?:y|ies)|convictions?)\b|السوابق\s+الجنائية|السجل\s+الجنائي",
+            re.I,
+        ),
+    ),
+]
+# As cards are written: one run of digits, or groups of four (Amex 4-6-5) with one separator
+_CARD = re.compile(
+    r"(?<![\d-])(?:\d{13,19}|\d{4}([ -])\d{4}\1\d{4}\1\d{4}(?:\1\d{3})?|\d{4}([ -])\d{6}\2\d{5})"
+    r"(?![\d-])"
+)
+_TEMPLATE = re.compile(
+    r"\[\s*(?:insert|name|party|company|date|address|amount|●|•|\.{3}|x+)[^\]]{0,40}\]|_{5,}|\.{8,}|"
+    r"\{\{\s*\w+|<<\s*\w+|\[●\]|\[\s*\]|"
+    r"\b(?:model|standard|template|sample|unified)\s+(?:form\s+of\s+)?(?:contract|agreement|form)\b|"
+    r"نموذج\s+(?:عقد|اتفاقية)|العقد\s+الموحد|النموذج\s+الموحد",
+    re.I,
+)
+_KIND = {
+    "PARTY": ("party name", "party names"),
+    "EMAIL": ("email address", "email addresses"),
+    "PHONE": ("phone number", "phone numbers"),
+    "IBAN": ("IBAN", "IBANs"),
+    "VAT": ("VAT number", "VAT numbers"),
+    "ID": ("ID or registration number", "ID or registration numbers"),
+}
+
+
+def _card(digits: str) -> bool:
+    """A payment card number: a card network's length and prefix, and a valid check digit."""
+    n = len(digits)
+    shaped = (
+        (n == 16 and digits[0] in "245")
+        or (n == 15 and digits[:2] in ("34", "37"))
+        or (n in (13, 19) and digits[0] == "4")
+    )
+    return shaped and _luhn(digits)
+
+
+def _luhn(digits: str) -> bool:
+    total = 0
+    for i, ch in enumerate(reversed(digits)):
+        d = int(ch) * (2 if i % 2 else 1)
+        total += d - 9 if d > 9 else d
+    return total % 10 == 0
+
+
+def _quote(s: str) -> str:
+    s = re.sub(r"\s+", " ", s).strip()
+    return f"“{s[:1].upper()}{s[1:].lower()}”" if s.isascii() else f"«{s}»"
+
+
+def _list(parts: list[str]) -> str:
+    return parts[0] if len(parts) == 1 else f"{', '.join(parts[:-1])} and {parts[-1]}"
+
+
+def detect_label(text: str, contract: Contract | None = None) -> Detection:
+    """The label a contract's own text calls for. Never lower than internal unless the text is a
+    blank template with no identifiers at all."""
+    restricted: list[str] = []
+    internal: list[str] = []
+    for line in text.splitlines():
+        if is_marking(line):
+            ln = _plain(line)
+            (restricted if re.fullmatch(_MARK_RESTRICTED, ln, re.I) else internal).append(
+                f"Marked {_quote(ln)}"
+            )
+    for m in _MARK_FIELD.finditer(text):
+        value = m.group(1)
+        if re.fullmatch(_MARK_RESTRICTED, value, re.I):
+            restricted.append(f"Classified {_quote(value)}")
+        elif re.fullmatch(_MARK_INTERNAL, value, re.I):
+            internal.append(f"Classified {_quote(value)}")
+    if _SAYS_CONFIDENTIAL.search(text):
+        restricted.append("Says the document itself is confidential")
+    if _UNDER_NDA.search(text):
+        restricted.append("Shared under a non-disclosure agreement")
+    for what, pat in _SENSITIVE:
+        if pat.search(text):
+            restricted.append(f"Mentions sensitive personal data ({what})")
+    for m in _CARD.finditer(text):
+        if _card(re.sub(r"\D", "", m.group(0))):
+            restricted.append("Has a payment card number")
+            break
+    if restricted:
+        return Detection("restricted", list(dict.fromkeys(restricted)))
+
+    found = Redactor.for_contract(contract).summary() if contract is not None else {}
+    parts = [f"{found[k]} {_KIND[k][found[k] != 1]}" for k in _KIND if found.get(k)]
+    if parts:
+        internal.append(f"Has {_list(parts)}")
+    if internal:
+        return Detection("internal", list(dict.fromkeys(internal)))
+    if _TEMPLATE.search(text):
+        return Detection(
+            "public", ["A blank template: no names, contact details or account numbers"]
+        )
+    return Detection(
+        "internal", ["No names or account details found, but nothing shows the text is published"]
+    )
 
 
 def read_label(contract_path: Path) -> str | None:

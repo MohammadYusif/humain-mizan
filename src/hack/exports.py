@@ -109,6 +109,17 @@ def data_line(policy: dict[str, Any] | None) -> str:
     if not policy:
         return ""
     label = str(policy.get("sensitivity", "")).capitalize()
+    detected = str(policy.get("label_detected") or "")
+    why = "; ".join(r[:1].lower() + r[1:] for r in policy.get("label_reasons") or [])
+    if policy.get("label_set_by") == "auto":
+        label += f" (suggested from the text: {why})" if why else " (suggested from the text)"
+    elif (
+        policy.get("label_set_by") == "person"
+        and detected
+        and detected != policy.get("sensitivity")
+    ):
+        reason = f" ({why})" if why else ""
+        label = f"Detected: {detected.capitalize()}{reason}. Set to {label} by a person"
     if not policy.get("allowed", True):
         return f"{label}. Not sent to any model: {policy.get('reason', '')}"
     where = (

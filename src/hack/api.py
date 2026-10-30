@@ -387,7 +387,7 @@ def create_app(
                         "languages": sorted({cl.lang for cl in c.clauses}),
                         "source": source,
                         "ocr": ocr_info(c.source),
-                        "sensitivity": P.level_of(cfg, c.doc_id),
+                        **P.label_info(cfg, c.doc_id),
                     }
                 )
         return out
@@ -402,9 +402,9 @@ def create_app(
         """Upload a .pdf/.docx/.txt/.md file or a scan (.png/.jpg/.tif), or paste text. Scans and
         Arabic PDFs are read by local OCR. Stored under data/uploads (git-ignored)."""
         source: dict | None = None
-        level = sensitivity or cfg.default_sensitivity
-        if level not in P.LEVELS:
-            raise HTTPException(400, f"sensitivity must be one of {', '.join(P.LEVELS)}")
+        level = sensitivity or "auto"  # no choice: read the text and pick the label here
+        if level != "auto" and level not in P.LEVELS:
+            raise HTTPException(400, f"sensitivity must be auto or one of {', '.join(P.LEVELS)}")
         try:
             if file is not None and file.filename:
                 data = await file.read(C.MAX_UPLOAD_BYTES + 1)
@@ -433,8 +433,15 @@ def create_app(
             sidecar.write_text(json.dumps(source, ensure_ascii=False), encoding="utf-8")
         else:
             sidecar.unlink(missing_ok=True)
-        P.write_label(path, level)
         c = C.load_contract(cfg.uploads_dir, doc_id)
+        # Detection runs on this server before the contract can reach any model, and is kept
+        # with the label even when a person chooses one, so the audit shows both.
+        # The raw text, not the stored one: a marking line is dropped from the clauses.
+        found = P.detect_label(f"{title or ''}\n{raw}", c)
+        if level == "auto":
+            P.write_label(path, found.level, "auto", found)
+        else:
+            P.write_label(path, level, "person", found)
         return {
             "doc_id": c.doc_id,
             "title": c.title,
@@ -442,7 +449,7 @@ def create_app(
             "languages": sorted({cl.lang for cl in c.clauses}),
             "source": "upload",
             "ocr": ocr_info(c.source),
-            "sensitivity": level,
+            **P.label_info(cfg, doc_id),
         }
 
     @app.put("/contracts/{doc_id}/sensitivity")
@@ -454,10 +461,10 @@ def create_app(
         if path.parent.resolve() != cfg.uploads_dir.resolve():
             raise HTTPException(400, "only uploaded contracts can be relabelled")
         try:
-            P.write_label(path, req.sensitivity)
+            P.write_label(path, req.sensitivity, "person")
         except ValueError as e:
             raise HTTPException(400, str(e)) from None
-        return {"doc_id": doc_id, "sensitivity": req.sensitivity}
+        return {"doc_id": doc_id, **P.label_info(cfg, doc_id)}
 
     @app.get("/contracts/{doc_id}")
     def contract(doc_id: str) -> dict[str, Any]:
@@ -470,7 +477,7 @@ def create_app(
             "title": c.title,
             "clauses": [{"id": cl.id, "lang": cl.lang, "text": cl.text} for cl in c.clauses],
             "ocr": ocr_info(c.source),
-            "sensitivity": P.level_of(cfg, c.doc_id),
+            **P.label_info(cfg, c.doc_id),
         }
 
     @app.get("/demo/scenes")

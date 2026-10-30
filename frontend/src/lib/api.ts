@@ -42,6 +42,9 @@ export interface DataPolicyRecord {
   model?: string
   /** Placeholders used, by kind (PARTY, EMAIL, PHONE, IBAN, VAT, ID). */
   redacted?: Record<string, number>
+  label_set_by?: "auto" | "person"
+  label_detected?: Sensitivity | null
+  label_reasons?: string[]
 }
 
 /** How a contract's text was obtained when it was read from a scan (local OCR). */
@@ -67,6 +70,11 @@ export interface ContractSummary {
   source: "sample" | "held-out" | "real" | "upload"
   ocr?: OcrSource | null
   sensitivity?: Sensitivity
+  /** How the label was set: read from the text on the server, or chosen by a person. */
+  label_set_by?: "auto" | "person" | null
+  /** What the server's detector found, kept when a person changes the label. */
+  label_detected?: Sensitivity | null
+  label_reasons?: string[]
 }
 
 export interface Clause {
@@ -466,7 +474,9 @@ export const api = {
   contract: (docId: string) => request<Contract>(`/contracts/${enc(docId)}`),
   uploadContract: (form: FormData) => request<ContractSummary>("/contracts", { method: "POST", body: form }),
   setSensitivity: (docId: string, sensitivity: Sensitivity) =>
-    request<{ doc_id: string; sensitivity: Sensitivity }>(`/contracts/${enc(docId)}/sensitivity`, {
+    request<
+      Pick<ContractSummary, "doc_id" | "sensitivity" | "label_set_by" | "label_detected" | "label_reasons">
+    >(`/contracts/${enc(docId)}/sensitivity`, {
       method: "PUT",
       body: JSON.stringify({ sensitivity }),
     }),

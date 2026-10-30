@@ -43,7 +43,12 @@ annotations, CLAUDETTE's unfair-clause tags). The first run on them was blind an
 - **Weaker models.** A local model (qwen3:14b) goes from 3/9 wrong approvals with no safeguards to 0/9
   with them, on the main suite. On the blind set it still approved 2 of 8 risky contracts, so we say
   plainly: local ("sovereign") mode needs a lawyer on every contract.
-- **Confidential contracts.** Every contract carries a label (Public, Internal, Restricted). Restricted
+- **Confidential contracts.** Every contract carries a label (Public, Internal, Restricted). On upload,
+  Mizan reads the text on the server, with no model call, and suggests the label with its reasons: a
+  confidentiality marking, an NDA, health records or a card number make it Restricted; names or account
+  details, Internal; a blank template, Public. Making it stricter is one click; making it looser is recorded
+  as a person's decision, next to what the text called for. Mizan never decides on its own to send
+  something out; it only decides on its own to hold something back. Restricted
   contracts never reach an external model: with one configured they go to a lawyer with no model call; with
   a model inside the network they are reviewed but never approved or sent automatically. Internal contracts
   reach an external model with names, contact details, account and ID numbers replaced by placeholders.

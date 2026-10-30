@@ -2,6 +2,19 @@ import type { DataPolicyConfig, Sensitivity } from "@/lib/api"
 
 export const LEVEL_LABEL: Record<Sensitivity, string> = { public: "Public", internal: "Internal", restricted: "Restricted" }
 
+const RANK: Record<Sensitivity, number> = { public: 0, internal: 1, restricted: 2 }
+
+/** Whether a label is looser than what the contract's own text called for. Mizan never does this
+ * on its own; a person can, and it is recorded. */
+export function looserThan(level: Sensitivity | undefined, detected: Sensitivity | null | undefined): boolean {
+  return Boolean(level && detected && RANK[level] < RANK[detected])
+}
+
+/** The detector's reasons as one clause: "has 2 party names; marked “Confidential”". */
+export function reasonText(reasons: string[] | undefined): string {
+  return (reasons ?? []).map((r) => r.charAt(0).toLowerCase() + r.slice(1)).join("; ")
+}
+
 /** Whether the configured model may read a contract with this label at all. */
 export function blocked(level: Sensitivity | undefined, policy: DataPolicyConfig | null): boolean {
   if (!level || !policy || policy.location === "local") return false

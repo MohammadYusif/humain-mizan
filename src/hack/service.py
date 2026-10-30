@@ -29,6 +29,11 @@ def data_policy(task: str, settings: Settings, provider: Provider) -> dict[str, 
     location = P.provider_location(provider, settings)
     d = P.decide(settings, m.group(1), location)
     rec = {**d.record(), "provider": provider.name, "model": provider.model}
+    info = P.label_info(settings, d.doc_id)
+    if info["label_set_by"]:  # how the label was set, for the audit
+        rec["label_set_by"] = info["label_set_by"]
+        rec["label_detected"] = info["label_detected"]
+        rec["label_reasons"] = info["label_reasons"]
     if d.allowed and d.redact:
         try:
             contract = C.load_contract(settings.contract_dirs(), d.doc_id)

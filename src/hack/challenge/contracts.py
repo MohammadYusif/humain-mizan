@@ -328,6 +328,11 @@ def to_contract_markdown(
         paras = [q for p in paras for q in _split_numbered(p)]
     paras = [re.sub(r"\s*\n\s*", " ", p) for p in paras]  # unwrap hard line breaks
     paras = [p for p in paras if len(_LETTER.findall(p)) >= 3]  # drop "---", page numbers, etc.
+    from .policy import is_marking  # policy imports this module
+
+    # A classification marking ("CONFIDENTIAL") is neither the title nor a clause. The label is
+    # detected from the raw text, so it still counts there.
+    paras = [p for p in paras if not is_marking(p)]
     title = title_hint
     if paras and paras[0].startswith("# "):
         title = paras.pop(0)[2:].strip()
