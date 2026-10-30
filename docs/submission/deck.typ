@@ -236,7 +236,7 @@
     ],
     [
       #let sub(s) = block(below: 0.35em, text(size: 20pt, weight: "semibold", fill: ink, s))
-      #sub[Limits we state rather than hide]
+      #sub[Key limitations]
       #set text(size: 15pt, fill: muted)
       #set list(spacing: 0.45em)
       - Playbook rules are illustrative, not legal advice. 15 labels come from outside annotators; the rest are ours.

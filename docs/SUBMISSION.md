@@ -159,7 +159,7 @@ Decisions and their trade-offs:
   trace. Demo script: `docs/DEMO.md`.
 - Results in full, including what went wrong: `docs/RESULTS.md`.
 
-Limits we state rather than hide: playbook rules are illustrative, not legal advice; most labels are
+Key limitations: playbook rules are illustrative, not legal advice; most labels are
 ours (15 real-contract labels come from outside annotators); on real contracts recall is 66-73%, so the
 issue list is incomplete even when the route is right; no real contract in our suites should be approved
 (the Saudi ones are buyer paper, the CUAD ones are under US law), so approval of a real compliant contract
