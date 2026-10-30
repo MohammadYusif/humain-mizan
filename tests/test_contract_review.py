@@ -571,8 +571,8 @@ def test_real_world_labels_are_consistent():
 
     s = Settings(provider="fake")
     sources = {x["id"]: x for x in json.loads(Path("evals/real/sources.json").read_text("utf-8"))}
-    cases = load_cases(s.real_cases)
-    assert {c["id"] for c in cases} == set(sources)
+    cases = [c for f in sorted(s.real_cases.parent.glob("cases*.jsonl")) for c in load_cases(f)]
+    assert sorted(c["id"] for c in cases) == sorted(sources)  # every batch, each id once
     for case in cases:
         scope = set(case["scope"])
         assert scope <= set(BY_ID), case["id"]

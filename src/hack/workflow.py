@@ -440,9 +440,11 @@ def eval_results(settings: Settings) -> list[dict[str, Any]]:
     if not files and settings.results_dir.is_dir():
         files = sorted(settings.results_dir.glob("*.json"))
     known = {p.stem for d in settings.contract_dirs() for p in d.glob("*.md")}
-    # Real-world contracts are not shipped (third-party text), but their labelled ids are.
-    if settings.real_cases.is_file():
-        known |= {c["id"] for c in load_cases(settings.real_cases)}
+    # Real-world contracts are not shipped (third-party text), but their labelled ids are, in every
+    # batch next to the first one (cases.jsonl, cases-batch2.jsonl, ...).
+    if settings.real_cases.parent.is_dir():
+        for f in sorted(settings.real_cases.parent.glob("cases*.jsonl")):
+            known |= {c["id"] for c in load_cases(f)}
     best: dict[tuple[str, str], tuple[int, float, dict[str, Any], Path]] = {}
     for p in files:
         try:
