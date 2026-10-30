@@ -1,9 +1,10 @@
 import { ArrowUpRight, Check, Clapperboard, Gavel, Info, LoaderCircle, PenLine, Send, Trash2, X } from "lucide-react"
 import { cn } from "cn"
-import { useId, useState } from "react"
+import { useId, useRef, useState } from "react"
 import { toast } from "sonner"
 
 import { RouteBadge, SeverityBadge } from "@/components/tone-badges"
+import { ARRIVE, useArrivals } from "@/hooks/use-arrivals"
 import { RedFlagSummary } from "@/components/two-detectors"
 import {
   AlertDialog,
@@ -385,7 +386,22 @@ export function InboxView({
 }) {
   // Hide a decided item at once; the next poll confirms it has left the inbox.
   const [decided, setDecided] = useState<Set<string>>(new Set())
+  const [leaving, setLeaving] = useState<Set<string>>(new Set())
+  // A decided card fades out first, then the list closes up and the inbox refreshes. The timer is a
+  // fallback in case the animation-end event never fires.
+  const closed = useRef<Set<string>>(new Set())
+  const finish = (id: string) => {
+    if (closed.current.has(id)) return
+    closed.current.add(id)
+    setDecided((s) => new Set(s).add(id))
+    onDecided()
+  }
+  const leave = (id: string) => {
+    setLeaving((s) => new Set(s).add(id))
+    setTimeout(() => finish(id), 400)
+  }
   const visible = items?.filter((i) => !decided.has(i.run_id)) ?? null
+  const isNew = useArrivals(visible?.map((i) => i.run_id))
   const legal = visible?.filter((i) => i.kind !== "approve_send").length ?? 0
   const sends = (visible?.length ?? 0) - legal
   // Finished non-eval runs that reached a route and need nobody.
@@ -439,14 +455,21 @@ export function InboxView({
       ) : (
         <ul className="flex flex-col gap-5">
           {visible.map((it) => (
-            <li key={it.run_id} className={cn("transition-opacity")}>
+            <li
+              key={it.run_id}
+              className={cn(
+                leaving.has(it.run_id)
+                  ? "pointer-events-none animate-out fade-out-0 zoom-out-[0.98] duration-200 ease-in fill-mode-forwards"
+                  : isNew(it.run_id) && ARRIVE
+              )}
+              onAnimationEnd={(e) => {
+                if (e.target === e.currentTarget && leaving.has(it.run_id)) finish(it.run_id)
+              }}
+            >
               <InboxCard
                 item={it}
                 contract={contracts?.find((c) => c.doc_id === it.doc_id) ?? null}
-                onDone={() => {
-                  setDecided((s) => new Set(s).add(it.run_id))
-                  onDecided()
-                }}
+                onDone={() => leave(it.run_id)}
               />
             </li>
           ))}

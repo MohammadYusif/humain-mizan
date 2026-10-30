@@ -3,6 +3,7 @@ import { cn } from "cn"
 import { useEffect, useId, useState } from "react"
 
 import { RouteBadge } from "@/components/tone-badges"
+import { ARRIVE_TOP, REVEAL, useArrivals } from "@/hooks/use-arrivals"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
@@ -56,6 +57,8 @@ export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
     runs?.filter(
       (r) => (r.doc_id || r.status !== "done") && (showEval || !isEvalRun(r.run_id) || r.run_id === selectedId)
     ) ?? null
+  const isNewRun = useArrivals(reviews?.map((r) => r.run_id))
+  const isNewRoute = useArrivals(reviews?.filter((r) => r.route).map((r) => `${r.run_id}:${r.route}`))
 
   return (
     <Card className={cn("min-h-0 gap-3", className)}>
@@ -88,13 +91,13 @@ export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
               {reviews.map((r) => {
                 const active = r.run_id === selectedId
                 return (
-                  <li key={r.run_id}>
+                  <li key={r.run_id} className={cn("min-w-0", isNewRun(r.run_id) && ARRIVE_TOP)}>
                     <button
                       type="button"
                       onClick={() => onSelect(r)}
                       aria-current={active ? "true" : undefined}
                       className={cn(
-                        "group flex w-full flex-col gap-1.5 rounded-lg border border-transparent px-2.5 py-2 text-start transition-colors outline-none",
+                        "group flex w-full min-w-0 flex-col gap-1.5 rounded-lg border border-transparent px-2.5 py-2 text-start transition-colors outline-none",
                         "hover:bg-muted focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
                         active && "border-border bg-accent"
                       )}
@@ -119,7 +122,10 @@ export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
                             Failed
                           </Badge>
                         ) : r.route ? (
-                          <RouteBadge route={r.route} />
+                          <RouteBadge
+                            route={r.route}
+                            className={cn("shrink-0", isNewRoute(`${r.run_id}:${r.route}`) && REVEAL)}
+                          />
                         ) : (
                           <Badge variant="outline" className="rounded-md text-muted-foreground">
                             No route

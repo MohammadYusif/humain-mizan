@@ -1,5 +1,7 @@
 import { CircleAlert, MessageSquare, Flag, FlagTriangleRight, MessageSquareDashed, Wrench } from "lucide-react"
 import { cn } from "cn"
+
+import { ARRIVE, useArrivals } from "@/hooks/use-arrivals"
 import { useState } from "react"
 
 import { RichText } from "@/components/rich-text"
@@ -228,6 +230,7 @@ function Detail({ e }: { e: TraceEvent }) {
 
 export function TraceTab({ trace, running }: { trace: TraceEvent[] | null; running: boolean }) {
   const [open, setOpen] = useState<string[]>([])
+  const isNew = useArrivals(trace?.map((_, i) => String(i)))
 
   if (!trace) {
     return (
@@ -291,6 +294,7 @@ export function TraceTab({ trace, running }: { trace: TraceEvent[] | null; runni
               value={String(i)}
               className={cn(
                 "relative rounded-lg border bg-card not-last:border-b",
+                isNew(String(i)) && ARRIVE,
                 err && "border-escalate/50 bg-escalate-soft/40",
                 nudge && "border-dashed bg-muted/40"
               )}

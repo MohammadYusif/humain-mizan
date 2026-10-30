@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useBatch, useBatches } from "@/hooks/use-api"
+import { REVEAL, useArrivals } from "@/hooks/use-arrivals"
 import { api, errorMessage, type BatchItem, type BatchStatus, type ContractSummary, type Route } from "@/lib/api"
 import { byWorkflow, cost, DECISION_LABEL, plural, relativeTime, seconds, usd } from "@/lib/format"
 import { go } from "@/lib/route"
@@ -254,7 +255,11 @@ function RouteSplit({ b }: { b: BatchStatus }) {
     <div className="flex flex-col gap-1.5">
       <div className="flex h-2.5 overflow-hidden rounded-sm bg-muted" role="img" aria-label={parts.map((p) => `${b.routes[p.key]} ${p.label}`).join(", ") || "no routes yet"}>
         {parts.map((p) => (
-          <span key={p.key} className={p.bar} style={{ width: `${(b.routes[p.key] / total) * 100}%` }} />
+          <span
+            key={p.key}
+            className={cn(p.bar, "transition-[width] duration-500 ease-out")}
+            style={{ width: `${(b.routes[p.key] / total) * 100}%` }}
+          />
         ))}
       </div>
       <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm tabular">
@@ -269,7 +274,7 @@ function RouteSplit({ b }: { b: BatchStatus }) {
   )
 }
 
-function ItemStatus({ it }: { it: BatchItem }) {
+function ItemStatus({ it, fresh = false }: { it: BatchItem; fresh?: boolean }) {
   if (it.status === "queued")
     return (
       <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -289,7 +294,7 @@ function ItemStatus({ it }: { it: BatchItem }) {
       </span>
     )
   return it.route ? (
-    <RouteBadge route={it.route} />
+    <RouteBadge route={it.route} className={cn(fresh && REVEAL)} />
   ) : (
     <Badge variant="outline" className="rounded-md text-muted-foreground">
       No route
@@ -350,6 +355,9 @@ function OpenRun({ it }: { it: BatchItem }) {
 
 function BatchDetail({ batchId }: { batchId: string }) {
   const { data: b, error } = useBatch(batchId)
+  // A route revealed while you watch the batch, not every badge on opening a finished batch.
+  const routeKey = (it: BatchItem) => `${it.run_id}:${it.route}`
+  const isFresh = useArrivals(b?.items.filter((it) => it.route).map(routeKey), batchId)
 
   if (!b) {
     return error ? (
@@ -469,7 +477,7 @@ function BatchDetail({ batchId }: { batchId: string }) {
                 <TableRow key={it.run_id}>
                   <TableCell className="ps-4 font-mono text-[0.8rem] font-medium">{it.doc_id}</TableCell>
                   <TableCell>
-                    <ItemStatus it={it} />
+                    <ItemStatus it={it} fresh={isFresh(routeKey(it))} />
                   </TableCell>
                   <TableCell className="text-end font-mono tabular">{it.risk_score ?? "–"}</TableCell>
                   <TableCell>
@@ -494,7 +502,7 @@ function BatchDetail({ batchId }: { batchId: string }) {
             <li key={it.run_id} className="flex flex-col gap-2 px-4 py-3">
               <div className="flex items-center gap-2">
                 <span className="min-w-0 flex-1 truncate font-mono text-[0.8rem] font-medium">{it.doc_id}</span>
-                <ItemStatus it={it} />
+                <ItemStatus it={it} fresh={isFresh(routeKey(it))} />
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <HumanState it={it} />

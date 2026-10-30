@@ -24,6 +24,7 @@ import { toast } from "sonner"
 import { RichText } from "@/components/rich-text"
 import { TwoDetectors } from "@/components/two-detectors"
 import { SeverityBadge } from "@/components/tone-badges"
+import { ARRIVE, REVEAL, useArrivals } from "@/hooks/use-arrivals"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -50,8 +51,9 @@ function SeverityLine({ counts }: { counts: Record<Severity, number> }) {
   )
 }
 
-function RouteCard({ review }: { review: ReviewView }) {
+function RouteCard({ review, runId }: { review: ReviewView; runId: string }) {
   const { route, risk_score, counts, reasons } = review
+  const arrived = useArrivals(route ? [route] : [], runId)
 
   if (review.status === "error") {
     return (
@@ -100,7 +102,7 @@ function RouteCard({ review }: { review: ReviewView }) {
 
   const tone = ROUTE_TONE[route]
   return (
-    <Card className="p-0">
+    <Card className={cn("p-0", arrived(route) && REVEAL)}>
       <div className="grid gap-6 p-5 sm:p-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-start">
         <div className="flex min-w-0 flex-col gap-3">
           <span className="text-sm text-muted-foreground">Route, computed by the scoring code</span>
@@ -394,9 +396,11 @@ export function ReviewTab({
   runId: string
 }) {
   const running = review.status === "running" || review.status === "starting"
+  const findingKey = (f: Finding) => `${f.clause_id}-${f.rule_id}`
+  const isNewFinding = useArrivals(review.findings.map(findingKey), runId)
   return (
     <div className="flex flex-col gap-6">
-      <RouteCard review={review} />
+      <RouteCard review={review} runId={runId} />
       <TwoDetectors review={review} onJump={onJump} />
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
@@ -413,7 +417,9 @@ export function ReviewTab({
           {review.findings.length > 0 ? (
             <div className="flex flex-col gap-3">
               {review.findings.map((f) => (
-                <FindingCard key={`${f.clause_id}-${f.rule_id}`} f={f} onJump={onJump} />
+                <div key={findingKey(f)} className={cn(isNewFinding(findingKey(f)) && ARRIVE)}>
+                  <FindingCard f={f} onJump={onJump} />
+                </div>
               ))}
               {running ? <Skeleton className="h-24 w-full rounded-lg" /> : null}
             </div>

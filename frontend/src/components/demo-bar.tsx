@@ -39,7 +39,9 @@ export function DemoBar({ demo, finished, onNext, onRestart, onExit }: Props) {
           <span className="shrink-0 text-xs text-muted-foreground tabular">
             {demo.index + 1}/{demo.scenes.length}
           </span>
-          <h2 className="min-w-0 flex-1 truncate text-sm font-semibold sm:text-lg">{scene.title}</h2>
+          <h2 key={scene.id} className="min-w-0 flex-1 truncate text-sm font-semibold animate-in fade-in-0 slide-in-from-bottom-1 duration-300 sm:text-lg">
+            {scene.title}
+          </h2>
           <span className="hidden sm:inline-flex">
             <RouteBadge route={scene.route} />
           </span>
@@ -57,7 +59,9 @@ export function DemoBar({ demo, finished, onNext, onRestart, onExit }: Props) {
         </div>
         {/* Narration: always shown from sm up; on phones it sits behind the chevron to keep the bar short. */}
         <CollapsibleContent forceMount className="data-[state=closed]:max-sm:hidden">
-          <p className="max-w-[68ch] text-sm leading-relaxed text-muted-foreground">{scene.narration}</p>
+          <p key={scene.id} className="max-w-[68ch] text-sm leading-relaxed text-muted-foreground animate-in fade-in-0 duration-500">
+            {scene.narration}
+          </p>
         </CollapsibleContent>
         <div className="flex items-center gap-2">
           <span className="me-auto inline-flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
