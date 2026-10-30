@@ -11,6 +11,8 @@ uv run hack serve                 # http://127.0.0.1:8000
 
 Or with Docker (builds the UI too): `docker compose up --build` → http://localhost:8000.
 
+Private deployment (Railway) behind Mizan's own sign-in page: see [docs/DEPLOY.md](docs/DEPLOY.md). Locally, with no users configured, sign-in is off.
+
 ## What it does
 - **Review**: pick a sample or **bring your own contract** (.pdf, .docx, .txt/.md, a scan or a phone photo, or paste). Live trace, findings with verbatim quotes and redlines, memo, route.
 - **OCR, on the server**: scans, photos and Arabic PDFs are read by Tesseract (best Arabic + English models) inside the container, so a scan never leaves it for OCR. Word confidences are kept: a scan read with low confidence can never be approved or negotiated automatically; it goes to a lawyer with the reason. Try `samples/scans/` (a clean Arabic scan, a clean English scan, a blurry photo).

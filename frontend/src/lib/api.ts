@@ -379,6 +379,14 @@ export interface Insights {
   min_accepted: number
 }
 
+/** Fired when the server says the session is gone, so the app can show the sign-in page. */
+export const SIGNED_OUT = "mizan:signed-out"
+
+export interface Me {
+  user: string | null
+  auth: boolean
+}
+
 export class ApiError extends Error {
   readonly status: number
   constructor(status: number, message: string) {
@@ -411,6 +419,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     } catch {
       /* non-JSON error body: keep statusText */
     }
+    if (res.status === 401 && !path.startsWith("/auth/")) window.dispatchEvent(new Event(SIGNED_OUT))
     throw new ApiError(res.status, detail)
   }
   return (await res.json()) as T
@@ -420,6 +429,9 @@ const enc = encodeURIComponent
 const post = (body: unknown): RequestInit => ({ method: "POST", body: JSON.stringify(body) })
 
 export const api = {
+  me: () => request<Me>("/auth/me"),
+  login: (username: string, password: string) => request<Me>("/auth/login", post({ username, password })),
+  logout: () => request<{ ok: boolean }>("/auth/logout", { method: "POST" }),
   health: () => request<Health>("/healthz"),
   contracts: () => request<ContractSummary[]>("/contracts"),
   contract: (docId: string) => request<Contract>(`/contracts/${enc(docId)}`),

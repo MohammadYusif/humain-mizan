@@ -4,7 +4,7 @@
 #let d = json("data.json")
 #show: setup.with(title: "Redline: " + d.title, footer-note: d.disclaimer)
 
-#label("Redline · " + d.doc_id)
+#brand("Redline", d.doc_id)
 #v(0.2em)
 #text(size: 16pt, weight: "semibold", lang-text(d.title, d.title_lang))
 #v(0.3em)

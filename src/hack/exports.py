@@ -56,6 +56,7 @@ def _compile(template: str, data: dict[str, Any]) -> bytes:
     files = {
         "main.typ": (ASSETS / template).read_bytes(),
         "base.typ": (ASSETS / "base.typ").read_bytes(),
+        "logo.svg": (ASSETS / "logo.svg").read_bytes(),
         "data.json": json.dumps(data, ensure_ascii=False).encode("utf-8"),
     }
     return typst.compile(files, format="pdf", font_paths=[str(FONTS)], ignore_system_fonts=True)

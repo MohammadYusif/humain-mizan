@@ -44,6 +44,15 @@ export function relativeTime(epochSeconds: number, now = Date.now()): string {
   return rtf.format(Math.round(diff / 86400), "day")
 }
 
+/** "claude-sonnet-5-5" -> "Claude Sonnet 5.5", "qwen3:14b" -> "qwen3 14B"; anything else as is. */
+export function modelName(id: string): string {
+  const claude = /^claude-([a-z]+)-(\d+)-(\d+)$/.exec(id)
+  if (claude) return `Claude ${claude[1][0].toUpperCase()}${claude[1].slice(1)} ${claude[2]}.${claude[3]}`
+  const tagged = /^([\w.-]+):(\d+(?:\.\d+)?)b$/i.exec(id)
+  if (tagged) return `${tagged[1]} ${tagged[2]}B`
+  return id
+}
+
 export const ROUTE_LABEL: Record<Route, string> = {
   approve: "Approve",
   negotiate: "Negotiate",

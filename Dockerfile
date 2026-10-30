@@ -44,9 +44,13 @@ COPY --from=builder /app/.venv /app/.venv
 COPY --from=web /src/web ./web
 COPY evals ./evals
 COPY demo ./demo
+COPY --chmod=755 docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 ENV PATH="/app/.venv/bin:$PATH"
-USER app
+# The entrypoint starts as root only to hand mounted volumes to the app user, then drops to it.
+ENTRYPOINT ["docker-entrypoint.sh"]
 EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=2)"
-CMD ["uvicorn", "hack.api:app", "--host", "0.0.0.0", "--port", "8000"]
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\", \"8000\")}/healthz', timeout=2)"
+# PORT is set by hosts such as Railway; proxy headers make the app see HTTPS behind their proxy
+# (so the sign-in cookie is marked Secure).
+CMD ["sh", "-c", "exec uvicorn hack.api:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]

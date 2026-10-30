@@ -5,11 +5,12 @@ import re
 from collections.abc import Callable
 from typing import Any
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
+from . import auth as A
 from . import demo as D
 from . import exports as X
 from . import learning as L
@@ -52,6 +53,11 @@ class RunResponse(BaseModel):
     model: str
 
 
+class SignInRequest(BaseModel):
+    username: str
+    password: str
+
+
 class DecisionRequest(BaseModel):
     decision: str
     note: str = ""
@@ -91,6 +97,58 @@ def create_app(
         if not _ID.match(id_):
             raise HTTPException(400, "bad id")
         return id_
+
+    # --- sign-in -----------------------------------------------------------------------------------
+    auth = A.Auth(A.parse_users(cfg.auth_users), cfg.secret_key, cfg.require_auth)
+    public = {"/auth/login", "/auth/logout", "/auth/me", "/healthz", "/", "/index.html"}
+
+    def is_ui_file(path: str) -> bool:
+        """Built UI files (scripts, styles, fonts, icons): needed to draw the sign-in page, no data."""
+        f = (cfg.web_dir / path.lstrip("/")).resolve()
+        return f.is_file() and f.is_relative_to(cfg.web_dir.resolve())
+
+    @app.middleware("http")
+    async def require_sign_in(request: Request, call_next):
+        path = request.url.path
+        open_ = path in public or (request.method == "GET" and is_ui_file(path))
+        if auth.enabled and not open_ and auth.user_of(request.cookies.get(A.COOKIE)) is None:
+            return JSONResponse({"detail": "sign in required"}, status_code=401)
+        return await call_next(request)
+
+    @app.get("/auth/me")
+    def me(request: Request) -> dict[str, Any]:
+        if not auth.enabled:
+            return {"user": None, "auth": False}
+        user = auth.user_of(request.cookies.get(A.COOKIE))
+        if user is None:
+            raise HTTPException(401, "sign in required")
+        return {"user": user, "auth": True}
+
+    @app.post("/auth/login")
+    def login(req: SignInRequest, request: Request) -> Response:
+        if not auth.enabled:
+            return JSONResponse({"user": None, "auth": False})
+        client = request.client.host if request.client else "unknown"
+        if auth.blocked(client):
+            raise HTTPException(429, "Too many attempts. Wait a few minutes and try again.")
+        if not auth.check(client, req.username.strip(), req.password):
+            raise HTTPException(401, "That user name and password don't match.")
+        res = JSONResponse({"user": req.username.strip(), "auth": True})
+        res.set_cookie(
+            A.COOKIE,
+            auth.token_for(req.username.strip()),
+            max_age=A.SESSION_SECONDS,
+            httponly=True,
+            samesite="lax",
+            secure=request.url.scheme == "https",
+        )
+        return res
+
+    @app.post("/auth/logout")
+    def logout() -> Response:
+        res = JSONResponse({"ok": True})
+        res.delete_cookie(A.COOKIE)
+        return res
 
     @app.get("/healthz")
     def healthz() -> dict[str, Any]:

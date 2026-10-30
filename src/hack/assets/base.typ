@@ -56,6 +56,15 @@
 
 #let label(s) = text(size: 7.5pt, fill: muted, s)
 
+// Top line of every export: the mark, the product and what the document is.
+#let brand(kind, doc-id) = grid(
+  columns: (auto, 1fr),
+  column-gutter: 6pt,
+  align: horizon,
+  image("logo.svg", width: 15pt),
+  text(size: 8pt, fill: muted)[#text(weight: "semibold", fill: ink, "Mizan") · #kind · #mono(doc-id, size: 7.5pt)],
+)
+
 #let section(s) = {
   v(1.1em)
   text(size: 11pt, weight: "semibold", s)

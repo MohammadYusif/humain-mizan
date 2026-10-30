@@ -43,6 +43,11 @@ class Settings(BaseSettings):
     price_input_per_mtok: float | None = None
     price_output_per_mtok: float | None = None
 
+    # Sign-in (see auth.py): off when no users are set; a deployment sets require_auth so it fails closed.
+    auth_users: str = ""
+    secret_key: str | None = None
+    require_auth: bool = False
+
     # Not HACK_-prefixed: the standard variable, but read from .env too (the SDK only sees os.environ).
     anthropic_api_key: str | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
 

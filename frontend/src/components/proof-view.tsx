@@ -24,7 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useResource } from "@/hooks/use-api"
 import { api, type ContractSummary, type EvalCase, type EvalModel } from "@/lib/api"
-import { percent, plural, seconds, usd } from "@/lib/format"
+import { modelName, percent, plural, seconds, usd } from "@/lib/format"
 
 const loadEvals = () => api.evals()
 
@@ -82,14 +82,6 @@ const notSafe = (s: Safety) => s.approved + s.unrouted
 /** A model served locally (OpenAI-compatible server such as Ollama) has no API price. */
 function isLocal(m: EvalModel) {
   return m.summary.provider === "openai_compat" || (m.summary.cost_usd === 0 && !m.model.startsWith("claude"))
-}
-
-function modelName(id: string) {
-  const claude = /^claude-([a-z]+)-(\d+)-(\d+)$/.exec(id)
-  if (claude) return `Claude ${claude[1][0].toUpperCase()}${claude[1].slice(1)} ${claude[2]}.${claude[3]}`
-  const tagged = /^([\w.-]+):(\d+(?:\.\d+)?)b$/i.exec(id)
-  if (tagged) return `${tagged[1]} ${tagged[2]}B`
-  return id
 }
 
 /** One eval entry = model + variant (the same model can be measured before and after a change). */

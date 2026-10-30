@@ -67,6 +67,23 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_hash_password(args: argparse.Namespace) -> int:
+    """Prints one HACK_AUTH_USERS entry. The password is typed at a prompt, never on the command line."""
+    import getpass
+
+    from .auth import hash_password
+
+    pw = getpass.getpass(f"Password for {args.user}: ")
+    if len(pw) < 12:
+        print("Use at least 12 characters.", file=sys.stderr)
+        return 1
+    if getpass.getpass("Again: ") != pw:
+        print("The passwords don't match.", file=sys.stderr)
+        return 1
+    print(f"{args.user}:{hash_password(pw)}")
+    return 0
+
+
 def _cmd_serve(args: argparse.Namespace) -> int:
     import uvicorn
 
@@ -101,6 +118,10 @@ def main(argv: list[str] | None = None) -> int:
     c = sub.add_parser("compare", help="print a table from saved eval result files")
     c.add_argument("reports", nargs="+")
     c.set_defaults(fn=_cmd_compare)
+
+    h = sub.add_parser("hash-password", help="make a HACK_AUTH_USERS entry for sign-in")
+    h.add_argument("user")
+    h.set_defaults(fn=_cmd_hash_password)
 
     s = sub.add_parser("serve", help="start the API + demo UI")
     s.add_argument("--host", default="127.0.0.1")

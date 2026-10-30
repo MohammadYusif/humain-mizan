@@ -1,11 +1,13 @@
-import { Clapperboard, Inbox, Layers, Lightbulb, Monitor, Moon, Scale, ScrollText, ShieldCheck, Sun } from "lucide-react"
+import { Clapperboard, Inbox, Layers, Lightbulb, LogOut, Monitor, Moon, ScrollText, ShieldCheck, Sun, UserRound } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { LogoMark } from "@/components/logo"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -15,6 +17,7 @@ import {
 import { TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import type { Health } from "@/lib/api"
+import { modelName } from "@/lib/format"
 import { useTheme, type Theme } from "@/lib/theme"
 
 function HealthBadge({ health, error }: { health: Health | null; error: string | null }) {
@@ -40,15 +43,15 @@ function HealthBadge({ health, error }: { health: Health | null; error: string |
         <Badge
           variant="outline"
           tabIndex={0}
-          className="h-6 max-w-[11rem] gap-1.5 rounded-md bg-card font-mono text-[0.7rem] font-normal text-foreground sm:max-w-none"
+          className="h-7 max-w-[11rem] gap-1.5 rounded-md bg-card px-2 text-xs font-normal text-foreground sm:max-w-none"
         >
           <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-approve" />
-          <span className="hidden text-muted-foreground sm:inline">{health.provider} ·</span>
-          <span className="truncate">{health.model}</span>
+          <span className="truncate">{modelName(health.model)}</span>
         </Badge>
       </TooltipTrigger>
-      <TooltipContent>
-        API {health.status} · provider {health.provider} · model {health.model}
+      <TooltipContent className="flex flex-col gap-0.5">
+        <span>Reviews run on {health.model} ({health.provider})</span>
+        {health.ocr ? <span>Scans: {health.ocr.available ? health.ocr.detail : "OCR not available on this server"}</span> : null}
       </TooltipContent>
     </Tooltip>
   )
@@ -120,17 +123,42 @@ export function AreaNav({ inboxCount }: { inboxCount: number | null }) {
   )
 }
 
+function UserMenu({ user, onSignOut }: { user: string; onSignOut?: () => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" className="h-9 gap-1.5 px-2" aria-label={`Signed in as ${user}`}>
+          <UserRound aria-hidden />
+          <span className="hidden max-w-28 truncate text-sm font-normal md:inline">{user}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuLabel className="font-normal text-muted-foreground">Signed in as {user}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={() => onSignOut?.()}>
+          <LogOut aria-hidden /> Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export function AppHeader({
   health,
   healthError,
   nav,
   onDemo,
+  user,
+  onSignOut,
 }: {
   health: Health | null
   healthError: string | null
   nav: ReactNode
   /** Starts the guided demo; undefined while one is running. */
   onDemo?: () => void
+  /** Who is signed in on a deployment; null when sign-in is off (local development). */
+  user?: string | null
+  onSignOut?: () => void
 }) {
   return (
     <header className="sticky top-0 z-30 border-b bg-background">
@@ -138,9 +166,9 @@ export function AppHeader({
         <a
           href="#review"
           aria-label="Mizan home"
-          className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="shrink-0 rounded-[7px] outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
-          <Scale className="size-[1.15rem]" strokeWidth={1.75} aria-hidden />
+          <LogoMark />
         </a>
         <div className="min-w-0 shrink-0">
           <div className="flex items-baseline gap-2">
@@ -163,6 +191,7 @@ export function AppHeader({
           ) : null}
           <HealthBadge health={health} error={healthError} />
           <ThemeToggle />
+          {user ? <UserMenu user={user} onSignOut={onSignOut} /> : null}
         </div>
       </div>
     </header>

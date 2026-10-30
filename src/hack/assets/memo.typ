@@ -3,7 +3,7 @@
 #let d = json("data.json")
 #show: setup.with(title: "Review memo: " + d.title, footer-note: d.disclaimer)
 
-#label("Contract review memo · " + d.doc_id)
+#brand("Contract review memo", d.doc_id)
 #v(0.2em)
 #text(size: 16pt, weight: "semibold", lang-text(d.title, d.title_lang))
 #v(0.2em)
