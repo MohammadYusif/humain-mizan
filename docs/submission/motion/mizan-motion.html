@@ -371,10 +371,11 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
   <!-- S7: proof -->
   <section class="scene" id="s7">
     <div class="cap" id="c7"><div class="num">07</div><h2>Proof</h2>
-      <p>Every suite was labelled before its first run. The results and traces are saved, and can be graded again without the model.</p></div>
-    <div id="s7grid" class="abs" style="left:800px; top:230px; width:1000px; display:grid; grid-template-columns:1fr 1fr; column-gap:60px; row-gap:56px"></div>
-    <div id="s7foot" class="abs" style="left:800px; top:850px; width:1000px; font-size:23px; color:var(--muted-fg)">
-      About 5 cents per contract. Same results with names hidden. 118 tests, no API calls.
+      <p>59 contracts, 27 of them real. Every answer key was written before Mizan saw the contract, by reviewers that never saw its output.</p></div>
+    <div id="s7method" class="abs" style="left:800px; top:180px; width:1000px; height:110px"></div>
+    <div id="s7rows" class="abs" style="left:800px; top:330px; width:1000px"></div>
+    <div id="s7foot" class="abs" style="left:800px; top:900px; width:1000px; font-size:22px; color:var(--muted-fg)">
+      Plus 118 automated tests with no API calls. 4 to 23 cents a contract, depending on its length.
     </div>
   </section>
 
@@ -393,7 +394,7 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
 const DUR = 63;
 const STEPS = ["Upload", "Label", "Read", "Check", "Route", "Act", "Proof"];
 // Scene windows [start, end] in seconds. The total stays 63 s: add_music.py fits the music to it.
-const S = [[0, 5], [5, 9.5], [9.5, 21], [21, 28.5], [28.5, 37.5], [37.5, 45.5], [45.5, 54.5], [54.5, 59], [59, 63]];
+const S = [[0, 5], [5, 9.5], [9.5, 21], [21, 27.5], [27.5, 35], [35, 42.5], [42.5, 51.5], [51.5, 59], [59, 63]];
 
 const $ = (id) => document.getElementById(id);
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -545,18 +546,45 @@ ROUTES.forEach(([name, key, desc]) => {
   $("s5routes").appendChild(el);
 });
 
-const METRICS = [
-  ["12/12", "routes right on the main suite of 12 contracts"],
-  ["0/9", "risky contracts approved on that suite"],
-  ["8/8", "routes right on a blind batch written by another agent"],
-  ["0/14", "risky real contracts approved, up to 101 pages, after one fix"],
-];
-METRICS.forEach(([big, small]) => {
+// How every test set was run: four steps, always in this order.
+const METHOD = ["Pick the contracts by a rule", "Write the answer key", "Commit it to git", "Run once, graded by code"];
+METHOD.forEach((m, i) => {
   const el = document.createElement("div");
-  el.innerHTML = `<div style="font-size:104px; font-weight:650; letter-spacing:-0.04em; line-height:1; font-variant-numeric:tabular-nums">${big}</div>
-    <div class="u" style="height:3px; background:var(--brass); margin-top:18px; width:120px; transform-origin:left"></div>
-    <div style="font-size:24px; color:var(--muted-fg); margin-top:16px; line-height:1.4; max-width:420px">${small}</div>`;
-  $("s7grid").appendChild(el);
+  el.className = "abs";
+  el.style.cssText = `left:${i * 262}px; top:0; width:220px`;
+  el.innerHTML = `<div style="width:46px; height:46px; border-radius:50%; border:2.5px solid var(--primary); display:grid; place-items:center; font-family:'Plex Mono'; font-size:20px; color:var(--primary); background:var(--paper)">${i + 1}</div>
+    <div style="font-size:21px; font-weight:600; margin-top:14px; line-height:1.3">${m}</div>`;
+  $("s7method").appendChild(el);
+  if (i < METHOD.length - 1) {
+    const ln = document.createElement("div");
+    ln.className = "abs link";
+    ln.style.cssText = `left:${i * 262 + 56}px; top:22px; width:196px; height:2.5px; background:var(--primary); transform-origin:left`;
+    $("s7method").appendChild(ln);
+  }
+});
+// The scoreboard: [test set, real?, contracts, routes right, risky contracts approved].
+const SUITES = [
+  ["Main suite, run 4 times", false, "12 × 4", "48/48", "0/36"],
+  ["Blind sets written by another agent", false, "20", "20/20", "0/14"],
+  ["Real: SEC filings, Saudi government, terms of service", true, "15", "14/14", "0/14"],
+  ["Real, second batch, blind", true, "12", "11/12", "0/12"],
+  ["Names hidden from the model", false, "12", "12/12", "0/9"],
+  ["Another company’s playbook", false, "8", "8/8", "0/5"],
+];
+const head = document.createElement("div");
+head.className = "row head";
+head.style.cssText = "display:grid; grid-template-columns:1fr 120px 200px 170px; gap:20px; padding:0 0 14px; border-bottom:1.5px solid var(--line); font-size:18px; color:var(--muted-fg)";
+head.innerHTML = `<span>Test set</span><span style="text-align:right">Contracts</span><span style="text-align:right">Routes right</span><span style="text-align:right">Risky approved</span>`;
+$("s7rows").appendChild(head);
+SUITES.forEach(([name, real, n, routes, risky]) => {
+  const el = document.createElement("div");
+  el.className = "row";
+  el.style.cssText = "position:relative; display:grid; grid-template-columns:1fr 120px 200px 170px; gap:20px; align-items:center; padding:17px 0; border-bottom:1.5px solid var(--border); font-size:23px";
+  el.innerHTML = `<span style="display:flex; align-items:center; gap:12px">${name}${real ? '<span class="chip ok" style="height:28px; font-size:16px">Real</span>' : ""}</span>
+    <span class="mono" style="text-align:right">${n}</span>
+    <span class="mono" style="text-align:right">${routes}</span>
+    <span class="mono risky" style="text-align:right; font-weight:600; color:var(--approve); font-size:26px">${risky}</span>`;
+  $("s7rows").appendChild(el);
 });
 
 /* ---------- per-frame rendering ---------- */
@@ -731,8 +759,8 @@ function s2(t) {
 
 function s3(t) {
   const l = scene(3, t);
-  show($("c3"), l, 0.2, 7.5);
-  show($("s3page"), l, 0.3, 7.5, 20);
+  show($("c3"), l, 0.2, 6.5);
+  show($("s3page"), l, 0.3, 6.5, 20);
   // OCR: the scan bar moves down; text above it is crisp, below it soft.
   const sc = p(l, 1.0, 2.2);
   $("s3scan").style.top = lerp(30, 560, sc) + "px";
@@ -743,18 +771,18 @@ function s3(t) {
     el.style.background = done ? "oklch(0.64 0.02 65)" : "var(--line)";
     el.style.filter = done ? "none" : "blur(1.2px)";
   });
-  show($("s3conf"), l, 1.0, 7.5, 12);
+  show($("s3conf"), l, 1.0, 6.5, 12);
   const c = eo(p(l, 1.0, 2.2));
   $("s3bar").style.width = c * 87 + "%";
   $("s3pct").textContent = Math.round(c * 87) + "%";
   [...$("s3rows").children].forEach((el, i) => {
     const a = eo(p(l, 3.4 + i * 0.32, 0.5));
-    tf(el, { o: a * (1 - eio(p(l, 7.05, 0.45))), x: (1 - a) * -40 });
+    tf(el, { o: a * (1 - eio(p(l, 6.05, 0.45))), x: (1 - a) * -40 });
     const chip = el.querySelector(".chip");
     const ca = eo(p(l, 3.75 + i * 0.32, 0.35));
     tf(chip, { o: ca, s: lerp(0.8, 1, ca) });
   });
-  show($("s3foot"), l, 5.4, 7.5, 10);
+  show($("s3foot"), l, 5.1, 6.5, 10);
 }
 
 function s4(t) {
@@ -780,14 +808,14 @@ function s4(t) {
 
 function s5(t) {
   const l = scene(5, t);
-  show($("c5"), l, 0.2, 7.5);
+  show($("c5"), l, 0.2, 7.0);
   [...$("s5list").children].forEach((el, i) => {
-    tf(el, { o: eo(p(l, 0.5 + i * 0.12, 0.5)) * (1 - eio(p(l, 7.55, 0.45))) });
+    tf(el, { o: eo(p(l, 0.5 + i * 0.12, 0.5)) * (1 - eio(p(l, 6.6, 0.4))) });
     const k = eo(p(l, 1.2 + i * 0.4, 0.35));
     el.querySelector(".fill").style.opacity = k;
     el.querySelector("path").style.strokeDashoffset = 26 * (1 - k);
   });
-  show($("s5bal"), l, 0.6, 8, 16);
+  show($("s5bal"), l, 0.6, 7.0, 16);
   // Two weights drop into the Issues pan; the beam tips towards them.
   const w1 = eo(p(l, 3.4, 0.45)), w2 = eo(p(l, 3.9, 0.45));
   tf($("s5w1"), { o: w1, y: (1 - w1) * -120 });
@@ -800,12 +828,12 @@ function s5(t) {
   const routes = [...$("s5routes").children];
   routes.forEach((el, i) => {
     const a = eo(p(l, 4.4 + i * 0.12, 0.5));
-    const pick = eo(p(l, 5.4, 0.45));
+    const pick = eo(p(l, 5.0, 0.45));
     const chosen = el.dataset.key === "negotiate";
     el.querySelector(".bg").style.opacity = chosen ? pick : 0;
-    tf(el, { o: a * (chosen ? 1 : lerp(1, 0.45, pick)) * (1 - eio(p(l, 7.55, 0.45))), y: (1 - a) * 20 });
+    tf(el, { o: a * (chosen ? 1 : lerp(1, 0.45, pick)) * (1 - eio(p(l, 6.6, 0.4))), y: (1 - a) * 20 });
   });
-  show($("s5why"), l, 5.8, 8, 10);
+  show($("s5why"), l, 5.3, 7.0, 10);
 }
 
 function s6(t) {
@@ -895,12 +923,29 @@ function s6(t) {
 
 function s7(t) {
   const l = scene(7, t);
-  show($("c7"), l, 0.2, 4.5);
-  [...$("s7grid").children].forEach((el, i) => {
-    show(el, l, 0.5 + i * 0.25, 4.5, 26);
-    el.querySelector(".u").style.transform = `scaleX(${eo(p(l, 0.9 + i * 0.25, 0.6))})`;
+  const END = 7.5;
+  show($("c7"), l, 0.2, END);
+  // The method: each step appears, then the line to the next one draws.
+  [...$("s7method").children].forEach((el) => {
+    if (el.classList.contains("link")) return;
+    const i = [...$("s7method").children].filter((c) => !c.classList.contains("link")).indexOf(el);
+    show(el, l, 0.4 + i * 0.4, END, 16);
   });
-  show($("s7foot"), l, 1.8, 4.5, 10);
+  [...$("s7method").querySelectorAll(".link")].forEach((ln, i) => {
+    ln.style.transform = `scaleX(${eo(p(l, 0.65 + i * 0.4, 0.35))})`;
+    ln.style.opacity = 1 - eio(p(l, END - 0.45, 0.45));
+  });
+  // The scoreboard rows land one by one; the risky-approved number pops last.
+  [...$("s7rows").children].forEach((el, i) => {
+    show(el, l, 2.0 + i * 0.28, END, 18);
+    const r = el.querySelector(".risky");
+    if (r) {
+      const k = eo(p(l, 2.35 + i * 0.28, 0.3));
+      r.style.transform = `scale(${lerp(1.5, 1, k)})`;
+      r.style.opacity = k;
+    }
+  });
+  show($("s7foot"), l, 4.4, END, 10);
 }
 
 function s8(t) {
