@@ -55,9 +55,7 @@ Severity and route are computed by code. A critical finding never approves. Nego
 
 ## Why should HUMAIN hire you? What makes you and your project stand out?
 
-Edit the bracketed line; the rest is what the project shows.
-
-> [One or two sentences about you: your study or work, and what you want to build at HUMAIN.]
+> I am Mohammad Albeladi, an AI trainer at SDAIA Academy and KAUST. I teach people to build with these models and see every week where the gap is: demos that work on stage and systems that can be trusted with a decision. Mizan is my attempt at the second kind, and HUMAIN is where I want to build more of them.
 >
 > I measure before I claim. Every label in Mizan was written before the model saw the contract, and when the first run on real Saudi contracts approved 5 of 14 it should not have, I published that number next to the fix. The fix was a general rule, not a patch to the test wording: approval now needs the words that cap our liability, quoted and verified by code. The result went to 0 of 14, and I re-ran the earlier suites to make sure nothing else broke. I also reported what did not work: our pattern checks catch almost nothing on contracts they were not written for, so the system says plainly that local models need a lawyer on every contract.
 >
