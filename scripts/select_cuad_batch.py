@@ -82,7 +82,10 @@ def main(n: int) -> None:
                 ensure_ascii=False,
             )
         )
-    print(f"# {len(picks)} contracts met the rule; took the first {min(n, len(picks))}", file=sys.stderr)
+    print(
+        f"# {len(picks)} contracts met the rule; took the first {min(n, len(picks))}",
+        file=sys.stderr,
+    )
 
 
 if __name__ == "__main__":

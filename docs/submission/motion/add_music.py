@@ -65,7 +65,9 @@ def main(silent, music, out):
             dst.mux(pkt)
         step = 1024
         for i in range(0, audio.shape[1], step):
-            fr = av.AudioFrame.from_ndarray(audio[:, i : i + step].copy(), format="fltp", layout="stereo")
+            fr = av.AudioFrame.from_ndarray(
+                audio[:, i : i + step].copy(), format="fltp", layout="stereo"
+            )
             fr.sample_rate = SR
             fr.pts = i
             fr.time_base = Fraction(1, SR)
