@@ -1,0 +1,28 @@
+name: Bug report
+description: Something does not work as described.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations: { required: true }
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: Steps, the contract used (a sample or a description, never confidential text), and the run id if there is one.
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes:
+      label: Commit or deployment
+      placeholder: e.g. 4d47f3c, or the Railway deployment
+  - type: checkboxes
+    id: safe
+    attributes:
+      label: Before you submit
+      options:
+        - label: I removed secrets and confidential contract text from this report.
+          required: true

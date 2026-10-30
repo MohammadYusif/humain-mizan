@@ -1,0 +1,20 @@
+name: Feature request
+description: Something Mizan should do.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: Who needs this, and what they do today without it.
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+    validations: { required: true }
+  - type: textarea
+    id: measure
+    attributes:
+      label: How we would know it works
+      description: The test or eval case that would show it.

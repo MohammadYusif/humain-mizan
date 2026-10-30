@@ -1,49 +1,152 @@
-# Mizan — an agent that owns contract review end to end
+# Mizan ميزان
 
-HUMAIN Future AI Builders Hackathon, Challenge 3 (Autonomous Enterprise). Mizan reads a contract (Arabic, English or bilingual), checks every clause against the company playbook, and **routes** it: approve, negotiate (redline sent to the counterparty) or escalate (a lawyer decides, with the exact question). The route is computed by code, not chosen by the model.
+[![ci](https://github.com/MohammadYusif/humain-mizan/actions/workflows/ci.yml/badge.svg)](https://github.com/MohammadYusif/humain-mizan/actions/workflows/ci.yml)
+
+An agent that owns contract review for an in-house legal team. Mizan reads a supplier contract in
+Arabic, English or both, typed or scanned, checks every clause against the company's playbook, and
+routes it: **approve**, **negotiate** (it drafts the redline and the message to the supplier) or
+**escalate** (a lawyer gets it with the exact question). The model reads; code decides the route;
+anything uncertain goes to a lawyer.
+
+Built for the HUMAIN Future AI Builders Hackathon, Challenge 3 (Autonomous Enterprise).
+
+![Mizan: every clause checked against your playbook, in Arabic and English](docs/submission/background.png)
+
+## Results
+
+59 contracts, 27 of them real public contracts we did not write. Every answer key was written before
+Mizan saw the contract, committed to git before the run, and graded by code; every result is kept,
+failures included. Claude Sonnet 5.5, effort medium. Details: [docs/RESULTS.md](docs/RESULTS.md).
+
+| Test set | Contracts | Routes right | Risky contracts approved |
+|---|---|---|---|
+| Main suite, run 4 times | 12 × 4 | 48/48 | **0/36** |
+| Blind sets written by another agent | 20 | 20/20 | **0/14** |
+| Real: SEC filings, terms of service, Saudi government contracts in Arabic | 15 | 14/14 | **0/14** |
+| Real, second batch, picked by a rule and run once, blind | 12 | 11/12 | **0/12** |
+| Names hidden from the model | 12 | 12/12 | **0/9** |
+| Another company's playbook, from a file | 8 | 8/8 | **0/5** |
+
+The first run on real contracts approved 5 it should not have; one general rule fixed it (approval
+needs the words that cap our own liability, quoted and verified by code) and every suite was re-run.
+Where it is weakest: on real contracts it finds about two thirds of the labelled issues.
+
+## How it works
+
+| 1. Bring any contract | 2. Every clause checked | 3. Code decides the route |
+|---|---|---|
+| ![](docs/submission/step-1-upload.png) | ![](docs/submission/step-2-findings.png) | ![](docs/submission/step-3-route.png) |
+| PDF, Word, text, scan or photo. Scans are read by OCR inside the container; a doubtful reading goes to a lawyer. | Each finding quotes the contract word for word and proposes the playbook's wording as a redline. | Severity and route come from code. A critical finding never approves. |
+
+**Why the route can be trusted**
+
+- Routing is code ([review.py](src/hack/challenge/review.py)). Approval needs evidence, not only the
+  absence of findings: every page read, every clause typed, liability and governing-law clauses
+  present, and the words that cap our liability quoted and verified.
+- Two detectors: Arabic and English red-flag patterns ([tripwires.py](src/hack/challenge/tripwires.py))
+  run without the model; a critical flag always escalates, the others must be recorded or cleared with
+  a quote.
+- Quotes must appear verbatim in the clause. An instruction written inside a contract is quoted in the
+  reason and escalated, never followed. Messages to the supplier are built by code from the redlines.
+
+**Who may see a contract**
+
+- Before any model sees it, Mizan reads the contract on the server and suggests a label, with what it
+  found: **Public**, **Internal** (names, contacts and account numbers replaced by placeholders for an
+  external model, put back for people) or **Restricted** (never sent to an external model).
+- Raising a label is one click. Lowering it takes a signed-in person and an answer, from fixed
+  choices, for each thing Mizan found; the server rejects anything else.
+- Each person signs in. One review runs at a time per contract; the next reader opens the finished
+  review instead of running it again. Restricted contracts and their reviews open only for Legal.
+
+Also in the app: a batch queue with an auto-send policy, a lawyers' inbox that holds only
+escalations, redline and memo PDFs, a Proof screen with every result, a learning loop that turns
+lawyers' decisions into proposed playbook changes, and a guided demo that replays four recorded runs
+with no API key.
+
+## Run it
+
+Requirements: Python 3.12 with [uv](https://docs.astral.sh/uv/), Node 26, and an Anthropic API key.
 
 ```bash
-cp .env.example .env              # add ANTHROPIC_API_KEY
+cp .env.example .env        # set ANTHROPIC_API_KEY
+```
+```bash
 uv sync --all-extras
-cd frontend && npm install && npm run build && cd ..
-uv run hack serve                 # http://127.0.0.1:8000
+```
+```bash
+cd frontend && npm ci && npm run build && cd ..
+```
+```bash
+uv run hack serve           # http://127.0.0.1:8000
 ```
 
-Or with Docker (builds the UI too): `docker compose up --build` → http://localhost:8000.
+Or with Docker, which also installs Tesseract for OCR:
 
-Private deployment (Railway) behind Mizan's own sign-in page: see [docs/DEPLOY.md](docs/DEPLOY.md). Locally, with no users configured, sign-in is off.
+```bash
+docker compose up --build   # http://localhost:8000
+```
 
-## What it does
-- **Review**: pick a sample or **bring your own contract** (.pdf, .docx, .txt/.md, a scan or a phone photo, or paste). Live trace, findings with verbatim quotes and redlines, memo, route.
-- **OCR, on the server**: scans, photos and Arabic PDFs are read by Tesseract (best Arabic + English models) inside the container, so a scan never leaves it for OCR. Word confidences are kept: a scan read with low confidence can never be approved or negotiated automatically; it goes to a lawyer with the reason. Try `samples/scans/` (a clean Arabic scan, a clean English scan, a blurry photo).
-- **Queue + Inbox**: run many contracts in parallel; the agent sends negotiation redlines itself (or waits for approval), and only escalations reach a lawyer's inbox. An estimate of hours saved is shown with its assumptions.
-- **Proof**: eval results per model (route accuracy, false auto-approve, recall/precision, latency, cost), including the local model.
-- **Held-out test**: 12 contracts written blind (never used for tuning) — Claude Sonnet 5.5 routes 100% correctly with 0 wrong approvals.
-- **Real contracts**: 15 public contracts we did not write (CUAD SEC filings, Zoom/Dropbox terms, Saudi-law SEC exhibits, Ministry of Finance and EXPRO contracts in Arabic up to 101 pages). The first run approved 5 that should go to a lawyer; after adding the liability-cap evidence check, 0 of 14. See `evals/real/` and `docs/RESULTS.md`.
-- **Second blind batch**: 8 more contracts in new industries, labels committed before the only run: 8/8 routes, 0/6 wrong approvals.
-- **Another company's rules**: a different buyer's playbook loaded from a file (`HACK_PLAYBOOK`), no code change: 8/8, both expected route changes, 0/5 wrong approvals.
-- **Confidential contracts**: every contract is labelled Public, Internal or Restricted. Restricted contracts never reach an external model: with one configured they go straight to a lawyer with no model call; with a model inside the network they are reviewed but never approved or sent automatically. Internal contracts reach an external model with party names, emails, phone numbers, IBANs and ID/CR/VAT numbers replaced by placeholders, which are put back in everything people read and send. Enforced before the run and again in the tool that serves contract text; each review and memo PDF records the label, where the model ran and what was hidden. Measured: the main suite with names hidden still routes 12/12 with 0/9 wrong approvals (`src/hack/challenge/policy.py`).
-- **Guided demo**: four recorded runs replay as if live, with no API key or network (demo-safe).
-- **Insights (learning loop)**: lawyers' decisions become proposed playbook amendments; a human approves them; red flags and critical rules never relax.
-- **PDF exports**: a redline (offending text struck through, playbook wording proposed under each clause with the rule and reason) and a decision memo, typeset with Typst; Arabic is right-to-left.
+With no accounts configured, sign-in is off locally. To add one (the password is asked at a prompt):
 
-## Why the route can be trusted
-- Severity and routing are code (`src/hack/challenge/review.py`); a critical finding never approves.
-- Approval requires evidence of coverage: every page read, every clause typed, liability and governing-law clauses present, nothing unclear, and the words that cap our own liability quoted and verified.
-- **Two detectors**: deterministic red-flag patterns (Arabic + English, `tripwires.py`) run independently of the model. Critical flags always escalate; others must be recorded as findings or cleared with a verbatim quote, on record. Measured honestly: the patterns catch known wording (12/12 on the suite they were written against) but only 1 of 13 issues on the blind held-out set, so on new contracts the model is the real detector — use a strong model for unattended review.
-- Quotes must appear verbatim in the clause; instructions inside a contract force escalation; outward sends need approval.
-- Text read from a scan is only acted on automatically when OCR was confident (average word confidence at least 80% and at most 15% uncertain words; calibrated on the sample scans).
+```bash
+uv run python scripts/add_user.py yourname legal
+```
+
+Contracts to try: `samples/demo/logistics-services-agreement.docx` (Internal, negotiates) and
+`samples/demo/board-supply-confidential.txt` (Restricted, goes to a lawyer); scans in `samples/scans/`.
+
+## Configuration
+
+Set in `.env` (see [.env.example](.env.example) for every option).
+
+| Variable | What it does |
+|---|---|
+| `ANTHROPIC_API_KEY` | The model provider key. |
+| `HACK_MODEL` | Model id: `claude-opus-5-5` by default; the results and the deployment use `claude-sonnet-5-5`. |
+| `HACK_PROVIDER` | `anthropic`, or `openai_compat` for a local model (Ollama, vLLM). |
+| `HACK_AUTH_USERS`, `HACK_SECRET_KEY` | Sign-in accounts (scrypt hashes) and the session key. |
+| `HACK_AUTH_ROLES` | `name:role` pairs; only `legal` opens Restricted contracts. |
+| `HACK_MAX_REVIEWS` | Total model reviews allowed on a shared deployment. |
+| `HACK_PLAYBOOK` | Another company's playbook, loaded from a file. |
 
 ## Develop
+
 ```bash
-uv run pytest                                  # 99 tests, no API calls (the real-OCR test runs where Tesseract is installed, e.g. in Docker)
-uv run hack run "Review contract saas-en-01 and route it."
-uv run hack eval --model claude-sonnet-5-5     # 12 labelled contracts -> evals/results/
-uv run hack rescore evals/results/<file>.json  # re-grade saved traces against current labels
-cd frontend && npm run dev                     # UI on :5173, proxies the API on :8000
+uv run pytest                                   # 126 tests, no API calls
 ```
-Local model ("sovereign mode"): `HACK_PROVIDER=openai_compat HACK_MODEL=qwen3:14b` with Ollama (`docker compose --profile local up`).
+```bash
+uv run ruff check . && uv run ruff format --check .
+```
+```bash
+cd frontend && npm run typecheck && npm run lint && npm run dev   # UI on :5173, API on :8000
+```
+```bash
+uv run hack eval --model claude-sonnet-5-5      # labelled contracts -> evals/results/
+```
 
-CI (`.github/workflows/ci.yml`) runs lint, tests, the licence check, the UI build and a Docker smoke test with sign-in on every push.
+CI ([ci.yml](.github/workflows/ci.yml)) runs on every push and pull request: lint, tests, the
+licence check, the UI build, and a Docker image smoke test with sign-in required.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow and [SECURITY.md](SECURITY.md) for reporting
+a vulnerability.
 
-Submission notes by judging criterion: [docs/SUBMISSION.md](docs/SUBMISSION.md). Demo script: [docs/DEMO.md](docs/DEMO.md). Results: [docs/RESULTS.md](docs/RESULTS.md). Spec: [docs/SPEC.md](docs/SPEC.md). Third-party licences: [docs/LICENSES.md](docs/LICENSES.md). Playbook rules are illustrative demo defaults, not legal advice.
+## Layout
+
+```
+src/hack/            agent loop, API, workflow (queue, inbox, locks), evals, exports
+src/hack/challenge/  playbook, contract parsing and OCR, review and routing, red flags, data policy
+frontend/            React + Vite + Tailwind + shadcn/ui (built into web/)
+evals/               labelled contracts, real-contract sources and labels, curated results
+demo/                recorded runs for the guided demo
+samples/             contracts to upload, including scans
+docs/                results, deployment, demo script, submission material
+```
+
+## Documentation
+
+[Results](docs/RESULTS.md) · [Submission notes by criterion](docs/SUBMISSION.md) ·
+[Demo script](docs/DEMO.md) · [Deployment](docs/DEPLOY.md) · [Spec](docs/SPEC.md) ·
+[Third-party licences](docs/LICENSES.md)
+
+Playbook rules are illustrative defaults, not legal advice. Mizan is decision support generated by an
+AI agent; the route is computed by code and anything uncertain goes to a lawyer.
