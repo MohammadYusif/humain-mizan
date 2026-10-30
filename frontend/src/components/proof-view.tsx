@@ -5,6 +5,7 @@ import {
   CircleX,
   FileSearch,
   FlaskConical,
+  Scale,
   RotateCcw,
   Server,
   ShieldAlert,
@@ -607,6 +608,66 @@ function HeldOut({ models, contracts }: { models: EvalModel[]; contracts: Contra
   )
 }
 
+/** A smaller suite with its own question: one line per run, then every contract. */
+function SuiteSection({
+  id,
+  icon: Icon,
+  title,
+  description,
+  models,
+  contracts,
+}: {
+  id: string
+  icon: typeof Scale
+  title: string
+  description: ReactNode
+  models: EvalModel[]
+  contracts: ContractSummary[] | null
+}) {
+  const ids = new Set(models.flatMap((m) => m.cases.map((c) => c.id)))
+  return (
+    <section className="flex flex-col gap-5" aria-labelledby={id}>
+      <Card className="gap-4">
+        <CardHeader>
+          <CardTitle id={id} className="flex flex-wrap items-center gap-2 text-lg font-semibold">
+            <Icon className="size-5 text-primary" aria-hidden />
+            {title}
+            <Badge variant="outline" className="rounded-md font-normal">
+              {plural(ids.size, "contract")}
+            </Badge>
+          </CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="flex flex-col divide-y rounded-lg border bg-background/60">
+            {models.map((m) => {
+              const r = safety(m)
+              return (
+                <li key={keyOf(m)} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-sm">
+                  <span className="font-medium">{modelName(m.model)}</span>
+                  <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular sm:ms-auto">
+                    <span>
+                      route accuracy <span className="font-semibold">{percent(m.summary.route_accuracy)}</span>
+                    </span>
+                    <span>
+                      pass <span className="font-semibold">{percent(m.summary.pass_rate)}</span>
+                    </span>
+                    <span className={notSafe(r) ? "font-semibold text-escalate" : "text-approve"}>
+                      false auto-approve {m.summary.false_auto_approve}
+                    </span>
+                    <span>{money(m, m.summary.cost_usd)} total</span>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </CardContent>
+      </Card>
+      <CaseMatrix models={models} contracts={contracts} title={`${title}, every contract`} />
+    </section>
+  )
+}
+
 /** What a real-world result can and cannot claim; shown with the numbers, not in a footnote. */
 const REAL_LIMITS = [
   "Outside annotators mark where a clause is (CUAD) or that it is unfair to a consumer (CLAUDETTE). Whether it breaks our buyer playbook, and every route label, is our own judgement.",
@@ -739,7 +800,7 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
     )
   }
 
-  const isMain = (m: EvalModel) => m.suite !== "held-out" && m.suite !== "real"
+  const isMain = (m: EvalModel) => !m.suite || m.suite === "main"
   if (data.filter(isMain).length === 0) {
     return (
       <Empty className="border bg-card py-16">
@@ -758,6 +819,8 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
   const models = data.filter(isMain)
   const heldOut = data.filter((m) => m.suite === "held-out")
   const real = data.filter((m) => m.suite === "real")
+  const blind2 = data.filter((m) => m.suite === "held-out-2")
+  const policy = data.filter((m) => m.suite === "policy-change")
   const local = models.filter(isLocal)
   const anyRegraded = models.some((m) => m.summary.rescored_from)
 
@@ -787,6 +850,26 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
       {models.length > 1 ? <Comparison models={models} /> : null}
       <CaseMatrix models={models} contracts={contracts} />
       {heldOut.length ? <HeldOut models={heldOut} contracts={contracts} /> : null}
+      {blind2.length ? (
+        <SuiteSection
+          id="blind2-h"
+          icon={FlaskConical}
+          title="Second blind batch"
+          description="Eight more contracts in industries not used before, written and labelled by a separate agent that saw neither the red-flag patterns nor any model output, committed before the first run. Run once and reported as it came out."
+          models={blind2}
+          contracts={contracts}
+        />
+      ) : null}
+      {policy.length ? (
+        <SuiteSection
+          id="policy-h"
+          icon={Scale}
+          title="Another company's rules"
+          description="The same contracts reviewed under a different buyer's playbook, loaded from a file with no code change: payment no sooner than 60 days, and a supplier exit on 30 days' notice accepted for 12-month terms. Labels were written from the policy before the run. One contract should move from approve to negotiate and one from negotiate to approve."
+          models={policy}
+          contracts={contracts}
+        />
+      ) : null}
       {real.length ? <RealWorld models={real} contracts={contracts} /> : null}
 
       <div className="grid gap-5 lg:grid-cols-2">
