@@ -616,6 +616,8 @@ function SuiteSection({
   description,
   models,
   contracts,
+  rowLabel,
+  matrix = true,
 }: {
   id: string
   icon: typeof Scale
@@ -623,6 +625,9 @@ function SuiteSection({
   description: ReactNode
   models: EvalModel[]
   contracts: ContractSummary[] | null
+  /** Names each row when several runs share a model, e.g. "run 2". */
+  rowLabel?: (m: EvalModel, i: number) => string
+  matrix?: boolean
 }) {
   const ids = new Set(models.flatMap((m) => m.cases.map((c) => c.id)))
   return (
@@ -640,11 +645,11 @@ function SuiteSection({
         </CardHeader>
         <CardContent>
           <ul className="flex flex-col divide-y rounded-lg border bg-background/60">
-            {models.map((m) => {
+            {models.map((m, i) => {
               const r = safety(m)
               return (
                 <li key={keyOf(m)} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5 text-sm">
-                  <span className="font-medium">{modelName(m.model)}</span>
+                  <span className="font-medium">{rowLabel ? rowLabel(m, i) : modelName(m.model)}</span>
                   <span className="flex flex-wrap gap-x-4 gap-y-1 text-xs tabular sm:ms-auto">
                     <span>
                       route accuracy <span className="font-semibold">{percent(m.summary.route_accuracy)}</span>
@@ -663,7 +668,7 @@ function SuiteSection({
           </ul>
         </CardContent>
       </Card>
-      <CaseMatrix models={models} contracts={contracts} title={`${title}, every contract`} />
+      {matrix ? <CaseMatrix models={models} contracts={contracts} title={`${title}, every contract`} /> : null}
     </section>
   )
 }
@@ -822,6 +827,8 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
   const blind2 = data.filter((m) => m.suite === "held-out-2")
   const policy = data.filter((m) => m.suite === "policy-change")
   const redaction = data.filter((m) => m.suite === "redaction")
+  const real2 = data.filter((m) => m.suite === "real-2")
+  const repeats = data.filter((m) => m.suite?.startsWith("repeat-")).sort((a, b) => (a.suite ?? "").localeCompare(b.suite ?? ""))
   const local = models.filter(isLocal)
   const anyRegraded = models.some((m) => m.summary.rescored_from)
 
@@ -882,6 +889,28 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
         />
       ) : null}
       {real.length ? <RealWorld models={real} contracts={contracts} /> : null}
+      {real2.length ? (
+        <SuiteSection
+          id="real2-h"
+          icon={FileSearch}
+          title="Second real batch, blind"
+          description="Twelve more public SEC contracts from CUAD, picked by a fixed rule so nobody chose them, labelled from the text and CUAD's lawyer-reviewed annotations, and committed before the only run. None was approved and 11 of 12 routes matched. Recall was 66%: it found the liability, interest, indemnity and non-compete issues and missed most termination, payment-term and confidentiality-term issues. Reported as it came out."
+          models={real2}
+          contracts={contracts}
+        />
+      ) : null}
+      {repeats.length ? (
+        <SuiteSection
+          id="repeat-h"
+          icon={FlaskConical}
+          title="Same result every run"
+          description="The main contracts reviewed three more times back to back, to check that the result is not one lucky run. Model output varies; the routes and findings did not."
+          models={repeats}
+          contracts={contracts}
+          rowLabel={(m, i) => `${modelName(m.model)}, run ${i + 1}`}
+          matrix={false}
+        />
+      ) : null}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Card className="gap-4">

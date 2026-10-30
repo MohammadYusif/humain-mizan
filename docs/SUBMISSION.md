@@ -13,16 +13,31 @@ model calls (`hack rescore`). Claude Sonnet 5.5, effort medium, unless stated.
 
 | Suite | What it is | Routes right | Wrongly approved | Recall / precision | Cost per contract |
 |---|---|---|---|---|---|
-| Main | 12 contracts we wrote and tuned on | 12/12 | 0/9 | 100% / 94% | $0.052 |
+59 different contracts, **27 of them real** public contracts we did not write. Across all of them, in
+every run, Mizan never approved a contract its answer key sends to negotiation or a lawyer.
+
+| Suite | What it is | Routes right | Wrongly approved | Recall / precision | Cost per contract |
+|---|---|---|---|---|---|
+| Main, run 4 times | 12 contracts we wrote and tuned on; same result in all 4 runs | 48/48 | 0/36 | 100% / 94% | $0.035-0.053 |
 | Held-out (blind) | 12 contracts by a separate agent that never saw our patterns or labels | 12/12 | 0/8 | 92% / 100% | $0.053 |
 | Second blind batch | 8 more, new industries, labels committed (`f1f75c6`) before the only run | **8/8** | **0/6** | 100% / 88% | $0.054 |
 | Real contracts | 15 public contracts: CUAD SEC filings, Zoom/Dropbox terms (CLAUDETTE), Saudi Ministry of Finance and EXPRO contracts in Arabic, up to 101 pages, read by OCR | 14/14 | 0/14 | 73% / 97% | $0.23 |
+| **Real, second batch (blind)** | 12 more CUAD SEC filings, **picked by a rule** (`scripts/select_cuad_batch.py`), labels committed (`7cc74f5`) before the only run | **11/12** | **0/12** | 66% / 96% | $0.18 |
 
-The second blind batch was run once and is reported as it came out. Its one precision miss is an extra
-indemnity finding on the colocation contract; every labelled issue and every route matched.
+The blind batches were run once and are reported as they came out.
 
-On the real contracts the agent found all 7 issues marked by outside annotators (CUAD's lawyer-reviewed
-annotations, CLAUDETTE's unfair-clause tags). The first run on them was blind and was not good; see 3.
+**What the second real batch shows.** It tests the liability-cap fix on 12 real contracts it had never
+seen, picked by a rule so nobody chose easy ones, with 34 checks decided by CUAD's lawyer-reviewed
+annotations. Safety held: none approved, 11 of 12 routes right. The one miss (Pareteum) has a cap that
+carves out our IP indemnity; Mizan read the cap as covering us and said negotiate, not escalate, so a
+person still sends the redline. Precision stayed at 96%. **Recall is where it is weakest on real
+contracts: 66%.** It finds the liability, interest, indemnity and non-compete problems (16 of 17) and
+misses most termination-for-convenience, payment-term and confidentiality-term issues (8 of 19). We did
+not tune on it. On real paper, Mizan is a safe router with an incomplete issue list, not a replacement
+for reading the contract.
+
+On the first real suite the agent found all 7 issues marked by outside annotators (CUAD, CLAUDETTE); on
+the second, 5 of 8. The first run on the first suite was blind and was not good; see 3.
 
 ## 2. Robustness and adaptation
 
@@ -70,6 +85,8 @@ did not see model output.
 | Day 2 | Real contracts, blind first run: 57% routes, **5/14 wrongly approved**. On buyer-side Saudi paper the agent read the *supplier's* uncapped liability as the liability clause, so nothing capped ours | A general gate: approval or negotiation needs the words that cap **our** liability, quoted and verified by code; otherwise escalate | 100%, 0/14 |
 | Day 2 | Regression check after that gate | Re-ran main and held-out | 12/12; 100%, 0/8 |
 | Day 2 | Policy change; second blind batch | New playbook from a file; 8 new blind contracts | 8/8; 8/8 |
+| Day 2 | Does the cap gate hold on real contracts it never saw? | 12 more CUAD contracts picked by a rule, labelled and committed first, run once | 11/12, **0/12**; recall 66% |
+| Day 2 | Is the main result luck? | Main suite run 3 more times | Identical every run |
 
 The eval harness measures route accuracy, wrong approvals (the number that matters most), recall and
 precision per rule, recall against independent annotators only, latency and cost, and records the
@@ -143,11 +160,12 @@ Decisions and their trade-offs:
 - Results in full, including what went wrong: `docs/RESULTS.md`.
 
 Limits we state rather than hide: playbook rules are illustrative, not legal advice; most labels are
-ours (only 7 real-contract labels come from outside annotators); the real Saudi contracts are all buyer
-paper, so approval of a real compliant contract is not tested; risky Arabic contracts are only measured
-on synthetic suites (no public labelled source exists); the OCR gate is calibrated on our three sample
-scans; handwriting, stamps and signatures are not read; suites are small (8 to 15 contracts), so these
-are strong signals, not benchmarks.
+ours (15 real-contract labels come from outside annotators); on real contracts recall is 66-73%, so the
+issue list is incomplete even when the route is right; no real contract in our suites should be approved
+(the Saudi ones are buyer paper, the CUAD ones are under US law), so approval of a real compliant contract
+is not tested; risky Arabic contracts are only measured on synthetic suites (no public labelled source
+exists); the OCR gate is calibrated on our three sample scans; handwriting, stamps and signatures are not
+read; suites are small (8 to 15 contracts), so these are strong signals, not benchmarks.
 
 ## Reproduce every number
 
@@ -159,6 +177,8 @@ uv run hack eval evals/heldout/cases-batch2.jsonl --suite held-out-2
 HACK_PLAYBOOK=evals/policy/other-buyer.json uv run hack eval evals/policy/cases.jsonl --suite policy-change
 uv run python scripts/fetch_real_contracts.py                                  # texts, checksum-verified
 HACK_BUDGET_USD=4 uv run hack eval evals/real/cases.jsonl --suite real
+uv run python scripts/select_cuad_batch.py 12                                   # re-run the pick
+HACK_MAX_TURNS=40 HACK_BUDGET_USD=4 uv run hack eval evals/real/cases-batch2.jsonl --suite real-2
 HACK_SAMPLE_SENSITIVITY=internal uv run hack eval --suite redaction            # names hidden
 uv run hack rescore evals/proof/<file>.json --cases <cases.jsonl>              # re-grade, no model calls
 ```

@@ -1,4 +1,43 @@
-# Results (synthetic contracts; reproduce with `uv run hack eval --model <id>`)
+# Results (reproduce with `uv run hack eval --model <id>`)
+
+## Everything we tested, at a glance
+
+59 different contracts, 27 of them real public contracts we did not write, plus 118 automated tests that make no API calls. Every answer key was written before Mizan saw the contract, by reviewers that never saw its output; the blind sets' keys were committed to git before their only run. Claude Sonnet 5.5, effort medium.
+
+| Test set | Contracts | Routes right | Risky contracts approved | Finding recall / precision |
+|---|---|---|---|---|
+| Main suite, run 4 times (same result every run) | 12 × 4 | 48/48 | **0/36** | 100% / 94% |
+| Blind sets written by another agent (2 batches) | 20 | 20/20 | **0/14** | 92-100% / 88-100% |
+| Real: SEC filings, Saudi government contracts, terms of service | 15 | 14/14 | **0/14** | 73% / 97% |
+| **Real, second batch, blind** (12 CUAD contracts, picked by a rule) | 12 | 11/12 | **0/12** | 66% / 96% |
+| Names hidden from the model (data policy) | 12 | 12/12 | **0/9** | 100% / 94% |
+| Another company's playbook, no code change | 8 | 8/8 | **0/5** | 100% / 100% |
+
+Across every set, Mizan never approved a contract its answer key sends to negotiation or a lawyer. Where it is weakest is completeness on real contracts: it finds the liability, interest, indemnity and non-compete problems, and misses about a third of the termination, payment-term and confidentiality-term issues. Details for each set follow.
+
+## Repeatability (`evals/proof/*-repeat-*.json`)
+
+The main suite run three more times back to back, 2026-10-30, on top of the earlier run: 12/12, route accuracy 100%, 0/9 wrong approvals, recall 100%, precision 94% in all four runs. Latency p50 16.2-17.1s; $1.46 for the three runs.
+
+## Second real batch, blind (`evals/real/cases-batch2.jsonl`)
+
+12 more CUAD contracts (public SEC filings with clause annotations by The Atticus Project's lawyer-reviewed annotators), run after the liability-cap fix to test it on contracts it had never seen. Picked by a rule in `scripts/select_cuad_batch.py` (service-type contracts, 15-150 KB, ordered by the SHA-256 of the filename: 42 qualified, the first 12 taken), so nobody chose them. Labelled by agents that never ran Mizan, from the text and CUAD's annotations: 126 checks, 41 issues, 34 checks decided by CUAD after checking the span against the text. Labels committed (`7cc74f5`) before the first and only run, 2026-10-30.
+
+| Claude Sonnet 5.5, one blind run | Result |
+|---|---|
+| **Approved a contract that should not be approved** | **0 / 12** |
+| Route accuracy | 92% (11/12) |
+| Finding precision | 96% (one extra finding) |
+| Finding recall | 66% (27/41); on CUAD-decided issues 5/8 |
+| Cost for 12 contracts / p50 latency | $2.20 / 38s |
+
+By rule, found / labelled: liability cap 6/7, late-payment interest 5/5, indemnity 3/3, non-compete 2/2, IP ownership 2/3, auto-renewal 1/2, payment terms 4/7, termination for convenience 3/8, confidentiality term 1/4. The one route miss: Pareteum's hosting agreement, where the liability cap carves out our IP indemnity (so our liability there is uncapped); Mizan read the cap as covering us and routed to negotiate rather than escalate. Negotiate still means a person sends the redline: nothing was approved.
+
+What the labels found about CUAD itself: on 5 of the 12 contracts CUAD's "cap on liability" annotation points at a clause that limits only the supplier, or only excludes consequential damages; read literally it would have marked uncapped contracts as capped. The labellers checked every CUAD span against the text and overruled it there.
+
+We report this as measured and did not tune anything on it. What it cannot show: these are US filings under US law, which our Saudi playbook always flags, so none could be approved; approvals of real compliant contracts are still untested.
+
+## Synthetic contracts (main suite)
 
 12 contracts we wrote ourselves (7 English, 4 Arabic/bilingual incl. 1 Arabic/English conflict, 2 traps, 1 prompt-injection, 1 missing liability clause); labels written by a separate reviewer agent and checked against the routing code. Small sample: treat as a smoke test, not a benchmark. Effort `medium`, 2026-10-29. The curated result files are in `evals/proof/` (what the Proof screen shows).
 
