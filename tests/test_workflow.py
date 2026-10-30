@@ -321,15 +321,15 @@ def test_proof_prefers_curated_files_and_keeps_variants_apart(tmp_path):
 def stops_after_scoring(doc="services-en-01"):
     """Scores to negotiate, then quits without render/send; a second stop after the nudge."""
     full = scripted_review(doc)
-    return [*full[:4], text("done, I think"), text("still done")]
+    return [*full[:5], text("done, I think"), text("still done")]
 
 
 def test_model_that_stops_early_is_nudged_to_finish(tmp_path):
     s = settings(tmp_path)
     script = [
-        *scripted_review("services-en-01")[:4],
+        *scripted_review("services-en-01")[:5],  # up to and including score_contract
         text("done, I think"),
-        *scripted_review("services-en-01")[4:],
+        *scripted_review("services-en-01")[5:],
     ]
     from hack.service import run_task
 

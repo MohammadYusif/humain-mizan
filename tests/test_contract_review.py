@@ -41,9 +41,33 @@ def read_all(reg, doc):
     return ids
 
 
-def tag(reg, doc, ids, types=None):
+CAPS = {  # the words that cap OUR liability in the sample contracts that have a mutual cap
+    "nda-en-01": ("c5", "Each party's aggregate liability under this Agreement is limited"),
+    "services-en-01": (
+        "c7",
+        "Each party's aggregate liability under this Agreement shall not exceed",
+    ),
+}
+
+
+def clause_text(reg, doc, clause_id):
+    first = j(call(reg, "load_contract", doc_id=doc))
+    pages = [first] + [
+        j(call(reg, "get_clauses", doc_id=doc, page=p)) for p in range(2, first["pages"] + 1)
+    ]
+    return next(c["text"] for pg in pages for c in pg["clauses"] if c["id"] == clause_id)
+
+
+def tag(reg, doc, ids, types=None, cap=True):
+    """Clause map, plus (like the agent) the confirmed cap on our liability: the opening words of
+    the clause typed as limitation of liability. Tests that need no cap pass cap=False."""
     types = types or {}
     clauses = [{"clause_id": i, "clause_types": types.get(i, ["Other"])} for i in ids]
+    liab = next((i for i in ids if LIAB in types.get(i, [])), None)
+    if cap and liab:
+        quote = CAPS[doc][1] if doc in CAPS else clause_text(reg, doc, liab)[:40]
+        res = call(reg, "confirm_liability_cap", doc_id=doc, clause_id=liab, quote=quote)
+        assert not res.is_error, res.content
     return call(reg, "submit_clause_map", doc_id=doc, clauses=clauses)
 
 
@@ -334,6 +358,13 @@ def scripted_review(doc):
                 },
             )
         ),
+        call_tools(
+            (
+                "3b",
+                "confirm_liability_cap",
+                {"doc_id": doc, "clause_id": "c7", "quote": CAPS["services-en-01"][1]},
+            )
+        ),
         call_tools(("4", "score_contract", {"doc_id": doc})),
         call_tools(("4b", "render_outputs", {"doc_id": doc, "memo": "One-sided termination."})),
         call_tools(("5", "send_to_counterparty", {"doc_id": doc, "message": "amend c3"})),
@@ -501,6 +532,34 @@ def test_heldout_cases_reference_real_clauses():
             if chk["type"] == "finding":
                 cls = chk["clause"] if isinstance(chk["clause"], list) else [chk["clause"]]
                 assert all(contract.clause(cl) is not None for cl in cls), (case["id"], chk)
+
+
+def test_approval_needs_the_words_that_cap_our_liability(tmp_path):
+    """Real buyer paper taught this: a clause about the SUPPLIER's liability typed as 'limitation of
+    liability' satisfied the presence check, and contracts with nothing capping our liability were
+    approved. Approval (and negotiation) now need the cap on OUR liability quoted and verified."""
+    reg, ids, types = reviewed(tmp_path)
+    tag(reg, "nda-en-01", ids, types, cap=False)
+    score = j(call(reg, "score_contract", doc_id="nda-en-01"))
+    assert score["route"] == "escalate"
+    assert any("caps our liability" in r for r in score["reasons"])
+    bad = call(
+        reg, "confirm_liability_cap", doc_id="nda-en-01", clause_id="c5", quote="not in it at all"
+    )
+    assert bad.is_error  # quotes are verified like findings
+    c2 = clause_text(reg, "nda-en-01", "c2")[:30]
+    assert not call(
+        reg, "confirm_liability_cap", doc_id="nda-en-01", clause_id="c2", quote=c2
+    ).is_error
+    score = j(call(reg, "score_contract", doc_id="nda-en-01"))
+    assert score["route"] == "escalate"  # quoted from a clause not typed as limitation of liability
+    assert any("not in a clause typed" in r for r in score["reasons"])
+    cl, quote = CAPS["nda-en-01"]
+    assert not call(
+        reg, "confirm_liability_cap", doc_id="nda-en-01", clause_id=cl, quote=quote
+    ).is_error
+    score = j(call(reg, "score_contract", doc_id="nda-en-01"))
+    assert score["route"] == "approve" and score["cap_evidence"]["clause_id"] == "c5"
 
 
 def test_real_world_labels_are_consistent():

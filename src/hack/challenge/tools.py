@@ -87,6 +87,14 @@ class ClearArgs(BaseModel):
     )
 
 
+class CapArgs(BaseModel):
+    doc_id: str
+    clause_id: str
+    quote: str = Field(
+        description="Exact words from the clause that cap OUR (the customer's) liability, e.g. the mutual cap"
+    )
+
+
 class RenderArgs(BaseModel):
     doc_id: str
     memo: str = Field(
@@ -297,6 +305,24 @@ def build_registry(settings: Settings, run_dir: Path | None = None) -> ToolRegis
             raise ValueError("give a reason")
         review.clear(a.clause_id, a.rule_id, a.reason, a.quote)
         return f"cleared {a.rule_id} on {a.clause_id}"
+
+    @registry.register(
+        "confirm_liability_cap",
+        "Record the exact words that cap OUR (the customer's) liability. A contract can only be approved or "
+        "negotiated with this evidence; without it, it escalates. Only call it when the clause really caps "
+        "our liability: a cap that covers only the supplier, a cap on delay penalties, or the supplier's "
+        "own liability or indemnity is NOT a cap on ours. If nothing caps our liability, do not call it.",
+        CapArgs,
+    )
+    def confirm_liability_cap(a: CapArgs) -> str:
+        review = review_of(a.doc_id)
+        clause = review.contract.clause(a.clause_id)
+        if clause is None:
+            raise ValueError(f"unknown clause_id {a.clause_id!r}")
+        if not C.quote_in_clause(a.quote, clause):
+            raise ValueError(_not_verbatim(clause.text))
+        review.confirm_cap(a.clause_id, a.quote)
+        return f"cap on our liability recorded from {a.clause_id}"
 
     @registry.register(
         "submit_clause_map",

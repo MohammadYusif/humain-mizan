@@ -16,7 +16,8 @@ MIN_CONFIDENCE = 0.6
 OTHER, UNCLEAR = "Other", "Unclear"
 VALID_TYPES = sorted({r.clause_type for r in PLAYBOOK} | {OTHER, UNCLEAR})
 # A contract without these cannot be approved automatically: absence is not compliance.
-REQUIRED_TYPES = ("Limitation of liability", "Governing law and dispute forum")
+LIAB_TYPE = "Limitation of liability"
+REQUIRED_TYPES = (LIAB_TYPE, "Governing law and dispute forum")
 # Text read from a scan is only trusted for automatic action when OCR was confident: a misread word
 # ("limited" read as "unlimited", a dropped "not") can hide or invent a risky clause.
 # Calibrated on the sample scans with Tesseract's best models: a clean 200-dpi Arabic scan reads at
@@ -69,6 +70,12 @@ class Review:
     risk_score: int | None = None
     rendered: bool = False  # render_outputs ran
     acted: bool = False  # the route's follow-up action (send / escalate) passed its gate
+    # {"clause_id", "quote"}: the verified words that cap OUR liability (required to approve/negotiate)
+    cap_evidence: dict[str, str] | None = None
+
+    def confirm_cap(self, clause_id: str, quote: str) -> None:
+        self.cap_evidence = {"clause_id": clause_id, "quote": quote}
+        self.route = None
 
     @classmethod
     def start(cls, contract: Contract) -> "Review":
@@ -166,6 +173,20 @@ def score(review: Review) -> dict:
         escalate.append(
             f"Required {_pl(len(missing), 'clause')} missing from the contract: {_ls(missing)}"
         )
+    # A clause typed "limitation of liability" is not enough: the words that cap OUR liability must be
+    # quoted (a supplier-only cap or the supplier's own liability clause does not count). Without
+    # them, nothing shows our exposure is limited. Not repeated when a LIAB-CAP issue is already flagged.
+    if LIAB_TYPE not in missing and not any(f.rule_id == "LIAB-CAP" for f in fs):
+        ev = review.cap_evidence
+        if ev is None:
+            escalate.append(
+                "No wording that caps our liability was confirmed: a lawyer must decide"
+            )
+        elif LIAB_TYPE not in cmap.get(ev["clause_id"], []):
+            escalate.append(
+                f"The cap quoted for our liability ({ev['clause_id']}) is not in a clause typed as "
+                "limitation of liability"
+            )
     if (doubt := ocr_doubt(review.contract.source)) is not None:
         escalate.append(doubt)
     if review.injected:
@@ -209,6 +230,7 @@ def score(review: Review) -> dict:
         "injected": review.injected,
         "tripwires": trip,
         "source": review.contract.source,
+        "cap_evidence": review.cap_evidence,
     }
 
 
