@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Callable
 from typing import Any
@@ -7,6 +8,7 @@ from typing import Any
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from . import demo as D
 from . import exports as X
@@ -14,6 +16,7 @@ from . import learning as L
 from . import workflow as W
 from .challenge import contracts as C
 from .challenge.playbook import as_dicts
+from .challenge.review import ocr_doubt
 from .challenge.view import review_view
 from .config import Settings, get_settings
 from .evals import final_route
@@ -22,6 +25,11 @@ from .service import run_task
 from .tracing import read_trace
 
 _ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+def ocr_info(source: dict | None) -> dict | None:
+    """How a contract's text was obtained, plus why it cannot be trusted for automatic action."""
+    return {**source, "doubt": ocr_doubt(source)} if source else None
 
 
 class RunRequest(BaseModel):
@@ -86,11 +94,15 @@ def create_app(
 
     @app.get("/healthz")
     def healthz() -> dict[str, Any]:
+        from .challenge import ocr
+
+        st = ocr.status()
         return {
             "status": "ok",
             "provider": cfg.provider,
             "model": cfg.model,
             "approve_writes": cfg.approve_writes,
+            "ocr": {"available": st["available"], "detail": st["detail"]},
         }
 
     @app.post("/run", response_model=RunResponse)
@@ -195,24 +207,35 @@ def create_app(
 
     @app.get("/runs/{run_id}/export/{kind}")
     def export(run_id: str, kind: str) -> Response:
-        """Word exports: redline.docx (tracked changes + comments) or memo.docx."""
+        """PDF exports: redline.pdf (struck quotes + proposed wording) or memo.pdf."""
+        if kind not in ("redline.pdf", "memo.pdf"):
+            raise HTTPException(404, "export must be redline.pdf or memo.pdf")
         st = W.run_state(cfg, checked(run_id))
         if st["status"] in ("queued", "running") or not st["view"] or not st["view"]["doc_id"]:
             raise HTTPException(404, "no finished review for this run")
-        view = {**st["view"], "decision": W.read_decision(cfg, run_id)}
+        view = {
+            **st["view"],
+            "decision": W.read_decision(cfg, run_id),
+            "model": next(
+                (
+                    e.get("model")
+                    for e in read_trace(cfg.runs_dir, run_id)
+                    if e["type"] == "run_start"
+                ),
+                None,
+            ),
+        }
         try:
-            if kind == "redline.docx":
-                data = X.redline_docx(cfg, view)
-            elif kind == "memo.docx":
-                data = X.memo_docx(cfg, view, run_id)
+            if kind == "redline.pdf":
+                data = X.redline_pdf(cfg, view, run_id)
             else:
-                raise HTTPException(404, "export must be redline.docx or memo.docx")
+                data = X.memo_pdf(cfg, view, run_id)
         except FileNotFoundError:
             raise HTTPException(404, "contract not found") from None
         name = f"{view['doc_id']}-{kind}"
         return Response(
             data,
-            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            media_type="application/pdf",
             headers={"Content-Disposition": f'attachment; filename="{name}"'},
         )
 
@@ -273,6 +296,7 @@ def create_app(
                         "clauses": len(c.clauses),
                         "languages": sorted({cl.lang for cl in c.clauses}),
                         "source": source,
+                        "ocr": ocr_info(c.source),
                     }
                 )
         return out
@@ -283,11 +307,15 @@ def create_app(
         text: str | None = Form(None),
         title: str | None = Form(None),
     ) -> dict[str, Any]:
-        """Upload a .txt/.md/.docx/.pdf file, or paste text. Stored under data/uploads (git-ignored)."""
+        """Upload a .pdf/.docx/.txt/.md file or a scan (.png/.jpg/.tif), or paste text. Scans and
+        Arabic PDFs are read by local OCR. Stored under data/uploads (git-ignored)."""
+        source: dict | None = None
         try:
             if file is not None and file.filename:
                 data = await file.read(C.MAX_UPLOAD_BYTES + 1)
-                raw, name = C.extract_text(file.filename, data), file.filename
+                # OCR takes seconds per page: keep it off the event loop.
+                raw, source = await run_in_threadpool(C.extract, file.filename, data)
+                name = file.filename
             elif text and text.strip():
                 data = text.encode("utf-8")
                 raw, name = text, title or "pasted contract"
@@ -303,7 +331,13 @@ def create_app(
             raise HTTPException(400, str(e)) from None
         doc_id = C.upload_id(name, data)
         cfg.uploads_dir.mkdir(parents=True, exist_ok=True)
-        (cfg.uploads_dir / f"{doc_id}.md").write_text(md, encoding="utf-8")
+        path = cfg.uploads_dir / f"{doc_id}.md"
+        path.write_text(md, encoding="utf-8")
+        sidecar = C.source_path(path)
+        if source:
+            sidecar.write_text(json.dumps(source, ensure_ascii=False), encoding="utf-8")
+        else:
+            sidecar.unlink(missing_ok=True)
         c = C.load_contract(cfg.uploads_dir, doc_id)
         return {
             "doc_id": c.doc_id,
@@ -311,6 +345,7 @@ def create_app(
             "clauses": len(c.clauses),
             "languages": sorted({cl.lang for cl in c.clauses}),
             "source": "upload",
+            "ocr": ocr_info(c.source),
         }
 
     @app.get("/contracts/{doc_id}")
@@ -323,6 +358,7 @@ def create_app(
             "doc_id": c.doc_id,
             "title": c.title,
             "clauses": [{"id": cl.id, "lang": cl.lang, "text": cl.text} for cl in c.clauses],
+            "ocr": ocr_info(c.source),
         }
 
     @app.get("/demo/scenes")

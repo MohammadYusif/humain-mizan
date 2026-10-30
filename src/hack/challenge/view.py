@@ -72,6 +72,7 @@ def review_view(trace: list[dict[str, Any]]) -> dict[str, Any]:
         "reasons": [_clean_reason(r) for r in score["reasons"]] if score else [],
         "injected": score.get("injected", []) if score else [],
         "tripwires": score.get("tripwires", []) if score else [],
+        "source": score.get("source") if score else None,
         "cleared": cleared,
         "findings": fs,
         "clause_map": clause_map,

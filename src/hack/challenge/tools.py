@@ -13,6 +13,16 @@ from .playbook import BY_ID, as_dicts
 from .review import VALID_TYPES, Finding, Review, score, severity_of
 
 
+def _source_note(source: dict | None) -> str:
+    if not source or source.get("kind") != "ocr":
+        return ""
+    return (
+        f"This text was read from a scan by OCR (average word confidence {source['mean_conf']:.0f}%). "
+        "Quote it exactly as given here, even where a word looks misread, and mention suspected "
+        "misreadings that matter in the memo."
+    )
+
+
 class DocArgs(BaseModel):
     doc_id: str = Field(description="Contract id, e.g. 'saas-en-01'")
 
@@ -165,6 +175,7 @@ def build_registry(settings: Settings, run_dir: Path | None = None) -> ToolRegis
             "pages": len(review.pages),
             "clause_count": len(review.contract.clauses),
             "notice": NOTICE,
+            "source_note": _source_note(review.contract.source),
             "red_flags": flags,
             "red_flags_note": RED_FLAGS_NOTE if flags else "",
             "clauses": [

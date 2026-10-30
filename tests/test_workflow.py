@@ -496,50 +496,6 @@ def test_learning_loop_never_relaxes_critical_rules(tmp_path):
     assert ins["proposals"] == [] and ins["notes"][0]["rule_id"] == "LIAB-CAP"
 
 
-def test_word_exports_have_tracked_changes_comments_and_rtl(tmp_path):
-    import zipfile
-
-    s = settings(tmp_path)
-    client = TestClient(create_app(s))
-    _, st = run_batch(s, lambda: scripted_review("services-en-01"), ["services-en-01"], False)
-    rid = st["items"][0]["run_id"]
-    r = client.get(f"/runs/{rid}/export/redline.docx")
-    assert r.status_code == 200 and "attachment" in r.headers["content-disposition"]
-    z = zipfile.ZipFile(io.BytesIO(r.content))
-    body = z.read("word/document.xml").decode()
-    assert "<w:del " in body and "<w:ins " in body and "w:delText" in body
-    assert "Client may terminate this Agreement only" in body  # the deleted quote
-    assert "Either party may terminate on 60 days" in body  # the inserted redline
-    assert "TERM-CONV" in z.read("word/comments.xml").decode()
-    from docx import Document
-
-    Document(io.BytesIO(r.content))  # reopens cleanly
-    m = client.get(f"/runs/{rid}/export/memo.docx")
-    assert m.status_code == 200
-    assert "TERM-CONV" in zipfile.ZipFile(io.BytesIO(m.content)).read("word/document.xml").decode()
-    assert client.get(f"/runs/{rid}/export/evil.exe").status_code == 404
-    assert client.get("/runs/nope/export/memo.docx").status_code == 404
-
-
-def test_arabic_redline_is_right_to_left():
-    import zipfile
-
-    from hack import exports as X
-
-    s = Settings(provider="fake")
-    contract = C.load_contract(s.contracts_dir, "ar-data-01")
-    clause = contract.clause("c4")
-    quote = "فائدة تأخير بنسبة اثنين في المائة"
-    assert quote in clause.text
-    view = {
-        "doc_id": "ar-data-01", "route": "negotiate",
-        "findings": [{"clause_id": "c4", "rule_id": "INTEREST", "severity": "major", "quote": quote,
-                      "issue": "riba", "redline": "رسم إداري ثابت", "clause_type": "Late payment charges"}],
-    }  # fmt: skip
-    body = zipfile.ZipFile(io.BytesIO(X.redline_docx(s, view))).read("word/document.xml").decode()
-    assert "<w:bidi/>" in body and "<w:rtl/>" in body and quote in body
-
-
 def test_demo_replays_are_marked_in_the_inbox_and_never_teach_the_learning_loop(tmp_path):
     import time as _t
 

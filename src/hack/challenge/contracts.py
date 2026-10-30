@@ -36,6 +36,8 @@ class Contract:
     doc_id: str
     title: str
     clauses: list[Clause]
+    # How the text was obtained when it was not typed: {"kind": "ocr", "mean_conf": ..., ...}
+    source: dict | None = None
 
     def clause(self, clause_id: str) -> Clause | None:
         return next((c for c in self.clauses if c.id == clause_id), None)
@@ -66,8 +68,25 @@ def load_contract(dirs: Path | list[Path], doc_id: str) -> Contract:
             path = Path(d) / f"{doc_id}{ext}"
             if path.is_file():
                 title, clauses = split_clauses(path.read_text(encoding="utf-8"))
-                return Contract(doc_id, title, clauses)
+                return Contract(doc_id, title, clauses, read_source(path))
     raise FileNotFoundError(f"no contract {doc_id!r}")
+
+
+def source_path(contract_path: Path) -> Path:
+    """Sidecar with how an uploaded contract's text was obtained (e.g. OCR confidence)."""
+    return contract_path.with_name(f"{contract_path.stem}.source.json")
+
+
+def read_source(contract_path: Path) -> dict | None:
+    import json
+
+    p = source_path(contract_path)
+    if not p.is_file():
+        return None
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except ValueError:
+        return {"kind": "unknown"}  # unreadable sidecar: treated as unverified text
 
 
 # --- Ingest of user-supplied contracts (paste, .txt/.md, .docx, .pdf) -------------------------
@@ -80,10 +99,28 @@ _CLAUSE_START = re.compile(
 )
 
 
+MIN_PAGE_LETTERS = 20  # a PDF page with fewer extractable letters is treated as a scan
+
+
 def extract_text(filename: str, data: bytes) -> str:
+    return extract(filename, data)[0]
+
+
+def extract(filename: str, data: bytes) -> tuple[str, dict | None]:
+    """Text of an uploaded contract, plus source metadata when it came from OCR."""
     if len(data) > MAX_UPLOAD_BYTES:
         raise ValueError(f"file too large (max {MAX_UPLOAD_BYTES // 1_000_000} MB)")
     ext = Path(filename).suffix.lower()
+    if ext == ".pdf":
+        return _extract_pdf(data)
+    from . import ocr
+
+    if ext in ocr.IMAGE_EXTS:
+        return _extract_image(data)
+    return _extract_plain(ext, data), None
+
+
+def _extract_plain(ext: str, data: bytes) -> str:
     if ext in (".txt", ".md", ""):
         try:
             return data.decode("utf-8-sig")
@@ -107,21 +144,101 @@ def extract_text(filename: str, data: bytes) -> str:
                 if cells:
                     parts.append(" | ".join(dict.fromkeys(cells)))
         return "\n\n".join(parts)
-    if ext == ".pdf":
-        import io
+    raise ValueError(
+        "unsupported file type: use .pdf, .docx, .txt, .md or a scan (.png, .jpg, .tif)"
+    )
 
-        from pypdf import PdfReader
 
-        try:
-            text = "\n".join((p.extract_text() or "") for p in PdfReader(io.BytesIO(data)).pages)
-        except Exception as e:  # pypdf stream/structure errors from a corrupt file
-            raise ValueError("this PDF could not be read (corrupt or not a PDF)") from e
-        if not text.strip():
-            raise ValueError(
-                "no extractable text in this PDF (scanned PDFs need OCR, which is out of scope)"
-            )
-        return text
-    raise ValueError("unsupported file type: use .txt, .md, .docx or .pdf")
+_SENTENCE_END = re.compile(r"[.!?؟:;؛)»\"]\s*$")
+
+
+def join_broken_paragraphs(text: str) -> str:
+    """OCR often ends a paragraph at the short last line of a justified (especially right-to-left)
+    paragraph. Rejoin a paragraph to the previous one when the previous one stops mid-sentence and
+    this one does not start a new clause."""
+    paras = [p.strip() for p in re.split(r"\n\s*\n", text) if p.strip()]
+    out: list[str] = []
+    for p in paras:
+        if out and not _SENTENCE_END.search(out[-1]) and not _CLAUSE_START.match(p):
+            out[-1] = f"{out[-1]}\n{p}"
+        else:
+            out.append(p)
+    return "\n\n".join(out)
+
+
+def _arabic_share(text: str) -> float:
+    letters = _LETTER.findall(text)
+    return len(_ARABIC.findall(text)) / len(letters) if letters else 0.0
+
+
+def _extract_pdf(data: bytes) -> tuple[str, dict | None]:
+    """Text-layer PDFs are read directly. Scanned pages, and pages that are mostly Arabic (PDF text
+    extraction scrambles Arabic), are read by OCR; then every page is OCR'd so the paragraph
+    structure is consistent and no page is silently skipped."""
+    import io
+
+    from pypdf import PdfReader
+
+    from . import ocr
+
+    try:
+        texts = [(p.extract_text() or "") for p in PdfReader(io.BytesIO(data)).pages]
+    except Exception as e:  # pypdf stream/structure errors from a corrupt file
+        raise ValueError("this PDF could not be read (corrupt or not a PDF)") from e
+    if not texts:
+        raise ValueError("this PDF has no pages")
+    scanned = [i for i, t in enumerate(texts) if len(_LETTER.findall(t)) < MIN_PAGE_LETTERS]
+    arabic = [i for i, t in enumerate(texts) if i not in scanned and _arabic_share(t) > 0.3]
+    if not scanned and not arabic:
+        return "\n".join(texts), None
+    if len(texts) > ocr.MAX_PAGES:
+        raise ValueError(f"this PDF needs OCR and has {len(texts)} pages (max {ocr.MAX_PAGES})")
+    reason = (
+        "scanned pages"
+        if scanned and not arabic
+        else "Arabic text (PDF text extraction scrambles Arabic)"
+        if arabic and not scanned
+        else "scanned pages and Arabic text"
+    )
+    import pypdfium2 as pdfium
+
+    try:
+        pdf = pdfium.PdfDocument(data)
+    except Exception as e:
+        raise ValueError("this PDF could not be rendered for OCR (corrupt or encrypted)") from e
+    try:
+        pages = {i: ocr.ocr_image(ocr.render_pdf_page(pdf, i)) for i in range(len(texts))}
+    finally:
+        pdf.close()
+    text = join_broken_paragraphs("\n\n".join(pages[i].text for i in sorted(pages)))
+    if len(_LETTER.findall(text)) < MIN_PAGE_LETTERS:
+        raise ValueError("no readable text found in this PDF, even with OCR")
+    return text, ocr.summary(pages, len(texts), reason)
+
+
+def _extract_image(data: bytes) -> tuple[str, dict | None]:
+    """A photo or scan of a contract (multi-page TIFFs page by page)."""
+    import io
+
+    from PIL import Image, ImageOps, UnidentifiedImageError
+
+    from . import ocr
+
+    try:
+        img = Image.open(io.BytesIO(data))
+        frames = []
+        for n in range(getattr(img, "n_frames", 1)):
+            if n >= ocr.MAX_PAGES:
+                break
+            img.seek(n)
+            frames.append(ImageOps.exif_transpose(img.copy()))  # phone photos carry rotation
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as e:
+        raise ValueError("this image could not be read (corrupt or not an image)") from e
+    pages = {i: ocr.ocr_image(f) for i, f in enumerate(frames)}
+    text = join_broken_paragraphs("\n\n".join(pages[i].text for i in sorted(pages)))
+    if len(_LETTER.findall(text)) < MIN_PAGE_LETTERS:
+        raise ValueError("no readable text found in this image")
+    return text, ocr.summary(pages, len(frames), "image upload")
 
 
 def to_contract_markdown(raw: str, title_hint: str) -> str:

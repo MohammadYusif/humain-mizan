@@ -17,6 +17,25 @@ OTHER, UNCLEAR = "Other", "Unclear"
 VALID_TYPES = sorted({r.clause_type for r in PLAYBOOK} | {OTHER, UNCLEAR})
 # A contract without these cannot be approved automatically: absence is not compliance.
 REQUIRED_TYPES = ("Limitation of liability", "Governing law and dispute forum")
+# Text read from a scan is only trusted for automatic action when OCR was confident: a misread word
+# ("limited" read as "unlimited", a dropped "not") can hide or invent a risky clause.
+# Calibrated on the sample scans with Tesseract's best models: a clean 200-dpi Arabic scan reads at
+# ~87% mean with ~8% of words below 60; a blurry phone photo at ~64% with ~42%.
+OCR_MIN_CONF = 80.0
+OCR_MAX_LOW_SHARE = 0.15
+
+
+def ocr_doubt(source: dict | None) -> str | None:
+    """Why scanned text is not reliable enough to act on without a lawyer, or None."""
+    if not source or source.get("kind") != "ocr":
+        return None if not source else "Text came from an unrecognised source"
+    mean, low = source.get("mean_conf", 0.0), source.get("low_conf_share", 1.0)
+    if mean >= OCR_MIN_CONF and low <= OCR_MAX_LOW_SHARE:
+        return None
+    return (
+        f"Scanned text read with low OCR confidence ({mean:.0f}% average, {low:.0%} of words "
+        "uncertain): a lawyer must check it against the original"
+    )
 
 
 @dataclass
@@ -142,6 +161,8 @@ def score(review: Review) -> dict:
         escalate.append(
             f"Required {_pl(len(missing), 'clause')} missing from the contract: {_ls(missing)}"
         )
+    if (doubt := ocr_doubt(review.contract.source)) is not None:
+        escalate.append(doubt)
     if review.injected:
         escalate.append(
             f"{_pl(len(review.injected), 'Clause')} with instructions aimed at an AI reviewer (untrusted): "
@@ -182,6 +203,7 @@ def score(review: Review) -> dict:
         "reasons": reasons,
         "injected": review.injected,
         "tripwires": trip,
+        "source": review.contract.source,
     }
 
 
