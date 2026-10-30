@@ -12,7 +12,8 @@ class Settings(BaseSettings):
     model: str = "claude-opus-5-5"
     effort: str = "medium"
     max_tokens: int = 16000
-    max_turns: int = 20
+    # Long contracts (80-100 pages, ~150 clauses) need ~10 turns; the loop guard and budget stop runaways.
+    max_turns: int = 40
     budget_usd: float = 5.0
     approve_writes: bool = False
     judge_model: str = "claude-sonnet-5-5"
