@@ -50,12 +50,12 @@ jobs:
       - name: Smoke test with sign-in required (as a deployment runs)
         run: |
           H=$(docker run --rm mizan python -c "from hack.auth import hash_password; print(hash_password('ci-smoke-password'))")
-          docker run -d --name m -p 9000:9000 -e PORT=9000 -e HACK_REQUIRE_AUTH=true -e HACK_SECRET_KEY=ci \
+          docker run -d --name mizan-smoke -p 9000:9000 -e PORT=9000 -e HACK_REQUIRE_AUTH=true -e HACK_SECRET_KEY=ci \
             -e "HACK_AUTH_USERS=ci:$H" -e HACK_RUNS_DIR=/app/data/runs mizan
           for i in $(seq 1 40); do curl -sf localhost:9000/healthz && break; sleep 1; done
           test "$(curl -s -o /dev/null -w '%{http_code}' localhost:9000/runs)" = 401
           curl -sf -c c.txt -X POST localhost:9000/auth/login -H 'content-type: application/json' \
             -d '{"username":"ci","password":"ci-smoke-password"}'
           test "$(curl -s -b c.txt -o /dev/null -w '%{http_code}' localhost:9000/runs)" = 200
-          docker exec m tesseract --list-langs | grep -q ara
+          docker exec mizan-smoke tesseract --list-langs | grep -q ara
           curl -sf -b c.txt localhost:9000/demo/scenes | grep -q escalate-injection
