@@ -155,27 +155,27 @@
 ]
 
 // 6. Testing and results
-#slide[Testing and results][59 contracts, 27 real. No risky one approved.][
+#slide[Testing and results][59 contracts, 27 real, every answer key written first][
   #let th(s) = text(size: 13pt, fill: muted, s)
-  #let what(s) = text(size: 14.5pt, s)
+  #let what(s) = text(size: 14pt, s)
   #set text(size: 16pt)
-  #note(size: 15pt)[Method, for every set: pick the contracts by a rule, write the answer key (reviewers who never saw Mizan's
-  output), commit it to git, run once, grade by code. Blind sets are reported as they came out.]
-  #v(0.25cm)
-  #table(columns: (2.2fr, 3.9fr, 0.95fr, 1.05fr, 0.85fr, 0.95fr), stroke: none, inset: (x: 7pt, y: 6.5pt), align: (x, y) => if x >= 2 and y > 0 { horizon } else { horizon + left },
+  #note(size: 15pt)[Answer keys are written by reviewers who never saw Mizan's output and committed to git before the run. Code grades
+  every run, and every result file is kept, the failed first runs too. The newest real batch was also picked by a rule.]
+  #v(0.3cm)
+  #table(columns: (1.75fr, 4.6fr, 0.95fr, 1.05fr, 0.8fr, 0.85fr), stroke: none, inset: (x: 7pt, y: 7pt), align: (x, y) => if x >= 2 and y > 0 { horizon } else { horizon + left },
     table.hline(stroke: 0.6pt + line-c),
-    th[Test set], th[What it is], th[Routes right], th[Risky approved], th[Recall], th[Per contract],
+    th[Test set], th[What it is (current version, Claude Sonnet 5.5)], th[Routes right], th[Risky approved], th[Recall], th[Per contract],
     table.hline(stroke: 0.6pt + line-c),
-    [Main, 4 runs], what[12 we wrote and tuned on; same result every run], [48/48], [*0/36*], [100%], [\$0.04],
-    [Blind], what[12 by a separate agent, new to the system], [12/12], [*0/8*], [92%], [\$0.05],
-    [Blind, batch 2], what[8 new industries], [8/8], [*0/6*], [100%], [\$0.05],
-    [Real], what[SEC filings, ToS, Saudi government (Arabic, to 101 pages)], [14/14], [*0/14*], [73%], [\$0.23],
-    [*Real, batch 2*], what[12 SEC filings picked by a rule, key from CUAD annotations], [11/12], [*0/12*], [66%], [\$0.18],
+    [Main, 4 runs], what[12 we wrote and tuned on; the same result in every run], [48/48], [*0/36*], [100%], [\$0.04],
+    [Held-out], what[12 by a separate agent; 11/12 on its first run, then one fix], [12/12], [*0/8*], [92%], [\$0.05],
+    [Held-out 2], what[8 more, new industries; run once, blind], [8/8], [*0/6*], [100%], [\$0.05],
+    [Real], what[15 public, Arabic up to 101 pages; after the fix on slide 9], [14/14], [*0/14*], [73%], [\$0.23],
+    [*Real 2*], what[12 SEC filings picked by a rule; run once, blind], [11/12], [*0/12*], [66%], [\$0.18],
     table.hline(stroke: 0.6pt + line-c),
   )
-  #v(0.2cm)
-  #note(size: 14pt)[Same results with names hidden (12/12, 0/9) and under another company's playbook (8/8, 0/5). On real contracts it
-  catches liability, interest, indemnity and non-compete issues and misses many termination and payment-term ones. Sonnet 5.5.]
+  #v(0.3cm)
+  #note(size: 14pt)[Names hidden from the model: 12/12, 0/9, unchanged. Another company's playbook from a file: 8/8, 0/5. On real contracts
+  it catches liability, interest, indemnity and non-compete issues and misses many termination and payment-term ones.]
 ]
 
 // 7. Innovation and value
@@ -203,22 +203,21 @@
   #let th(s) = text(size: 14pt, fill: muted, s)
   #let lbl(s) = text(weight: "semibold", s)
   #let cell(s) = text(size: 16pt, s)
-  #table(columns: (1.3fr, 2.3fr, 2.3fr), stroke: none, inset: (x: 10pt, y: 9pt), align: horizon + left,
+  #let sug(s) = block(above: 6pt, text(size: 13pt, fill: muted, s))
+  #table(columns: (1.5fr, 2.2fr, 2.2fr), stroke: none, inset: (x: 10pt, y: 7pt), align: horizon + left,
     table.hline(stroke: 0.6pt + line-c),
-    th[Label], th[External model (API outside the network)], th[Model in the network (local or HUMAIN-hosted)],
+    th[Label, suggested from the text], th[External model (API outside the network)], th[Model in the network (local or HUMAIN)],
     table.hline(stroke: 0.6pt + line-c),
-    [#lbl[Public] #note(size: 14pt)[templates]], cell[Reviewed as is.], cell[Reviewed as is.],
-    [#lbl[Internal] #note(size: 14pt)[names, IBANs]], cell[Identifiers become placeholders before sending, and are put back in everything people read and send out.], cell[Reviewed as is.],
-    [#lbl[Restricted] #note(size: 14pt)[confidential]], cell[No model call at all. The contract goes straight to a lawyer, with the reason.], cell[Reviewed, but never approved or sent automatically. A lawyer signs off.],
+    [#lbl[Public] #sug[for a blank template]], cell[Reviewed as is.], cell[Reviewed as is.],
+    [#lbl[Internal] #sug[for names, emails, account numbers]], cell[Identifiers become placeholders before sending, and are put back in what people read and send.], cell[Reviewed as is.],
+    [#lbl[Restricted] #sug[for a confidential marking, an NDA, health data]], cell[No model call at all. It goes straight to a lawyer, with the reason.], cell[Reviewed, but never approved or sent automatically.],
     table.hline(stroke: 0.6pt + line-c),
   )
-  #v(0.6cm)
-  #grid(columns: (1fr, 1fr), column-gutter: 1.4cm,
-    note(size: 16pt)[Mizan suggests the label from the text before any model sees it; making it looser is recorded as a person's decision. Hidden: names, emails, phones, IBANs, ID, CR, VAT.],
-    note(size: 16pt)[Enforced twice in code: before the run starts and in the tool that serves contract text. Every review and memo PDF records the label, where the model ran and what was hidden.],
-  )
-  #v(0.5cm)
-  #note(size: 16pt)[Review quality with identifiers hidden: #text(fill: ink, weight: "medium", redaction-result)]
+  #v(0.45cm)
+  #note(size: 15pt)[The label is suggested on this server before any model sees the contract; making it looser is recorded as a person's decision.
+  Enforced twice in code, before the run and in the tool that serves contract text. Every review records the label, how it was set and what was hidden.]
+  #v(0.35cm)
+  #note(size: 15pt)[Review quality with identifiers hidden: #text(fill: ink, weight: "medium", redaction-result)]
 ]
 
 // 8. Challenges and future improvements
@@ -232,24 +231,24 @@
       #v(0.5cm)
       #note(size: 16pt)[On Saudi buyer-side paper the agent read the *supplier's* uncapped liability as the liability clause, so
       nothing capped *ours*. Approval now needs the words that cap our liability, quoted and verified by code; without them
-      the contract escalates. The earlier suites were re-run afterwards and held, and 12 new real contracts it had never seen,
-      run once blind, gave 0/12.]
+      the contract escalates. The earlier suites were re-run afterwards and held. Then 12 new real contracts it had never
+      seen, run once and blind: none approved.]
     ],
     [
-      #head[Limits we state rather than hide]
+      #let sub(s) = block(below: 0.35em, text(size: 20pt, weight: "semibold", fill: ink, s))
+      #sub[Limits we state rather than hide]
       #set text(size: 15pt, fill: muted)
-      #set list(spacing: 0.5em)
-      - Playbook rules are illustrative, not legal advice; most labels are ours, 15 come from outside annotators.
-      - On real contracts recall is 66-73%: the route is safe, the issue list is incomplete.
-      - No real contract in our sets should be approved, so approving a real compliant contract is untested.
-      - Red-flag patterns catch 1/13 blind; a local model still approved 2/8, so local mode needs a lawyer on every contract.
+      #set list(spacing: 0.45em)
+      - Playbook rules are illustrative, not legal advice. 15 labels come from outside annotators; the rest are ours.
+      - Recall on real contracts is 66-73%: the routes are safe, but the issue list is not complete.
+      - No real contract in our sets should be approved, so approving a real compliant one is untested.
+      - Red-flag patterns catch 1/13 blind; a local model approved 2/8, so local mode needs a lawyer.
       - The OCR gate is calibrated on three sample scans; handwriting, stamps and signatures are not read.
-      #v(0.5cm)
-      #text(size: 20pt, fill: ink, weight: "semibold")[Next]
-      #v(0.2cm)
-      - Lawyer-validated labels, including risky Arabic contracts, where no public labelled source exists.
-      - Real compliant contracts in the suite, so approvals are exercised and not only refused.
-      - Better recall on termination and payment terms, measured on a fresh blind batch.
+      #v(0.45cm)
+      #sub[Next]
+      - Lawyer-validated labels, including risky Arabic contracts.
+      - Real compliant contracts, so approvals are tested too.
+      - Better recall on termination and payment terms.
     ])
 ]
 
@@ -258,10 +257,10 @@
   #grid(columns: (1.3fr, 1fr), column-gutter: 1.6cm, align: horizon,
     [
       #set text(size: 17pt)
-      - On 47 contracts it was not tuned on, 27 of them real and public: 45 of 46 labelled routes right and 0 of 40 risky contracts approved. The main suite gave the same result in 4 runs.
+      - Beyond the main suite, 47 contracts, 27 of them real: the current version gets 45 of 46 routes right and approves 0 of 40 risky ones, including the newest 12, run once and blind.
       - Arabic, English and bilingual, typed or scanned, up to 101 pages read by OCR.
       - Another buyer's rules from a file, a local model option, and confidential contracts that never leave.
-      - 118 tests with no API calls, CI on a fresh clone, every number on these slides reproducible from the repo and shown on the Proof screen.
+      - The main suite gives the same result in 4 runs; 118 tests with no API calls; every number here is reproducible from the repo and on the Proof screen.
     ],
     card-box(inset: 22pt)[
       #head[Demo]

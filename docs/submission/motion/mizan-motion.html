@@ -547,7 +547,7 @@ ROUTES.forEach(([name, key, desc]) => {
 });
 
 // How every test set was run: four steps, always in this order.
-const METHOD = ["Pick the contracts by a rule", "Write the answer key", "Commit it to git", "Run once, graded by code"];
+const METHOD = ["Write the answer key first", "Commit it before the run", "Grade the run by code", "Keep every result, failures too"];
 METHOD.forEach((m, i) => {
   const el = document.createElement("div");
   el.className = "abs";
@@ -574,7 +574,7 @@ const SUITES = [
 const head = document.createElement("div");
 head.className = "row head";
 head.style.cssText = "display:grid; grid-template-columns:1fr 120px 200px 170px; gap:20px; padding:0 0 14px; border-bottom:1.5px solid var(--line); font-size:18px; color:var(--muted-fg)";
-head.innerHTML = `<span>Test set</span><span style="text-align:right">Contracts</span><span style="text-align:right">Routes right</span><span style="text-align:right">Risky approved</span>`;
+head.innerHTML = `<span>Test set (current version)</span><span style="text-align:right">Contracts</span><span style="text-align:right">Routes right</span><span style="text-align:right">Risky approved</span>`;
 $("s7rows").appendChild(head);
 SUITES.forEach(([name, real, n, routes, risky]) => {
   const el = document.createElement("div");
