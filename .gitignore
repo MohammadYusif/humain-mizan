@@ -17,6 +17,8 @@ docs/BRIEF.md
 
 # Run artefacts
 runs/
+# recorded demo scenes (synthetic contracts) ship with the repo
+!demo/runs/
 evals/results/
 *.log
 

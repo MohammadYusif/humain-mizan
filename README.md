@@ -20,6 +20,8 @@ Private deployment (Railway) behind Mizan's own sign-in page: see [docs/DEPLOY.m
 - **Proof**: eval results per model (route accuracy, false auto-approve, recall/precision, latency, cost), including the local model.
 - **Held-out test**: 12 contracts written blind (never used for tuning) — Claude Sonnet 5.5 routes 100% correctly with 0 wrong approvals.
 - **Real contracts**: 15 public contracts we did not write (CUAD SEC filings, Zoom/Dropbox terms, Saudi-law SEC exhibits, Ministry of Finance and EXPRO contracts in Arabic up to 101 pages). The first run approved 5 that should go to a lawyer; after adding the liability-cap evidence check, 0 of 14. See `evals/real/` and `docs/RESULTS.md`.
+- **Second blind batch**: 8 more contracts in new industries, labels committed before the only run: 8/8 routes, 0/6 wrong approvals.
+- **Another company's rules**: a different buyer's playbook loaded from a file (`HACK_PLAYBOOK`), no code change: 8/8, both expected route changes, 0/5 wrong approvals.
 - **Guided demo**: four recorded runs replay as if live, with no API key or network (demo-safe).
 - **Insights (learning loop)**: lawyers' decisions become proposed playbook amendments; a human approves them; red flags and critical rules never relax.
 - **PDF exports**: a redline (offending text struck through, playbook wording proposed under each clause with the rule and reason) and a decision memo, typeset with Typst; Arabic is right-to-left.
@@ -33,7 +35,7 @@ Private deployment (Railway) behind Mizan's own sign-in page: see [docs/DEPLOY.m
 
 ## Develop
 ```bash
-uv run pytest                                  # 75 tests, no API calls (the real-OCR test runs where Tesseract is installed, e.g. in Docker)
+uv run pytest                                  # 82 tests, no API calls (the real-OCR test runs where Tesseract is installed, e.g. in Docker)
 uv run hack run "Review contract saas-en-01 and route it."
 uv run hack eval --model claude-sonnet-5-5     # 12 labelled contracts -> evals/results/
 uv run hack rescore evals/results/<file>.json  # re-grade saved traces against current labels
@@ -41,4 +43,6 @@ cd frontend && npm run dev                     # UI on :5173, proxies the API on
 ```
 Local model ("sovereign mode"): `HACK_PROVIDER=openai_compat HACK_MODEL=qwen3:14b` with Ollama (`docker compose --profile local up`).
 
-Results: [docs/RESULTS.md](docs/RESULTS.md). Spec: [docs/SPEC.md](docs/SPEC.md). Third-party licences: [docs/LICENSES.md](docs/LICENSES.md). Playbook rules are illustrative demo defaults, not legal advice.
+CI (`.github/workflows/ci.yml`) runs lint, tests, the licence check, the UI build and a Docker smoke test with sign-in on every push.
+
+Submission notes by judging criterion: [docs/SUBMISSION.md](docs/SUBMISSION.md). Demo script: [docs/DEMO.md](docs/DEMO.md). Results: [docs/RESULTS.md](docs/RESULTS.md). Spec: [docs/SPEC.md](docs/SPEC.md). Third-party licences: [docs/LICENSES.md](docs/LICENSES.md). Playbook rules are illustrative demo defaults, not legal advice.

@@ -34,6 +34,23 @@ The qwen3:14b column was measured before the liability-cap evidence check was ad
 
 The blind run's one miss was the Arabic prompt-injection: the model noticed the instruction, ignored it and flagged it in the memo, but the injection regex did not match its wording, so code routed the contract to negotiate instead of escalate (it was never approved). The fix lets the model report an injected instruction with a verified quote as a second detector; the regex was deliberately **not** widened to fit the held-out wording. After the fix the only miss is one unrecorded language-precedence finding on the bilingual audit contract, where the route was still correct.
 
+## Second blind batch (`evals/heldout/cases-batch2.jsonl`)
+
+8 more contracts in industries not used before (airport ground handling, hospital laundry, solar O&M, school transport, translation-memory SaaS, colocation, event security, pharmacy cold chain), written and labelled by a separate agent that saw neither the red-flag patterns nor any model output. Labels committed (`f1f75c6`) before the first and only run, 2026-10-30.
+
+| Claude Sonnet 5.5 | Result |
+|---|---|
+| Cases passed / route accuracy | 8/8 / 100% |
+| **Approved a contract that should not be approved** | **0 / 6** |
+| Recall / precision | 100% / 88% |
+| Latency p50 / cost per contract | 16.9s / $0.054 |
+
+The one precision miss is an extra INDEMNITY finding on `hb-colocation` (escalated anyway for its uncapped liability).
+
+## Another company's rules (`evals/policy/`)
+
+The same 8 contracts reviewed under a different buyer's playbook, loaded with `HACK_PLAYBOOK=evals/policy/other-buyer.json` and no code change: payment no sooner than 60 days and prepayment at most 30%; a supplier exit on 30+ days' notice accepted for 12-month terms. Labels were written from the policy before the run. Result: 8/8, route accuracy 100%, 0/5 wrong approvals, recall 100%, $0.44 in total. Both expected route changes happened: `ar-services-01` approve → negotiate (45-day payment), `services-en-01` negotiate → approve (supplier exit now acceptable). First graded at 64% precision because the labels had no `scope` (findings under rules a case does not label counted as false); scope added and re-graded with `hack rescore`, no new model calls, named in the result file.
+
 ## Real contracts (`evals/real/`)
 
 15 public contracts we did not write: 6 company contracts filed with the US SEC from CUAD (clause annotations by The Atticus Project's lawyer-reviewed annotators), Zoom and Dropbox terms of service from CLAUDETTE (clauses tagged unfair by its annotators), two Saudi-law SEC exhibits (Lucid's EV purchase agreement with the Ministry of Finance, Saudi Aramco's purchase-order terms), three Ministry of Finance model contracts (Etimad) and two EXPRO framework agreements of 79 and 101 pages, read by OCR. Labels were written by reviewers who never saw model output and committed before the first run (`57bea38`); each records who made it. Route labels and playbook judgements are ours. Run with a 40-turn cap and a $4 per-contract budget (long contracts), effort medium.
@@ -72,6 +89,6 @@ Claude Opus 5.5 was measured earlier, before the red-flag checks: 11/11 + the mi
 - Sonnet's very first run was graded 11/12 because on the bilingual licence it recorded the IP issue on the English half (c6) of the clause whose Arabic half (c5) was labelled; the label now accepts either half (re-graded with `hack rescore`, no new model calls). Every later Sonnet run passed 12/12 directly.
 - The one precision miss for the Claude models is an extra LANG-PREC finding on the Arabic/English conflict contract, which is arguably correct.
 
-Guarantees enforced in code, each covered by a test (75 tests): a critical finding never approves or negotiates; approval needs every page read, every clause typed, liability and governing-law clauses present, the words that cap our own liability quoted and verified, no unclear clause, no finding filed under a mismatched rule, and no instruction aimed at the AI reviewer in the text; deterministic red flags must agree (critical ones always escalate, others must be recorded or cleared with a verbatim quote); quotes must appear verbatim in the clause; outward sends need approval (or the queue's auto-send policy) and are route-gated; a run that ends without a route goes to a lawyer; an instruction aimed at the reviewer, found by the regex or reported by the model, forces escalation; an identical tool call is not repeated a third time; text read from a scan is acted on automatically only when OCR was confident (otherwise it escalates with the OCR confidence as the reason).
+Guarantees enforced in code, each covered by a test (82 tests): a critical finding never approves or negotiates; approval needs every page read, every clause typed, liability and governing-law clauses present, the words that cap our own liability quoted and verified, no unclear clause, no finding filed under a mismatched rule, and no instruction aimed at the AI reviewer in the text; deterministic red flags must agree (critical ones always escalate, others must be recorded or cleared with a verbatim quote); quotes must appear verbatim in the clause; outward sends need approval (or the queue's auto-send policy) and are route-gated; a run that ends without a route goes to a lawyer; an instruction aimed at the reviewer, found by the regex or reported by the model, forces escalation; an identical tool call is not repeated a third time; text read from a scan is acted on automatically only when OCR was confident (otherwise it escalates with the OCR confidence as the reason).
 
 Known limits: playbook rules are illustrative demo defaults (not legal advice); eval data is synthetic; the red-flag patterns were written against the main suite and caught only 1 of 13 issues on the blind held-out set, so they are a net for known wording, not a general detector; the local model is slow on this laptop (p95 ~20 minutes) and can loop (one case hit the turn cap); Arabic recall not measured separately (4 Arabic/bilingual cases); the OCR confidence gate is calibrated on three sample scans we made (clean Arabic 87% mean confidence, clean English 96%, blurry photo 64%), not on real-world scans, and handwriting, stamps and signatures are not read.

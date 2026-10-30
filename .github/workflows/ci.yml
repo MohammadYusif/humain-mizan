@@ -58,3 +58,4 @@ jobs:
             -d '{"username":"ci","password":"ci-smoke-password"}'
           test "$(curl -s -b c.txt -o /dev/null -w '%{http_code}' localhost:9000/runs)" = 200
           docker exec m tesseract --list-langs | grep -q ara
+          curl -sf -b c.txt localhost:9000/demo/scenes | grep -q escalate-injection
