@@ -406,6 +406,11 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("VAT", re.compile(r"(?<!\d)3\d{13}3(?!\d)")),
     ("ID", re.compile(r"(?<![\d,.])[12457]\d{9}(?!\d|[,.]\d)")),
 ]
+_PLACE_BEFORE = re.compile(
+    r"\b(?:registered|incorporated|organised|organized|established|based|located|domiciled|"
+    r"headquartered|resident)\s+(?:in|at|under\s+the\s+laws\s+of)\s+$",
+    re.I,
+)
 _LEADING = re.compile(r"^(?:between|and|by|of|with|from|to|is|this|that|the)\s+", re.I)
 _SUFFIX = re.compile(
     r"\s+(?:Pte\.?\s+)?(?:Ltd|Limited|LLC|FZ-LLC|FZE|FZCO|Inc|Incorporated|Corp|Corporation|Co|"
@@ -441,6 +446,11 @@ class Redactor:
         for t in texts:
             for m in _PARTY_EN.finditer(t):
                 name = _LEADING.sub("", m.group(1).strip().rstrip(","))
+                # "a company registered in Riyadh ("Supplier")": the word before the role is a
+                # place, not the party. Hiding it would also hide the city in "the courts of
+                # Riyadh", which the governing-law check needs.
+                if _PLACE_BEFORE.search(t[: m.start(1)]):
+                    continue
                 if len(name) >= 4 and name not in parties:
                     parties.append(name)
             for m in _PARTY_AR.finditer(t):

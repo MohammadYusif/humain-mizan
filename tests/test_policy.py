@@ -110,6 +110,29 @@ def test_redaction_hides_identifiers_keeps_amounts_and_restores_exactly():
     assert r.summary()["PARTY"] >= 3
 
 
+def test_a_place_before_a_role_is_not_taken_for_a_party():
+    """'registered in Riyadh ("Supplier")' names a place; hiding it would also hide the city in
+    the governing-law clause, which the review needs."""
+    c = C.Contract(
+        "x",
+        "Logistics Services Agreement",
+        [
+            C.Clause(
+                "c1",
+                "en",
+                'Between Wadi Freight Co., a company registered in Riyadh (the "Supplier"), and '
+                'Ramla Retail Co., a company registered in Jeddah (the "Customer").',
+            ),
+            C.Clause("c2", "en", "The courts of Riyadh have jurisdiction over any dispute."),
+        ],
+    )
+    r = P.Redactor.for_contract(c)
+    seen = " ".join(cl.text for cl in r.contract(c).clauses)
+    assert "Wadi Freight Co." not in seen and "Ramla Retail Co." not in seen
+    assert "courts of Riyadh" in seen and "registered in Jeddah" in seen
+    assert r.summary()["PARTY"] == 2
+
+
 def test_every_bundled_contract_round_trips_and_leaks_no_party_name():
     s = settings(__import__("pathlib").Path("unused"))
     for d in s.contract_dirs()[:2]:
