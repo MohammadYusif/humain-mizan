@@ -438,6 +438,8 @@ export const api = {
   uploadContract: (form: FormData) => request<ContractSummary>("/contracts", { method: "POST", body: form }),
   playbook: () => request<PlaybookRule[]>("/playbook"),
   runs: (limit = 40) => request<RunSummary[]>(`/runs?limit=${limit}`),
+  /** The reviews of one contract, newest first. */
+  runsFor: (docId: string, limit = 5) => request<RunSummary[]>(`/runs?limit=${limit}&doc_id=${enc(docId)}`),
   review: (runId: string) => request<ReviewView>(`/runs/${enc(runId)}/review`),
   trace: (runId: string) => request<TraceEvent[]>(`/runs/${enc(runId)}/trace`),
   run: (task: string, runId: string) => request<RunResponse>("/run", post({ task, run_id: runId })),

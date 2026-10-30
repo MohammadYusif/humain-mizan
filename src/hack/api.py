@@ -195,12 +195,16 @@ def create_app(
         )
 
     @app.get("/runs")
-    def runs(limit: int = 30) -> list[dict[str, Any]]:
-        """Newest first. status: running | done | error. needs_human: kind of pending decision."""
+    def runs(limit: int = 30, doc_id: str | None = None) -> list[dict[str, Any]]:
+        """Newest first. status: running | done | error. needs_human: kind of pending decision.
+        `doc_id` keeps only the runs of that contract (read from each run's first event)."""
         base = cfg.runs_dir
         if not base.is_dir():
             return []
         dirs = [d for d in base.iterdir() if (d / "trace.jsonl").is_file()]
+        if doc_id is not None:
+            checked(doc_id)
+            dirs = [d for d in dirs if W.task_doc(d / "trace.jsonl") == doc_id]
         dirs.sort(key=lambda d: (d / "trace.jsonl").stat().st_mtime, reverse=True)
         out = []
         for d in dirs[: max(1, min(limit, 100))]:

@@ -35,6 +35,18 @@ UNROUTED_REASON = "The agent stopped before computing a route; a lawyer must rev
 _TASK_DOC = re.compile(r"contract\s+([A-Za-z0-9_-]{1,64})")
 
 
+def task_doc(trace_path: Path) -> str | None:
+    """The contract a run was asked to review, from its first event only (cheap enough to filter
+    every run by contract)."""
+    try:
+        with trace_path.open(encoding="utf-8") as f:
+            first = json.loads(f.readline() or "{}")
+    except (OSError, ValueError):
+        return None
+    m = _TASK_DOC.search(first.get("task", "")) if first.get("type") == "run_start" else None
+    return m.group(1) if m else None
+
+
 class InvalidDecision(ValueError):
     """The request itself is malformed (HTTP 400), as opposed to a state conflict (HTTP 409)."""
 

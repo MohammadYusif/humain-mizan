@@ -85,6 +85,18 @@ def test_extract_text_docx_and_rejections():
     assert C.extract_text("x.txt", "عقد".encode("cp1256")) == "عقد"  # legacy Arabic encoding
 
 
+def test_runs_can_be_listed_for_one_contract(tmp_path):
+    """Picking a contract opens its latest review: the API lists one contract's runs, newest first."""
+    s = settings(tmp_path)
+    client = TestClient(create_app(s))
+    run_batch(s, lambda: scripted_review("services-en-01"), ["services-en-01"], False)
+    run_batch(s, scripted_escalation, ["nda-en-01"], False)
+    mine = client.get("/runs", params={"doc_id": "services-en-01"}).json()
+    assert [r["doc_id"] for r in mine] == ["services-en-01"] and mine[0]["status"] == "done"
+    assert client.get("/runs", params={"doc_id": "never-reviewed"}).json() == []
+    assert client.get("/runs", params={"doc_id": "../etc"}).status_code == 400
+
+
 def test_upload_endpoint_then_review_the_uploaded_contract(tmp_path):
     s = settings(tmp_path)
     client = TestClient(create_app(s))

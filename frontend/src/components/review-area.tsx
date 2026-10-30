@@ -1,8 +1,9 @@
 import { BookMarked, ChevronDown, FileText, ListTree, ScrollText } from "lucide-react"
 import { cn } from "cn"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 
+import { ContractOverview } from "@/components/contract-overview"
 import { ContractTab, type ClauseFocus } from "@/components/contract-tab"
 import { Intro } from "@/components/intro"
 import { NewReviewPanel } from "@/components/new-review-panel"
@@ -18,7 +19,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UploadContractDialog } from "@/components/upload-contract-dialog"
-import { useContract, useRunData } from "@/hooks/use-api"
+import { prefetchRun, useContract, useRunData } from "@/hooks/use-api"
 import { api, errorMessage, newRunId, type ContractSummary, type PlaybookRule, type RunSummary } from "@/lib/api"
 import { ROUTE_LABEL, seconds, usd } from "@/lib/format"
 import { go } from "@/lib/route"
@@ -89,6 +90,33 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
     revealWorkspace()
   }, [])
 
+  // Picking a contract opens its latest finished review if it has one; otherwise the workspace shows
+  // the contract, not reviewed yet. A later pick wins over a slower earlier one.
+  const pickSeq = useRef(0)
+  const pickContract = useCallback(
+    async (id: string) => {
+      setDocId(id)
+      setFocus(null)
+      if (posting) return // a review is running: just choose what to review next
+      const seq = ++pickSeq.current
+      let latest: RunSummary | undefined
+      try {
+        latest = (await api.runsFor(id)).find((r) => r.status === "done")
+      } catch {
+        /* list unavailable: show the contract instead */
+      }
+      if (seq !== pickSeq.current) return
+      if (latest) {
+        prefetchRun(latest.run_id, id)
+        go({ area: "review", runId: latest.run_id })
+      } else {
+        setTab("review")
+        go({ area: "review" })
+      }
+    },
+    [posting]
+  )
+
   const jumpToClause = useCallback((clauseId: string) => {
     setTab("contract")
     setFocus({ id: clauseId, nonce: Date.now() })
@@ -147,10 +175,12 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
         <NewReviewPanel
           contracts={contracts}
           docId={docId}
-          onDocChange={(id) => {
-            setDocId(id)
-            if (!posting) go({ area: "review" })
-          }}
+          onDocChange={(id) => void pickContract(id)}
+          note={
+            shownRunId && !live && review?.status === "done" && review.doc_id === docId
+              ? "Showing this contract's latest review. Review contract runs a new one."
+              : null
+          }
           onReview={() => void startReview()}
           onUpload={() => setUploadOpen(true)}
           busy={posting}
@@ -214,7 +244,15 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
           </TabsList>
 
           <TabsContent value="review">
-            {!shownRunId ? (
+            {!shownRunId && pickedDoc && viewContract ? (
+              <ContractOverview
+                summary={viewContract}
+                contract={contract.data}
+                busy={posting}
+                onReview={() => void startReview()}
+                onRead={() => setTab("contract")}
+              />
+            ) : !shownRunId ? (
               <Intro onUpload={() => setUploadOpen(true)} />
             ) : phase === "error" ? (
               <Empty className="border bg-card">

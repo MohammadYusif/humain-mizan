@@ -40,6 +40,8 @@ interface Props {
   onReview: () => void
   onUpload: () => void
   busy: boolean
+  /** What the workspace is showing for the picked contract, e.g. its latest review. */
+  note?: string | null
 }
 
 function ContractOption({ c }: { c: ContractSummary }) {
@@ -55,7 +57,7 @@ function ContractOption({ c }: { c: ContractSummary }) {
   )
 }
 
-export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUpload, busy }: Props) {
+export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUpload, busy, note }: Props) {
   const samples = contracts?.filter((c) => c.source === "sample" || c.source === "held-out") ?? []
   const real = contracts?.filter((c) => c.source === "real") ?? []
   const uploads = contracts?.filter((c) => c.source === "upload") ?? []
@@ -150,7 +152,7 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
           {busy ? "Reviewing…" : "Review contract"}
         </Button>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Nothing is sent to the counterparty without approval.
+          {note ?? "Nothing is sent to the counterparty without approval."}
         </p>
       </CardContent>
     </Card>
