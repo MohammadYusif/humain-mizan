@@ -9,6 +9,7 @@ import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/componen
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@/components/ui/empty"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
+import { prefetchRun } from "@/hooks/use-api"
 import type { RunSummary } from "@/lib/api"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -95,6 +96,8 @@ export function RunHistory({ runs, selectedId, onSelect, className }: Props) {
                     <button
                       type="button"
                       onClick={() => onSelect(r)}
+                      onPointerEnter={() => prefetchRun(r.run_id, r.doc_id)}
+                      onFocus={() => prefetchRun(r.run_id, r.doc_id)}
                       aria-current={active ? "true" : undefined}
                       className={cn(
                         "group flex w-full min-w-0 flex-col gap-1.5 rounded-lg border border-transparent px-2.5 py-2 text-start transition-colors outline-none",

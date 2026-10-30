@@ -22,6 +22,7 @@ import { useContract, useRunData } from "@/hooks/use-api"
 import { api, errorMessage, newRunId, type ContractSummary, type PlaybookRule, type RunSummary } from "@/lib/api"
 import { ROUTE_LABEL, seconds, usd } from "@/lib/format"
 import { go } from "@/lib/route"
+import { smoothly } from "@/lib/transition"
 
 type Tab = "review" | "contract" | "trace" | "playbook"
 
@@ -52,7 +53,9 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
   const [panelOpen, setPanelOpen] = useState(false)
 
   const live = posting && runId !== null && runId === liveRunId
-  const { review, trace, phase, error: runError } = useRunData(runId, live)
+  // `shownRunId` is the run on screen: while the next run loads, the previous one stays (dimmed).
+  const { runId: dataRunId, review, trace, phase, error: runError, stale } = useRunData(runId, live)
+  const shownRunId = dataRunId ?? runId
 
   // Opening a run (History, #run= link, Inbox, Queue) makes the picker follow that run's contract:
   // a manual pick only lasts until another run is opened.
@@ -63,7 +66,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
     if (runId) setTab("review")
   }
 
-  const runSummary = runs?.find((r) => r.run_id === runId) ?? null
+  const runSummary = runs?.find((r) => r.run_id === shownRunId) ?? null
   const known = (d: string | null | undefined) => (d && contracts?.some((c) => c.doc_id === d) ? d : null)
   const docId =
     pickedDoc ??
@@ -72,7 +75,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
     (live ? liveDoc : null) ??
     contracts?.[0]?.doc_id ??
     null
-  const viewDoc = runId ? (review?.doc_id ?? runSummary?.doc_id ?? (live ? liveDoc : null)) : docId
+  const viewDoc = shownRunId ? (review?.doc_id ?? runSummary?.doc_id ?? (live ? liveDoc : null)) : docId
   const contract = useContract(viewDoc)
   const viewContract = useMemo(() => contracts?.find((c) => c.doc_id === viewDoc) ?? null, [contracts, viewDoc])
 
@@ -83,8 +86,10 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
   }, [])
 
   const jumpToClause = useCallback((clauseId: string) => {
-    setTab("contract")
-    setFocus({ id: clauseId, nonce: Date.now() })
+    smoothly(() => {
+      setTab("contract")
+      setFocus({ id: clauseId, nonce: Date.now() })
+    })
   }, [])
 
   const startReview = useCallback(
@@ -164,15 +169,24 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
         onReviewNow={(doc) => void startReview(doc)}
       />
 
-      <section id="workspace" className="flex min-w-0 scroll-mt-36 flex-col gap-5" aria-label="Review workspace">
-        {runId ? (
+      <section
+        id="workspace"
+        aria-label="Review workspace"
+        aria-busy={stale || undefined}
+        className={cn(
+          "flex min-w-0 scroll-mt-36 flex-col gap-5 transition-opacity duration-200",
+          // Only a slow load dims the previous run (after 150 ms); a fast one just crossfades.
+          stale && "pointer-events-none opacity-55 delay-150"
+        )}
+      >
+        {shownRunId ? (
           <>
-            <RunHeader runId={runId} phase={phase} review={review} contract={viewContract} task={runSummary?.task ?? null} />
+            <RunHeader runId={shownRunId} phase={phase} review={review} contract={viewContract} task={runSummary?.task ?? null} />
             <StatsStrip review={review} trace={trace} />
           </>
         ) : null}
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="gap-5">
+        <Tabs value={tab} onValueChange={(v) => smoothly(() => setTab(v as Tab))} className="gap-5">
           <TabsList className="grid h-10! w-full grid-cols-4 sm:inline-flex sm:w-fit">
             <TabsTrigger value="review" className="px-3">
               <ScrollText aria-hidden className="hidden sm:block" />
@@ -198,7 +212,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
           </TabsList>
 
           <TabsContent value="review">
-            {!runId ? (
+            {!shownRunId ? (
               <Intro onUpload={() => setUploadOpen(true)} />
             ) : phase === "error" ? (
               <Empty className="border bg-card">
@@ -208,7 +222,7 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
                 </EmptyHeader>
               </Empty>
             ) : review ? (
-              <ReviewTab review={review} onJump={jumpToClause} runId={runId} />
+              <ReviewTab review={review} onJump={jumpToClause} runId={shownRunId} />
             ) : (
               <ReviewTabSkeleton />
             )}
@@ -217,17 +231,17 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
             <ContractTab
               contract={contract.data}
               loading={contract.loading}
-              error={contract.error ?? (runId && !viewDoc && !running ? "This run did not load a contract." : null)}
-              findings={runId ? (review?.findings ?? []) : []}
-              clauseMap={runId ? (review?.clause_map ?? null) : null}
+              error={contract.error ?? (shownRunId && !viewDoc && !running ? "This run did not load a contract." : null)}
+              findings={shownRunId ? (review?.findings ?? []) : []}
+              clauseMap={shownRunId ? (review?.clause_map ?? null) : null}
               focus={focus}
-              injected={runId ? (review?.injected ?? []) : []}
-              tripwires={runId ? (review?.tripwires ?? []) : []}
+              injected={shownRunId ? (review?.injected ?? []) : []}
+              tripwires={shownRunId ? (review?.tripwires ?? []) : []}
             />
           </TabsContent>
           <TabsContent value="trace">
-            {runId ? (
-              <TraceTab key={runId} trace={trace} running={running} />
+            {shownRunId ? (
+              <TraceTab key={shownRunId} trace={trace} running={running} />
             ) : (
               <Empty className="border bg-card">
                 <EmptyHeader>
