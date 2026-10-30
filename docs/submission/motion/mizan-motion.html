@@ -71,7 +71,23 @@ body.render { display: block; background: var(--background); }
 .chip.ok { background: var(--approve-soft); color: var(--approve); }
 .chip.brass { background: var(--brass-soft); color: var(--brass-ink); }
 .label { font-size: 18px; color: var(--muted-fg); font-weight: 500; }
-.tok { position: relative; display: inline-block; }
+.tok { position: relative; display: inline-block; isolation: isolate; }
+.scanline { position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--brass); opacity: 0;
+  box-shadow: 0 0 0 1px oklch(0.6 0.105 76 / 0.15); }
+/* A rubber stamp: ink border, slightly rotated, multiplied into the paper. */
+.stamp { position: absolute; padding: 4px 16px; border: 4px solid currentColor; border-radius: 8px;
+  font-size: 34px; font-weight: 750; letter-spacing: 0.06em; mix-blend-mode: multiply; opacity: 0;
+  transform-origin: center; }
+.meter .rail { position: relative; height: 10px; border-radius: 5px; background: var(--muted); margin-top: 40px; }
+.meter .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; }
+.meter .stop { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%;
+  background: var(--paper); border: 2px solid var(--line); }
+.meter .knob { position: absolute; top: 50%; width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%;
+  background: var(--paper); border: 5px solid; }
+.meter .names { display: flex; justify-content: space-between; margin-top: 22px; font-size: 21px; }
+.meter .names span { width: 120px; text-align: center; }
+.meter .names span:first-child { text-align: left; margin-left: -6px; }
+.meter .names span:last-child { text-align: right; margin-right: -6px; }
 .tok .a, .tok .b { white-space: nowrap; }
 .tok .a { display: inline-block; }
 .tok .b { position: absolute; left: 0; top: -1px; font-family: "Plex Mono", monospace; font-size: 0.92em;
@@ -139,54 +155,61 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
   <!-- S1: upload -->
   <section class="scene" id="s1">
     <div class="cap" id="c1"><div class="num">01</div><h2>Upload</h2>
-      <p>A PDF, Word file, scan or phone photo, in Arabic, English or both. Each contract gets a label.</p></div>
+      <p>A PDF, Word file, scan or phone photo, in Arabic, English or both.</p></div>
     <div id="s1files"></div>
-    <div class="card" id="s1doc" style="left:810px; top:270px; width:380px; height:500px; padding:34px 34px">
-      <div style="font-size:25px; font-weight:650; letter-spacing:-0.01em; line-height:1.2">Logistics services agreement</div>
-      <div class="label" style="margin-top:10px">English · 14 pages · PDF</div>
-      <div class="doc-lines" style="margin-top:34px">
+    <div class="card" id="s1doc" style="left:800px; top:220px; width:450px; height:330px; padding:26px 28px">
+      <div style="font-size:22px; font-weight:650; line-height:1.2">Logistics services agreement</div>
+      <div class="label" style="margin-top:8px">English · 14 pages · PDF</div>
+      <div class="doc-lines" style="margin-top:28px">
         <i style="width:92%"></i><i style="width:84%"></i><i style="width:96%"></i><i style="width:60%"></i>
         <i style="width:0; height:10px"></i>
         <i style="width:90%"></i><i style="width:94%"></i><i style="width:72%"></i>
-        <i style="width:0; height:10px"></i>
-        <i style="width:88%"></i><i style="width:80%"></i><i style="width:50%"></i>
       </div>
-    </div>
-    <div id="s1pick" class="abs" style="left:1270px; top:300px; width:530px">
-      <div class="label" style="font-size:21px; margin-bottom:18px">Who may see this contract?</div>
-      <div id="s1opts"></div>
     </div>
   </section>
 
-  <!-- S2: data policy -->
+  <!-- S2: label, then the data policy -->
   <section class="scene" id="s2">
-    <div class="cap" id="c2"><div class="num">02</div><h2>Data policy</h2>
-      <p>Internal contracts reach the model with names, emails and account numbers replaced. Restricted contracts never leave your network.</p></div>
+    <div class="cap" id="c2"><div class="num">02</div><h2>Label</h2>
+      <p>Mizan reads every contract on this server, before any model sees it, and suggests who may see it. Then the data policy decides what may leave.</p></div>
     <div id="s2gate" class="abs" style="left:1318px; top:200px; width:4px; height:760px"></div>
-    <div class="abs label" style="left:800px; top:160px; font-size:20px">Inside your network</div>
-    <div class="abs label" style="left:1350px; top:160px; font-size:20px">External model</div>
-    <div class="card" id="s2a" style="left:800px; top:220px; width:450px; padding:26px 28px; font-size:21px; line-height:1.75">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-        <span style="font-weight:650; font-size:22px">Logistics services agreement</span><span class="chip brass">Internal</span>
-      </div>
+    <div id="s2in" class="abs label" style="left:800px; top:160px; font-size:20px">Inside your network</div>
+    <div id="s2out" class="abs label" style="left:1350px; top:160px; font-size:20px">External model</div>
+
+    <div class="card" id="s2a" style="left:800px; top:220px; width:450px; padding:26px 28px 92px; font-size:21px; line-height:1.75; overflow:hidden">
+      <div style="font-weight:650; font-size:22px; margin-bottom:10px">Logistics services agreement</div>
       <div>This agreement is between</div>
-      <div><span class="tok"><span class="a">Wadi Freight Co.</span><span class="b">[PARTY-1]</span></span> (the “Supplier”)</div>
-      <div>and <span class="tok"><span class="a">Ramla Retail Co.</span><span class="b">[PARTY-2]</span></span> (the “Customer”).</div>
-      <div>Notices: <span class="tok"><span class="a">legal@wadifreight.example</span><span class="b">[EMAIL-1]</span></span></div>
-      <div>IBAN: <span class="tok"><span class="a">SA44 2000 0001 2345 6789 1234</span><span class="b">[IBAN-1]</span></span></div>
+      <div><span class="tok"><span class="hl"></span><span class="a">Wadi Freight Co.</span><span class="b">[PARTY-1]</span></span> (the “Supplier”)</div>
+      <div>and <span class="tok"><span class="hl"></span><span class="a">Ramla Retail Co.</span><span class="b">[PARTY-2]</span></span> (the “Customer”).</div>
+      <div>Notices: <span class="tok"><span class="hl"></span><span class="a">legal@wadifreight.example</span><span class="b">[EMAIL-1]</span></span></div>
+      <div>IBAN: <span class="tok"><span class="hl"></span><span class="a">SA44 2000 0001 2345 6789 1234</span><span class="b">[IBAN-1]</span></span></div>
+      <div class="scanline" id="s2scanA"></div>
+      <div class="stamp" id="s2stampA" style="right:30px; bottom:22px; color:var(--brass-ink)">INTERNAL</div>
     </div>
-    <div id="s2anote" class="abs" style="left:1350px; top:560px; width:450px; font-size:21px; line-height:1.45; color:var(--muted-fg)">
-      4 identifiers hidden. The real values come back in everything people read and send.
+    <div id="s2chips"></div>
+
+    <div id="s2meterA" class="meter abs" style="left:1380px; top:220px; width:420px"></div>
+    <div id="s2foundlbl" class="abs label" style="left:1380px; top:400px; font-size:20px">Found in the text</div>
+    <div id="s2why" class="abs" style="left:1380px; top:610px; width:420px">
+      <div style="font-size:34px; font-weight:650; letter-spacing:-0.02em">Suggested: <span style="color:var(--brass-ink)">Internal</span></div>
+      <div style="font-size:20px; line-height:1.45; color:var(--muted-fg); margin-top:10px">Making it stricter is one click. Making it looser is recorded as a person’s decision.</div>
     </div>
-    <div class="card" id="s2b" style="left:800px; top:680px; width:470px; padding:24px 28px">
-      <div style="display:flex; justify-content:space-between; align-items:center">
-        <span style="font-weight:650; font-size:22px">Board-level supply agreement</span><span class="chip critical">Restricted</span>
-      </div>
-      <div class="doc-lines" style="margin-top:22px"><i style="width:90%"></i><i style="width:76%"></i><i style="width:84%"></i></div>
+
+    <div id="s2anote" class="abs" style="left:1350px; top:620px; width:450px; font-size:21px; line-height:1.45; color:var(--muted-fg)">
+      4 identifiers hidden on the way out. The real values come back in everything people read and send.
     </div>
-    <div id="s2bnote" class="abs" style="left:1350px; top:690px; width:450px">
-      <div style="font-size:26px; font-weight:650; color:var(--escalate)">Stopped at the boundary</div>
-      <div style="font-size:21px; line-height:1.45; color:var(--muted-fg); margin-top:8px">No model call. It goes to a lawyer with the reason.</div>
+
+    <div id="s2meterB" class="meter abs" style="left:800px; top:220px; width:470px"></div>
+    <div class="card" id="s2b" style="left:800px; top:420px; width:470px; padding:22px 28px 96px; overflow:hidden">
+      <div class="mono" style="font-size:17px; color:var(--escalate)"><mark id="s2mark">STRICTLY CONFIDENTIAL<span class="hl" style="background:var(--escalate-soft)"></span></mark></div>
+      <div style="font-weight:650; font-size:22px; margin-top:12px">Board-level supply agreement</div>
+      <div class="doc-lines" style="margin-top:20px"><i style="width:90%"></i><i style="width:76%"></i><i style="width:84%"></i><i style="width:58%"></i></div>
+      <div class="scanline" id="s2scanB"></div>
+      <div class="stamp" id="s2stampB" style="right:30px; bottom:24px; color:var(--escalate)">RESTRICTED</div>
+    </div>
+    <div id="s2bnote" class="abs" style="left:1350px; top:450px; width:450px">
+      <div style="font-size:30px; font-weight:650; color:var(--escalate)">Stopped at the boundary</div>
+      <div style="font-size:21px; line-height:1.45; color:var(--muted-fg); margin-top:8px">No model call. It goes to a lawyer with the reason: marked “Strictly confidential”.</div>
     </div>
   </section>
 
@@ -278,14 +301,53 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
       <div><b style="font-weight:600">3.2</b> pay each invoice within <s id="s6s1" style="color:var(--escalate)">15</s> <u id="s6i1" style="color:var(--approve); text-decoration-thickness:2px">30</u> days of receipt.</div>
       <div style="margin-top:10px"><b style="font-weight:600">7.4</b> Late payments bear <s id="s6s2" style="color:var(--escalate)">interest at 2% per month</s> <u id="s6i2" style="color:var(--approve); text-decoration-thickness:2px">a one-time fee of 1% of the overdue amount</u>.</div>
     </div>
-    <div class="card" id="s6b" style="left:800px; top:510px; width:480px; padding:24px 28px; font-size:22px; line-height:1.5">
-      <div class="label" style="margin-bottom:10px">Message to Wadi Freight Co.</div>
-      <div>We can sign once clauses 3.2 and 7.4 are changed as marked in the attached redline.</div>
-      <div style="margin-top:16px; position:relative; height:34px">
-        <span id="s6wait" class="chip ink abs" style="left:0; top:0">Waiting for your approval</span>
-        <span id="s6sent" class="chip ok abs" style="left:0; top:0">Sent</span>
+    <div class="card" id="s6b" style="left:800px; top:490px; width:480px; padding:20px 26px 22px; font-size:21px; line-height:1.5; transform-origin:center">
+      <div style="display:flex; gap:12px; font-size:19px"><span class="label" style="width:72px; font-size:19px">To</span><span>Wadi Freight Co.</span></div>
+      <div style="display:flex; gap:12px; font-size:19px; margin-top:6px; padding-bottom:12px; border-bottom:1.5px solid var(--border)">
+        <span class="label" style="width:72px; font-size:19px">Subject</span><span>Clauses 3.2 and 7.4</span></div>
+      <div style="margin-top:12px">We can sign once clauses 3.2 and 7.4 are changed as marked in the attached redline.</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px">
+        <span class="chip ink" style="font-size:17px; height:30px">redline.pdf</span>
+        <span id="s6send" class="chip" style="background:var(--primary); color:var(--primary-fg); height:42px; padding:0 18px">Approve and send</span>
       </div>
     </div>
+    <svg id="s6trail" class="abs" style="left:0; top:0; overflow:visible" width="1920" height="1080">
+      <defs><mask id="s6mask" maskUnits="userSpaceOnUse" x="0" y="0" width="2200" height="1080">
+        <path id="s6reveal" d="M1040 640 Q1460 300 2060 250" fill="none" stroke="#fff" stroke-width="16"/></mask></defs>
+      <path id="s6path" d="M1040 640 Q1460 300 2060 250" fill="none" stroke="var(--brass)" stroke-width="4"
+        stroke-linecap="round" stroke-dasharray="1 15" mask="url(#s6mask)"/>
+    </svg>
+    <svg id="s6env" class="abs" style="left:0; top:0; overflow:visible" width="150" height="100" viewBox="0 0 150 100">
+      <rect x="2" y="2" width="146" height="96" rx="6" fill="var(--paper)" stroke="var(--foreground)" stroke-width="3"/>
+      <path d="M4 96 L58 52 M146 96 L92 52" stroke="var(--line)" stroke-width="2.5" fill="none"/>
+      <g id="s6flap" style="transform-origin:75px 3px">
+        <path d="M3 3 L75 58 L147 3 Z" fill="var(--brass-soft)" stroke="var(--foreground)" stroke-width="3" stroke-linejoin="round"/>
+      </g>
+      <circle id="s6seal" cx="75" cy="56" r="11" fill="var(--brass)"/>
+    </svg>
+    <div class="card" id="s6receipt" style="left:800px; top:490px; width:480px; padding:20px 26px 22px">
+      <div class="label" style="font-size:19px">Message to Wadi Freight Co.</div>
+      <div style="display:flex; align-items:center; gap:14px; margin-top:12px">
+        <span class="chip ok" style="height:40px; font-size:21px; gap:8px">
+          <svg width="22" height="22" viewBox="0 0 24 24"><path id="s6rtick" d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="26" stroke-dashoffset="26"/></svg>
+          Sent</span>
+        <span style="font-size:21px">with the redline attached</span>
+      </div>
+      <div style="font-size:19px; color:var(--muted-fg); margin-top:12px">Nothing left before you approved it.</div>
+    </div>
+    <div class="card" id="s6dest" style="left:1540px; top:290px; width:270px; padding:14px 18px; display:flex; gap:14px; align-items:center">
+      <div id="s6av" style="flex:none; width:46px; height:46px; border-radius:50%; background:var(--primary); color:var(--primary-fg); display:grid; place-items:center; font-size:18px; font-weight:650">WF</div>
+      <div style="position:relative; flex:1">
+        <div style="font-size:20px; font-weight:600">Wadi Freight Co.</div>
+        <div style="position:relative; height:24px; margin-top:2px">
+          <span id="s6inbox" class="abs label" style="left:0; top:0; font-size:17px">Their inbox</span>
+          <span id="s6deliv" class="abs" style="left:0; top:0; font-size:17px; color:var(--approve); font-weight:600; opacity:0">Delivered</span>
+        </div>
+      </div>
+    </div>
+    <svg id="s6cursor" class="abs" style="left:0; top:0" width="30" height="42" viewBox="0 0 30 42">
+      <path d="M3 2 L3 33 L11 26 L16.5 38.5 L22 36 L16.5 24 L27 24 Z" fill="var(--foreground)" stroke="var(--paper)" stroke-width="2.2" stroke-linejoin="round"/>
+    </svg>
     <div class="label abs" id="s6other" style="left:1330px; top:170px; font-size:20px">Another contract, escalated</div>
     <div class="card" id="s6c" style="left:1330px; top:210px; width:470px; padding:24px 28px; font-size:22px; line-height:1.5">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px">
@@ -312,7 +374,7 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
       <p>Every suite was labelled before its first run. The results and traces are saved, and can be graded again without the model.</p></div>
     <div id="s7grid" class="abs" style="left:800px; top:230px; width:1000px; display:grid; grid-template-columns:1fr 1fr; column-gap:60px; row-gap:56px"></div>
     <div id="s7foot" class="abs" style="left:800px; top:850px; width:1000px; font-size:23px; color:var(--muted-fg)">
-      About 5 cents per contract. Same results with names hidden. 99 tests, no API calls.
+      About 5 cents per contract. Same results with names hidden. 118 tests, no API calls.
     </div>
   </section>
 
@@ -329,9 +391,9 @@ mark { background: transparent; color: inherit; position: relative; isolation: i
 
 <script>
 const DUR = 63;
-const STEPS = ["Upload", "Data policy", "Read", "Check", "Route", "Act", "Proof"];
-// Scene windows [start, end] in seconds.
-const S = [[0, 5], [5, 12.5], [12.5, 21], [21, 28.5], [28.5, 37.5], [37.5, 45.5], [45.5, 54.5], [54.5, 59], [59, 63]];
+const STEPS = ["Upload", "Label", "Read", "Check", "Route", "Act", "Proof"];
+// Scene windows [start, end] in seconds. The total stays 63 s: add_music.py fits the music to it.
+const S = [[0, 5], [5, 9.5], [9.5, 21], [21, 28.5], [28.5, 37.5], [37.5, 45.5], [45.5, 54.5], [54.5, 59], [59, 63]];
 
 const $ = (id) => document.getElementById(id);
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -387,20 +449,47 @@ FILES.forEach(([fmt, title, ar, rot], i) => {
   $("s1files").appendChild(el);
 });
 
-const OPTS = [
-  ["Public", "Samples and published terms. Sent as they are."],
-  ["Internal", "Names, emails and account numbers hidden from an external model."],
-  ["Restricted", "Never sent to an external model."],
-];
-OPTS.forEach(([name, desc], i) => {
-  const el = document.createElement("div");
-  el.style.cssText = "position:relative; display:flex; gap:18px; padding:20px 22px; border:1.5px solid var(--border); border-radius:8px; margin-bottom:14px; background:var(--paper)";
-  el.innerHTML = `<div style="flex:none; width:26px; height:26px; border-radius:50%; border:2px solid var(--line); margin-top:3px; display:grid; place-items:center">
-      <div class="dot" style="width:12px; height:12px; border-radius:50%; background:var(--primary); opacity:0"></div></div>
-    <div><div style="font-size:24px; font-weight:600">${name}</div><div style="font-size:19px; color:var(--muted-fg); margin-top:4px; line-height:1.35">${desc}</div></div>
-    <div class="ring" style="position:absolute; inset:-1.5px; border:2.5px solid var(--primary); border-radius:8px; opacity:0"></div>`;
-  $("s1opts").appendChild(el);
+// The label meter: Public, Internal, Restricted on one rail, with a knob Mizan moves.
+const LEVELS = [["Public", "var(--approve)"], ["Internal", "var(--brass)"], ["Restricted", "var(--escalate)"]];
+["s2meterA", "s2meterB"].forEach((id) => {
+  $(id).innerHTML = `<div class="label" style="font-size:21px">Mizan suggests</div>
+    <div class="rail"><div class="fill"></div>
+      <div class="stop" style="left:0"></div><div class="stop" style="left:50%"></div><div class="stop" style="left:100%"></div>
+      <div class="knob"></div></div>
+    <div class="names">${LEVELS.map(([n]) => `<span>${n}</span>`).join("")}</div>`;
 });
+function meter(id, pos, o) {
+  const m = $(id);
+  m.style.opacity = o;
+  const lvl = pos < 0.25 ? 0 : pos < 0.75 ? 1 : 2;
+  const col = LEVELS[lvl][1];
+  m.querySelector(".knob").style.left = pos * 100 + "%";
+  m.querySelector(".knob").style.borderColor = col;
+  m.querySelector(".fill").style.width = pos * 100 + "%";
+  m.querySelector(".fill").style.background = col;
+  [...m.querySelectorAll(".names span")].forEach((s, i) => {
+    s.style.color = i === lvl ? col : "var(--muted-fg)";
+    s.style.fontWeight = i === lvl ? 650 : 450;
+  });
+}
+// What the scan finds in contract A; each one flies to the meter.
+const FOUND = ["Party name", "Party name", "Email address", "IBAN"];
+FOUND.forEach((k) => {
+  const el = document.createElement("span");
+  el.className = "chip brass abs";
+  el.textContent = k;
+  el.style.cssText = "left:0; top:0; font-size:20px; height:40px; padding:0 16px";
+  $("s2chips").appendChild(el);
+});
+// A stamp lands hard: falls from large, hits, the paper jolts.
+function stamp(el, card, l, at, rot) {
+  const k = p(l, at - 0.22, 0.22);
+  const fall = k * k; // accelerating
+  const s = l < at ? lerp(2.4, 1, fall) : 1 + 0.06 * Math.exp(-(l - at) * 14) * Math.sin((l - at) * 40);
+  el.style.opacity = l < at - 0.22 ? 0 : Math.min(0.92, fall * 1.2);
+  el.style.transform = `rotate(${lerp(rot - 10, rot, fall)}deg) scale(${s})`;
+  return l > at ? 5 * Math.exp(-(l - at) * 12) * Math.sin((l - at) * 50) : 0; // card jolt, px
+}
 
 for (let i = 0; i < 17; i++) {
   const el = document.createElement("i");
@@ -479,7 +568,21 @@ function measureTrack() {
     tk.style.width = "";
     tk._wa = tk.querySelector(".a").offsetWidth;
     tk._wb = tk.querySelector(".b").offsetWidth;
+    tk._x = tk.offsetLeft; // within its card, unaffected by transforms
+    tk._y = tk.offsetTop;
   });
+  $("s2a")._h = $("s2a").offsetHeight;
+  $("s2b")._h = $("s2b").offsetHeight;
+  // The send button's centre and the message card's centre, in stage pixels.
+  const card = $("s6b"), btn = $("s6send");
+  card._bx = 800 + btn.offsetLeft + btn.offsetWidth / 2;
+  card._by = 490 + btn.offsetTop + btn.offsetHeight / 2;
+  card._cy = 490 + card.offsetHeight / 2;
+  card._ey = 490 + card.offsetHeight + 80; // the envelope's centre, below the letter
+  const d = `M1040 ${card._ey} Q1330 260 1606 327`; // same curve as s6()
+  $("s6path").setAttribute("d", d);
+  $("s6reveal").setAttribute("d", d);
+  $("s6path")._len = $("s6path").getTotalLength();
   trackPos = [...$("track").children].map((c) => {
     const r = c.getBoundingClientRect();
     return { x: (r.left - stage.left) / k, w: r.width / k };
@@ -524,73 +627,106 @@ function s0(t) {
 
 function s1(t) {
   const l = scene(1, t);
-  show($("c1"), l, 0.2, 7.5);
+  show($("c1"), l, 0.2, 4.0);
   const files = [...$("s1files").children];
-  const merge = eio(p(l, 2.6, 1.0));
+  const merge = eio(p(l, 1.5, 0.9));
   files.forEach((el, i) => {
-    const a = eo(p(l, 0.4 + i * 0.18, 0.6));
-    const cx = 800 + i * 205 + 90, tx = 1000; // fly to the contract card's centre
+    const a = eo(p(l, 0.3 + i * 0.12, 0.5));
+    const cx = 800 + i * 205 + 90, tx = 1025; // fly into the contract card
     const rot = +el.dataset.rot;
     tf(el, {
-      o: a * (1 - p(l, 3.2, 0.4)),
+      o: a * (1 - p(l, 2.1, 0.4)),
       x: (tx - cx) * merge,
-      y: (1 - a) * 40 + merge * 120,
-      s: lerp(1, 0.7, merge),
+      y: (1 - a) * 40 + merge * 30,
+      s: lerp(1, 0.6, merge),
       r: rot * (1 - merge),
     });
   });
-  const d = eo(p(l, 3.1, 0.7));
-  tf($("s1doc"), { o: d * (1 - eio(p(l, 7.05, 0.45))), s: lerp(0.9, 1, d) });
-  show($("s1pick"), l, 4.0, 7.5, 18);
-  // Selection moves from nothing to Internal.
-  const opts = [...$("s1opts").children];
-  const sel = eo(p(l, 5.0, 0.4));
-  opts.forEach((el, i) => {
-    const on = i === 1 ? sel : 0;
-    el.querySelector(".dot").style.opacity = on;
-    el.querySelector(".dot").style.transform = `scale(${on})`;
-    el.querySelector(".ring").style.opacity = on;
-    tf(el, { o: eo(p(l, 4.2 + i * 0.15, 0.5)), x: (1 - eo(p(l, 4.2 + i * 0.15, 0.5))) * 24 });
-  });
+  const d = eo(p(l, 2.2, 0.6));
+  tf($("s1doc"), { o: d * (1 - eio(p(l, 4.05, 0.45))), s: lerp(0.9, 1, d) });
 }
 
 function s2(t) {
   const l = scene(2, t);
-  show($("c2"), l, 0.2, 8.5);
+  show($("c2"), l, 0.2, 11.0);
+  const a = $("s2a"), b = $("s2b");
+  const H = a._h || 280;
+
+  /* A: Mizan reads contract A and suggests its label. */
+  const scan = p(l, 0.9, 1.6);
+  $("s2scanA").style.top = scan * H + "px";
+  $("s2scanA").style.opacity = scan > 0 && scan < 1 ? 1 : 0;
+  const outA = 1 - eio(p(l, 5.15, 0.45)); // the suggestion panel leaves
+  show($("s2foundlbl"), l, 1.2, 5.6, 10);
+  const toks = [...a.querySelectorAll(".tok")];
+  const chips = [...$("s2chips").children];
+  const STEP = [0.2, 0.14, 0.1, 0.06]; // each find pushes the knob further from Public
+  let pos = 0, lastArrive = 0;
+  toks.forEach((tk, i) => {
+    const hit = 0.9 + 1.6 * ((tk._y || 0) + 16) / H;
+    tk.querySelector(".hl").style.transform = `scaleX(${eo(p(l, hit, 0.25))})`;
+    const fly = eio(p(l, hit + 0.1, 0.7));
+    const arrive = hit + 0.8;
+    lastArrive = Math.max(lastArrive, arrive);
+    const x0 = 800 + (tk._x || 0), y0 = 220 + (tk._y || 0) - 2;
+    const x1 = 1380 + (i % 2) * 196, y1 = 440 + Math.floor(i / 2) * 58;
+    const c = chips[i];
+    c.style.left = lerp(x0, x1, fly) + "px";
+    c.style.top = lerp(y0, y1, fly) - 110 * Math.sin(fly * Math.PI) + "px";
+    c.style.opacity = (l > hit + 0.1 ? 1 : 0) * outA;
+    c.style.transform = `scale(${lerp(0.8, 1, eo(p(l, hit + 0.1, 0.3)))}) rotate(${-8 * Math.sin(fly * Math.PI)}deg)`;
+    const land = eo(p(l, arrive - 0.05, 0.35));
+    pos += STEP[i] * land + (l > arrive ? 0.03 * Math.exp(-(l - arrive) * 8) * Math.sin((l - arrive) * 24) : 0);
+  });
+  const mA = eo(p(l, 0.5, 0.6));
+  meter("s2meterA", Math.max(0, pos), mA * outA);
+  $("s2meterA").style.transform = `translateY(${(1 - mA) * 18}px)`;
+  const jolt = stamp($("s2stampA"), a, l, lastArrive + 0.45, -8);
+  show($("s2why"), l, lastArrive + 0.65, 5.6, 14);
+
+  /* B: the data policy. Contract A crosses the boundary with its identifiers hidden. */
   const gate = $("s2gate");
-  const g = eo(p(l, 0.3, 0.8));
-  const block = p(l, 5.4, 0.3);
-  const gateColor = block > 0 && l < 8 ? "var(--escalate)" : "var(--brass)";
+  const g = eo(p(l, 5.4, 0.6));
+  const stopped = l > 10.45;
+  const gateColor = stopped ? "var(--escalate)" : "var(--brass)";
   gate.style.background = `repeating-linear-gradient(to bottom, ${gateColor} 0 14px, transparent 14px 24px)`;
   gate.style.clipPath = `inset(0 0 ${(1 - g) * 100}% 0)`;
-  gate.style.opacity = 1 - eio(p(l, 8.05, 0.45));
-  [...document.querySelectorAll("#s2 > .label")].forEach((el) => show(el, l, 0.5, 8.5, 10));
-
-  // Card A crosses the boundary; identifiers swap as it passes.
-  const a = $("s2a");
-  const ain = eo(p(l, 0.6, 0.6));
-  const cross = eio(p(l, 1.9, 1.6));
-  tf(a, { o: ain * (1 - eio(p(l, 8.05, 0.45))), x: cross * 548, y: (1 - ain) * 20 });
-  const toks = [...a.querySelectorAll(".tok")];
+  gate.style.opacity = 1 - eio(p(l, 11.05, 0.45));
+  show($("s2in"), l, 5.5, 11.5, 10);
+  show($("s2out"), l, 5.5, 11.5, 10);
+  const ain = eo(p(l, 0.2, 0.6));
+  const cross = eio(p(l, 5.8, 1.2));
+  tf(a, { o: ain * (1 - eio(p(l, 8.0, 0.4))), x: cross * 548, y: (1 - ain) * 20 + jolt });
   toks.forEach((tk, i) => {
-    const sw = p(l, 2.5 + i * 0.12, 0.5);
+    const sw = p(l, 6.2 + i * 0.12, 0.5);
     const w = lerp(tk._wa, tk._wb, eio(sw));
     tk.style.width = w + "px";
     const ea = tk.querySelector(".a");
     ea.style.opacity = 1 - clamp(sw * 2);
     ea.style.clipPath = `inset(0 ${Math.max(0, tk._wa - w)}px 0 0)`;
     tk.querySelector(".b").style.opacity = clamp(sw * 2 - 1);
+    tk.querySelector(".hl").style.opacity = 1 - clamp(sw * 2);
   });
-  show($("s2anote"), l, 3.8, 8.5, 14);
+  show($("s2anote"), l, 6.9, 8.4, 14);
 
-  // Card B is Restricted: it reaches the boundary and stops.
-  const b = $("s2b");
-  const bin = eo(p(l, 4.2, 0.5));
-  const go = p(l, 4.5, 0.9);
+  /* C: contract B is marked "Strictly confidential". Restricted, and it stops at the boundary. */
+  const mB = eo(p(l, 8.1, 0.5));
+  const swing = eio(p(l, 8.85, 0.6));
+  const settle = l > 9.45 ? -0.05 * Math.exp(-(l - 9.45) * 7) * Math.sin((l - 9.45) * 22) : 0;
+  const outC = 1 - eio(p(l, 11.05, 0.45));
+  meter("s2meterB", clamp(swing + settle, 0, 1.03), mB * outC);
+  $("s2meterB").style.transform = `translateY(${(1 - mB) * 18}px)`;
+  const bin = eo(p(l, 8.2, 0.5));
+  const scanB = p(l, 8.5, 0.6);
+  $("s2scanB").style.top = scanB * (b._h || 230) + "px";
+  $("s2scanB").style.opacity = scanB > 0 && scanB < 1 ? 1 : 0;
+  b.querySelector(".hl").style.transform = `scaleX(${eo(p(l, 8.6, 0.3))})`;
+  const joltB = stamp($("s2stampB"), b, l, 9.65, -7);
+  const go = p(l, 9.95, 0.5);
   const bx = 48 * Math.sin(Math.min(go, 1) * Math.PI / 2);
-  const bounce = l > 5.4 ? -14 * Math.exp(-(l - 5.4) * 6) * Math.sin((l - 5.4) * 18) : 0;
-  tf(b, { o: bin * (1 - eio(p(l, 8.05, 0.45))), x: bx + bounce });
-  show($("s2bnote"), l, 5.6, 8.5, 14);
+  const bounce = l > 10.45 ? -16 * Math.exp(-(l - 10.45) * 6) * Math.sin((l - 10.45) * 18) : 0;
+  tf(b, { o: bin * outC, x: bx + bounce, y: (1 - bin) * 20 + joltB });
+  show($("s2bnote"), l, 10.5, 11.5, 14);
 }
 
 function s3(t) {
@@ -684,17 +820,77 @@ function s6(t) {
   $("s6s2").style.color = s2 > 0.5 ? "var(--escalate)" : "inherit";
   $("s6i1").style.opacity = i1;
   $("s6i2").style.opacity = i2;
-  show($("s6b"), l, 2.4, 8.5);
-  const sent = eo(p(l, 3.9, 0.35));
-  $("s6wait").style.opacity = 1 - sent;
-  tf($("s6sent"), { o: sent, s: lerp(0.85, 1, sent) });
-  show($("s6other"), l, 4.4, 8.5, 10);
-  show($("s6c"), l, 4.5, 8.5);
-  const press = p(l, 5.6, 0.25);
-  $("s6btn").style.transform = `scale(${1 - 0.06 * Math.sin(press * Math.PI)})`;
-  $("s6arr").style.strokeDashoffset = 110 * (1 - eo(p(l, 5.8, 0.5)));
+  // The message: a cursor presses Approve and send; the letter slides into an envelope, the flap
+  // seals, the envelope flies to the supplier's inbox, and a Sent card takes the letter's place.
+  const card = $("s6b");
+  const ecx = 1040, ecy = card._ey || 800; // where the open envelope waits, below the letter
+  const cin = eo(p(l, 1.6, 0.5));
+  const tuck = eio(p(l, 3.4, 0.6)); // the letter shrinks and drops into the envelope's mouth
+  card.style.zIndex = 2; // in front of the envelope until it is inside
+  tf(card, {
+    o: cin * (1 - p(l, 3.88, 0.12)),
+    y: (1 - cin) * 22 + tuck * (ecy - 20 - (card._cy || 640)),
+    s: lerp(1, 0.18, tuck),
+  });
+  const press = p(l, 2.98, 0.22);
+  $("s6send").style.transform = `scale(${1 - 0.08 * Math.sin(press * Math.PI)})`;
+  $("s6send").style.filter = press > 0 && press < 1 ? "brightness(1.25)" : "none";
+  const cur = $("s6cursor");
+  const mv = eio(p(l, 2.25, 0.7));
+  const bx = card._bx || 1150, by = card._by || 735;
+  const cx = lerp(1330, bx - 4, mv), cy = lerp(960, by - 6, mv);
+  const tap = 1 - 0.12 * Math.sin(press * Math.PI);
+  cur.style.opacity = eo(p(l, 2.2, 0.25)) * (1 - p(l, 3.3, 0.25));
+  cur.style.transform = `translate(${cx}px, ${cy}px) scale(${tap})`;
+
+  const ein = eo(p(l, 3.25, 0.3)); // the open envelope appears under the letter
+  const flap = eio(p(l, 3.95, 0.3));
+  const fly = p(l, 4.4, 0.85);
+  const f = eio(fly);
+  const dest = [1606, 327]; // the supplier's avatar on the inbox badge
+  const P0 = [ecx, ecy], P1 = [1330, 260], P2 = dest;
+  const bez = (k, i) => (1 - k) * (1 - k) * P0[i] + 2 * (1 - k) * k * P1[i] + k * k * P2[i];
+  const ex = bez(f, 0), ey = bez(f, 1);
+  const dx = 2 * (1 - f) * (P1[0] - P0[0]) + 2 * f * (P2[0] - P1[0]);
+  const dy = 2 * (1 - f) * (P1[1] - P0[1]) + 2 * f * (P2[1] - P1[1]);
+  const heading = fly > 0 && fly < 1 ? (Math.atan2(dy, dx) * 180) / Math.PI * 0.45 * Math.sin(fly * Math.PI) : 0;
+  const lift = -14 * eio(p(l, 4.2, 0.2)); // a small hop before it goes
+  const env = $("s6env");
+  const arrived = p(l, 5.2, 0.15);
+  env.style.opacity = ein * (1 - arrived);
+  env.style.transform = `translate(${ex - 75}px, ${ey - 50 + lift * (1 - f)}px) rotate(${heading}deg) scale(${lerp(1.35, 1, eio(p(l, 4.1, 0.3))) * lerp(1, 0.32, f)})`;
+  $("s6flap").style.transform = `scaleY(${lerp(-1, 1, flap)})`;
+  $("s6seal").style.opacity = p(l, 4.18, 0.08);
+  $("s6seal").style.transform = `scale(${lerp(1.7, 1, eo(p(l, 4.18, 0.15)))})`;
+  $("s6seal").style.transformOrigin = "75px 56px";
+  // The trail follows the envelope and fades once it lands.
+  const len = $("s6path")._len || 900;
+  $("s6path").setAttribute("d", `M${P0[0]} ${P0[1]} Q${P1[0]} ${P1[1]} ${P2[0]} ${P2[1]}`);
+  $("s6reveal").setAttribute("d", `M${P0[0]} ${P0[1]} Q${P1[0]} ${P1[1]} ${P2[0]} ${P2[1]}`);
+  $("s6reveal").style.strokeDasharray = `${len} ${len}`;
+  $("s6reveal").style.strokeDashoffset = len * (1 - f);
+  $("s6trail").style.opacity = l < 4.4 ? 0 : 1 - eio(p(l, 5.25, 0.4));
+  // The inbox badge waits on the right, takes the envelope with a pulse, says Delivered, then goes.
+  const din = eo(p(l, 3.9, 0.45)), dout = eio(p(l, 5.85, 0.4));
+  const pulse = l > 5.2 ? 0.07 * Math.exp(-(l - 5.2) * 7) * Math.sin((l - 5.2) * 26) : 0;
+  tf($("s6dest"), { o: din * (1 - dout), x: (1 - din) * 40 + dout * 40, s: 1 + pulse });
+  const dl = eo(p(l, 5.22, 0.25));
+  $("s6inbox").style.opacity = 1 - dl;
+  $("s6deliv").style.opacity = dl;
+  $("s6av").style.background = dl > 0.5 ? "var(--approve)" : "var(--primary)";
+  // The Sent card takes the letter's place.
+  const r = eo(p(l, 5.35, 0.45));
+  tf($("s6receipt"), { o: r * (1 - eio(p(l, 8.05, 0.45))), y: (1 - r) * 18, s: lerp(0.96, 1, r) });
+  $("s6rtick").style.strokeDashoffset = 26 * (1 - eo(p(l, 5.6, 0.35)));
+
+  show($("s6other"), l, 6.15, 8.5, 10);
+  const cl = eo(p(l, 6.2, 0.6));
+  tf($("s6c"), { o: cl * (1 - eio(p(l, 8.05, 0.45))), x: (1 - cl) * 60 });
+  const pressL = p(l, 6.95, 0.25);
+  $("s6btn").style.transform = `scale(${1 - 0.06 * Math.sin(pressL * Math.PI)})`;
+  $("s6arr").style.strokeDashoffset = 110 * (1 - eo(p(l, 7.1, 0.45)));
   $("s6arrow").style.opacity = 1 - eio(p(l, 8.05, 0.45));
-  show($("s6d"), l, 6.1, 8.5);
+  show($("s6d"), l, 7.3, 8.5);
 }
 
 function s7(t) {
