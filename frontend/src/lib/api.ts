@@ -45,6 +45,9 @@ export interface DataPolicyRecord {
   label_set_by?: "auto" | "person"
   label_detected?: Sensitivity | null
   label_reasons?: string[]
+  label_set_by_name?: string | null
+  label_set_at?: string | null
+  label_change_reason?: string | null
 }
 
 /** How a contract's text was obtained when it was read from a scan (local OCR). */
@@ -77,6 +80,33 @@ export interface ContractSummary {
   label_reasons?: string[]
   /** What the detector found, item by item (shown only on this server; card numbers masked). */
   label_evidence?: LabelEvidence[]
+  /** Sign-off on a person's change: who, when (ISO), and why (required when looser). */
+  label_set_by_name?: string | null
+  label_set_at?: string | null
+  label_change_reason?: string | null
+  /** For each level below the detected one: what must be answered to lower it there. */
+  label_lowering?: Partial<Record<Sensitivity, LoweringGround[]>>
+  /** False when your role may not open it (Restricted, not legal): nothing of its text is sent. */
+  readable?: boolean
+  /** Its newest finished review: open it instead of reviewing again. */
+  last_review?: { run_id: string; by: string | null; route: Route | null; at: number } | null
+  /** Who is reviewing it right now: one review at a time per contract. */
+  in_review?: { by: string | null; run_id: string; since: string } | null
+}
+
+/** Why a label is lowered (who signs it off comes from the signed-in account). */
+/** One fixed answer per finding, {group id: choice id}: never free text. */
+export interface LabelSignOff {
+  grounds?: Record<string, string>
+}
+
+/** A finding a person must answer to set a label below the detected one. */
+export interface LoweringGround {
+  id: string
+  title: string
+  /** What was found in the text, e.g. "STRICTLY CONFIDENTIAL". */
+  found: string[]
+  choices: { id: string; text: string }[]
 }
 
 export interface LabelEvidence {
@@ -123,6 +153,8 @@ export interface RunSummary {
   needs_human: NeedsHuman | null
   /** Set on demo replays: the recorded run this one replays (never a live run). */
   replay_of?: string | null
+  /** Who started it, when sign-in is on. */
+  by?: string | null
   started: number
 }
 
@@ -193,6 +225,8 @@ export interface ClearedFlag {
 
 export interface ReviewView {
   doc_id: string | null
+  /** The signed-in account that started this review, when sign-in is on. */
+  by?: string | null
   route: Route | null
   risk_score: number | null
   counts: Record<Severity, number> | null
@@ -430,6 +464,8 @@ export const SIGNED_OUT = "mizan:signed-out"
 export interface Me {
   user: string | null
   auth: boolean
+  /** e.g. legal or procurement; null when roles are off. Only legal opens Restricted contracts. */
+  role?: string | null
 }
 
 export class ApiError extends Error {
@@ -481,12 +517,11 @@ export const api = {
   contracts: () => request<ContractSummary[]>("/contracts"),
   contract: (docId: string) => request<Contract>(`/contracts/${enc(docId)}`),
   uploadContract: (form: FormData) => request<ContractSummary>("/contracts", { method: "POST", body: form }),
-  setSensitivity: (docId: string, sensitivity: Sensitivity) =>
-    request<
-      Pick<ContractSummary, "doc_id" | "sensitivity" | "label_set_by" | "label_detected" | "label_reasons" | "label_evidence">
-    >(`/contracts/${enc(docId)}/sensitivity`, {
+  /** A person's label change. Looser than the text calls for needs `reason` (and `by` without sign-in). */
+  setSensitivity: (docId: string, sensitivity: Sensitivity, signOff?: LabelSignOff) =>
+    request<ContractSummary>(`/contracts/${enc(docId)}/sensitivity`, {
       method: "PUT",
-      body: JSON.stringify({ sensitivity }),
+      body: JSON.stringify({ sensitivity, ...signOff }),
     }),
   playbook: () => request<PlaybookRule[]>("/playbook"),
   runs: (limit = 40) => request<RunSummary[]>(`/runs?limit=${limit}`),

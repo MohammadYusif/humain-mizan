@@ -104,6 +104,14 @@ def _source_line(source: dict | None) -> str:
     )
 
 
+def _day(iso: Any) -> str:
+    """'2026-10-30T18:02:11+00:00' -> '30 Oct 2026' ('' when absent or unreadable)."""
+    try:
+        return datetime.fromisoformat(str(iso)).strftime("%d %b %Y").lstrip("0") if iso else ""
+    except ValueError:
+        return ""
+
+
 def data_line(policy: dict[str, Any] | None) -> str:
     """Who saw the contract: the sensitivity label, where the model ran, and what was hidden."""
     if not policy:
@@ -113,13 +121,17 @@ def data_line(policy: dict[str, Any] | None) -> str:
     why = "; ".join(r[:1].lower() + r[1:] for r in policy.get("label_reasons") or [])
     if policy.get("label_set_by") == "auto":
         label += f" (suggested from the text: {why})" if why else " (suggested from the text)"
-    elif (
-        policy.get("label_set_by") == "person"
-        and detected
-        and detected != policy.get("sensitivity")
-    ):
-        reason = f" ({why})" if why else ""
-        label = f"Detected: {detected.capitalize()}{reason}. Set to {label} by a person"
+    elif policy.get("label_set_by") == "person":
+        who = policy.get("label_set_by_name") or "a person"
+        when = _day(policy.get("label_set_at"))
+        signed = f"Set to {label} by {who}{f' on {when}' if when else ''}"
+        if change := policy.get("label_change_reason"):
+            signed += f", reason: {change}"
+        if detected and detected != policy.get("sensitivity"):
+            reason = f" ({why})" if why else ""
+            label = f"Detected: {detected.capitalize()}{reason}. {signed}"
+        elif policy.get("label_set_by_name"):
+            label = signed
     if not policy.get("allowed", True):
         return f"{label}. Not sent to any model: {policy.get('reason', '')}"
     where = (

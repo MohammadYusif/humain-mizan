@@ -10,6 +10,7 @@ from ..config import Settings
 from ..tools import ToolRegistry
 from . import contracts as C
 from . import policy as P
+from .messages import requested_changes
 from .playbook import BY_ID, as_dicts
 from .review import VALID_TYPES, Finding, Review, score, severity_of
 
@@ -443,7 +444,21 @@ def build_registry(
         precheck=lambda a: act(a.doc_id, "negotiate", "sending to the counterparty"),
     )
     def send_to_counterparty(a: SendArgs) -> str:
-        outbox("counterparty", {"doc_id": a.doc_id, "message": restored(a.doc_id, a.message)})
+        # The message is built by code from the recorded redlines, not taken from the model.
+        r = review_of(a.doc_id)
+        texts = {c.id: c.text for c in r.contract.clauses}
+        order = {"critical": 0, "major": 1}
+        found = [
+            {
+                **f.__dict__,
+                "clause_type": BY_ID[f.rule_id].clause_type if f.rule_id in BY_ID else "",
+            }
+            for f in sorted(
+                r.findings.values(), key=lambda f: (order.get(f.severity, 2), f.clause_id)
+            )
+        ]
+        message = requested_changes(r.contract.title or a.doc_id, found, texts) or a.message
+        outbox("counterparty", {"doc_id": a.doc_id, "message": restored(a.doc_id, message)})
         return "sent to counterparty"
 
     @registry.register(

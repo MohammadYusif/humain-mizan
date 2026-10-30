@@ -124,8 +124,9 @@ export function useRuns(keepPolling: boolean) {
   return { runs: data, error, refresh }
 }
 
+/** Polled so everyone sees who is reviewing what: faster while any contract is held. */
 export function useContracts() {
-  return usePolled("contracts", loadContracts, () => null)
+  return usePolled("contracts", loadContracts, (list) => (list.some((c) => c.in_review) ? 3000 : 8000))
 }
 
 /** Items waiting for a human; polled so the header badge stays current. */

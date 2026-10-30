@@ -618,6 +618,7 @@ function SuiteSection({
   contracts,
   rowLabel,
   matrix = true,
+  real = false,
 }: {
   id: string
   icon: typeof Scale
@@ -628,6 +629,8 @@ function SuiteSection({
   /** Names each row when several runs share a model, e.g. "run 2". */
   rowLabel?: (m: EvalModel, i: number) => string
   matrix?: boolean
+  /** Contracts we did not write. */
+  real?: boolean
 }) {
   const ids = new Set(models.flatMap((m) => m.cases.map((c) => c.id)))
   return (
@@ -637,6 +640,7 @@ function SuiteSection({
           <CardTitle id={id} className="flex flex-wrap items-center gap-2 text-lg font-semibold">
             <Icon className="size-5 text-primary" aria-hidden />
             {title}
+            {real ? <RealBadge /> : null}
             <Badge variant="outline" className="rounded-md font-normal">
               {plural(ids.size, "contract")}
             </Badge>
@@ -692,7 +696,8 @@ function RealWorld({ models, contracts }: { models: EvalModel[]; contracts: Cont
         <CardHeader>
           <CardTitle id="real-h" className="flex flex-wrap items-center gap-2 text-lg font-semibold">
             <FileSearch className="size-5 text-primary" aria-hidden />
-            Real contracts
+            First real batch
+            <RealBadge />
             <Badge variant="outline" className="rounded-md font-normal">
               {plural(ids.size, "contract")}
             </Badge>
@@ -786,6 +791,124 @@ function RealWorld({ models, contracts }: { models: EvalModel[]; contracts: Cont
   )
 }
 
+/** Marks a section whose contracts we did not write. */
+function RealBadge() {
+  return <Badge className="rounded-md px-2 font-semibold">Real contracts</Badge>
+}
+
+const METHOD = [
+  "Answer key written before Mizan saw the contract",
+  "Committed to git before the run",
+  "Graded by code, not by a model",
+  "Every result kept, failures too",
+]
+
+function scrollToSection(id: string) {
+  const el = document.getElementById(id)
+  if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 88 })
+}
+
+function RealBatch({ m, title, note, target }: { m: EvalModel; title: string; note: string; target: string }) {
+  const s = m.summary
+  const bad = notSafe(safety(m))
+  const ind = s.independent_labels ?? 0
+  const found = Math.round((s.independent_recall ?? 0) * ind)
+  return (
+    <div className="flex flex-col gap-4 rounded-lg border bg-background/60 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h3 className="font-semibold">{title}</h3>
+        <span className="text-xs text-muted-foreground tabular">{plural(m.cases.length, "contract")}</span>
+      </div>
+      <div className="flex items-end gap-3">
+        <span
+          className={cn("font-heading text-5xl leading-none font-semibold tabular", bad ? "text-escalate" : "text-approve")}
+        >
+          {s.false_auto_approve}
+        </span>
+        <span className="pb-1 text-sm text-muted-foreground">risky contracts approved</span>
+      </div>
+      <dl className="grid grid-cols-3 gap-3 text-sm">
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-xs text-muted-foreground">Routes right</dt>
+          <dd className="font-semibold tabular">{percent(s.route_accuracy)}</dd>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-xs text-muted-foreground">Issues found</dt>
+          <dd className="font-semibold tabular">{percent(s.recall)}</dd>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <dt className="text-xs text-muted-foreground">Findings correct</dt>
+          <dd className="font-semibold tabular">{percent(s.precision)}</dd>
+        </div>
+      </dl>
+      {ind ? (
+        <p className="text-sm">
+          Found <span className="font-semibold tabular">{found} of {ind}</span> issues marked by outside annotators.
+        </p>
+      ) : null}
+      <p className="text-xs leading-relaxed text-muted-foreground">{note}</p>
+      <Button variant="outline" size="sm" className="w-fit" onClick={() => scrollToSection(target)}>
+        Every contract in this batch
+      </Button>
+    </div>
+  )
+}
+
+/** The real-contract results, up front: what was tested, how, and what came out. */
+function RealSpotlight({ real, real2 }: { real: EvalModel[]; real2: EvalModel[] }) {
+  const first = real.find((m) => m.variant === null) ?? real[0]
+  const second = real2.find((m) => m.variant === null) ?? real2[0]
+  const ids = new Set([first, second].filter(Boolean).flatMap((m) => m.cases.map((c) => c.id)))
+  const before = real.find((m) => m.variant !== null && safety(m).approved > 0)
+  return (
+    <Card className="gap-6 p-6 sm:p-8" aria-labelledby="real-spotlight-h">
+      <div className="flex flex-col gap-3">
+        <RealBadge />
+        <h2 id="real-spotlight-h" className="max-w-3xl text-2xl leading-snug font-semibold text-balance sm:text-3xl">
+          Tested on <span className="text-escalate">{ids.size} real contracts</span> we did not write
+        </h2>
+        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+          Public contracts from outside sources: company contracts filed with the US SEC, consumer terms of service,
+          and Saudi government model contracts in Arabic. Where outside annotators had marked issues (CUAD&apos;s
+          lawyer-reviewed annotations, CLAUDETTE), we scored against them.
+        </p>
+      </div>
+      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        {METHOD.map((t, i) => (
+          <li key={t} className="flex items-start gap-2.5 text-sm">
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-primary font-mono text-xs text-primary">
+              {i + 1}
+            </span>
+            <span className="pt-0.5">{t}</span>
+          </li>
+        ))}
+      </ol>
+      <div className={cn("grid gap-4", first && second && "md:grid-cols-2")}>
+        {first ? (
+          <RealBatch
+            m={first}
+            title="Batch 1: SEC filings, terms of service, Saudi government"
+            note={
+              before
+                ? `Its first run approved ${plural(safety(before).approved, "risky contract")}. That led to the liability-cap check; this is the re-run on the same contracts, so it is not blind.`
+                : "Run on the current version."
+            }
+            target="real-h"
+          />
+        ) : null}
+        {second ? (
+          <RealBatch
+            m={second}
+            title="Batch 2: SEC filings, blind"
+            note="Picked by a fixed rule so nobody chose them. Answer key committed before the only run, after the fix. Reported as it came out, misses included."
+            target="real2-h"
+          />
+        ) : null}
+      </div>
+    </Card>
+  )
+}
+
 export function ProofView({ contracts }: { contracts: ContractSummary[] | null }) {
   const { data, error } = useResource("evals", loadEvals)
 
@@ -834,6 +957,20 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
 
   return (
     <div className="flex flex-col gap-6">
+      {real.length || real2.length ? <RealSpotlight real={real} real2={real2} /> : null}
+      {real.length ? <RealWorld models={real} contracts={contracts} /> : null}
+      {real2.length ? (
+        <SuiteSection
+          id="real2-h"
+          icon={FileSearch}
+          title="Second real batch, blind"
+          real
+          description="Twelve more public SEC contracts from CUAD, picked by a fixed rule so nobody chose them, labelled from the text and CUAD's lawyer-reviewed annotations, and committed before the only run. None was approved and 11 of 12 routes matched. Recall was 66%: it found the liability, interest, indemnity and non-compete issues and missed most termination, payment-term and confidentiality-term issues. Reported as it came out."
+          models={real2}
+          contracts={contracts}
+        />
+      ) : null}
+      <h2 className="mt-2 font-heading text-xl font-semibold">Our own test contracts</h2>
       <Headline models={models} />
       <RoiCalculator
         model={models[0]}
@@ -885,17 +1022,6 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
           title="Reviewed with names hidden"
           description="The main contracts reviewed as Internal: party names, contact details, account and ID numbers replaced by placeholders before the model saw them, and put back for people afterwards. Measures what hiding identifiers costs in review quality. Product names and places are not replaced; places matter for governing law."
           models={redaction}
-          contracts={contracts}
-        />
-      ) : null}
-      {real.length ? <RealWorld models={real} contracts={contracts} /> : null}
-      {real2.length ? (
-        <SuiteSection
-          id="real2-h"
-          icon={FileSearch}
-          title="Second real batch, blind"
-          description="Twelve more public SEC contracts from CUAD, picked by a fixed rule so nobody chose them, labelled from the text and CUAD's lawyer-reviewed annotations, and committed before the only run. None was approved and 11 of 12 routes matched. Recall was 66%: it found the liability, interest, indemnity and non-compete issues and missed most termination, payment-term and confidentiality-term issues. Reported as it came out."
-          models={real2}
           contracts={contracts}
         />
       ) : null}

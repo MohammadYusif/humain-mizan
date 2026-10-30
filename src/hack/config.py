@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     # Long contracts (80-100 pages, ~150 clauses) need ~10 turns; the loop guard and budget stop runaways.
     max_turns: int = 40
     budget_usd: float = 5.0
+    # Reviews that may call the model on this deployment, in total (single runs and batches).
+    # Unset: no limit. A shared demo sets it so its API key cannot be used up.
+    max_reviews: int | None = None
     approve_writes: bool = False
     judge_model: str = "claude-sonnet-5-5"
     runs_dir: Path = Path("runs")
@@ -62,6 +65,9 @@ class Settings(BaseSettings):
 
     # Sign-in (see auth.py): off when no users are set; a deployment sets require_auth so it fails closed.
     auth_users: str = ""
+    # Roles: "sara:legal,omar:procurement". Only legal opens Restricted contracts and their
+    # reviews. Empty: roles are off and every signed-in person reads everything.
+    auth_roles: str = ""
     secret_key: str | None = None
     require_auth: bool = False
 

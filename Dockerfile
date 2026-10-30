@@ -4,7 +4,7 @@
 FROM node:26-slim AS web
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
@@ -15,13 +15,12 @@ COPY --from=ghcr.io/astral-sh/uv:0.12.5 /uv /uvx /bin/
 WORKDIR /app
 
 FROM base AS builder
-# Dependencies first so this layer is cached until pyproject/uv.lock change.
+# Dependencies first so this layer is cached until pyproject/uv.lock change. No BuildKit cache
+# mounts: Railway's builder rejects them without a service-specific id.
 COPY pyproject.toml uv.lock ./
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --all-extras --no-install-project
+RUN uv sync --frozen --no-dev --all-extras --no-install-project
 COPY src ./src
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --all-extras --no-editable
+RUN uv sync --frozen --no-dev --all-extras --no-editable
 
 FROM base AS runtime
 # Local OCR for scanned contracts (Tesseract, Apache-2.0): scans never leave the container for OCR.

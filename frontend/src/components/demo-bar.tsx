@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import type { DemoScene } from "@/lib/api"
+import { modelName } from "@/lib/format"
 import { go } from "@/lib/route"
 
 export interface DemoState {
@@ -35,19 +36,17 @@ export function DemoBar({ demo, finished, onNext, onRestart, onExit }: Props) {
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-2 pb-2 sm:px-6 sm:pb-5 print:hidden"
     >
       <Collapsible className="pointer-events-auto mx-auto flex max-w-3xl flex-col gap-2 rounded-lg border bg-popover p-3 shadow-md sm:gap-3 sm:p-5">
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-xs text-muted-foreground tabular">
+        <div className="flex items-start gap-2">
+          <span className="shrink-0 pt-0.5 text-xs text-muted-foreground tabular sm:pt-1.5">
             {demo.index + 1}/{demo.scenes.length}
           </span>
-          <h2 key={scene.id} className="min-w-0 flex-1 truncate text-sm font-semibold animate-in fade-in-0 slide-in-from-bottom-1 duration-300 sm:text-lg">
+          {/* The whole title, wrapping if it must: never cut off. */}
+          <h2
+            key={scene.id}
+            className="min-w-0 flex-1 text-sm font-semibold text-balance animate-in fade-in-0 slide-in-from-bottom-1 duration-300 sm:text-lg"
+          >
             {scene.title}
           </h2>
-          <span className="hidden sm:inline-flex">
-            <RouteBadge route={scene.route} />
-          </span>
-          <Badge variant="outline" className="shrink-0 rounded-sm border-dashed font-normal text-muted-foreground">
-            Replay<span className="hidden sm:inline">&nbsp;of a recorded {scene.model} run</span>
-          </Badge>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" size="icon" className="group size-9 sm:hidden" aria-label="Show the narration">
               <ChevronDown className="transition-transform group-data-[state=open]:rotate-180" aria-hidden />
@@ -56,6 +55,12 @@ export function DemoBar({ demo, finished, onNext, onRestart, onExit }: Props) {
           <Button variant="ghost" size="icon" className="size-9" onClick={onExit} aria-label="Exit the demo">
             <X aria-hidden />
           </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <RouteBadge route={scene.route} />
+          <Badge variant="outline" className="rounded-sm border-dashed font-normal text-muted-foreground">
+            Replay of a recorded {modelName(scene.model)} run
+          </Badge>
         </div>
         {/* Narration: always shown from sm up; on phones it sits behind the chevron to keep the bar short. */}
         <CollapsibleContent forceMount className="data-[state=closed]:max-sm:hidden">

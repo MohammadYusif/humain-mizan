@@ -1,9 +1,9 @@
-import { CircleCheck, FileText, LoaderCircle, Play, ScanText, Send, TriangleAlert, Upload, X } from "lucide-react"
+import { CircleCheck, FileText, LoaderCircle, Play, ScanSearch, ScanText, Send, TriangleAlert, Upload, X } from "lucide-react"
 import { cn } from "cn"
 import { useId, useState, type DragEvent, type FormEvent } from "react"
 import { toast } from "sonner"
 
-import { LabelSuggestion, SensitivityBadge, SensitivityPicker, type LabelChoice } from "@/components/data-policy"
+import { LabelSuggestion, SensitivityBadge } from "@/components/data-policy"
 import { useDataPolicy } from "@/hooks/use-data-policy"
 import { blocked } from "@/lib/data-policy"
 import { LangChips } from "@/components/new-review-panel"
@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { api, errorMessage, type ContractSummary, type OcrSource } from "@/lib/api"
+import { api, errorMessage, type ContractSummary, type LabelSignOff, type OcrSource, type Sensitivity } from "@/lib/api"
 import { contractTitle, langOf, plural } from "@/lib/format"
 
 const ACCEPT = [".pdf", ".docx", ".txt", ".md", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp"]
@@ -84,7 +84,6 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
   const [error, setError] = useState<string | null>(null)
   const [added, setAdded] = useState<ContractSummary | null>(null)
   const policy = useDataPolicy()
-  const [sensitivity, setLevel] = useState<LabelChoice>("auto")
 
   const reset = () => {
     setFile(null)
@@ -93,7 +92,6 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
     setError(null)
     setAdded(null)
     setBusy(false)
-    setLevel("auto")
   }
 
   const pick = (f: File | undefined) => {
@@ -124,7 +122,6 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
       form.append("text", text)
     }
     if (title.trim()) form.append("title", title.trim())
-    form.append("sensitivity", sensitivity)
     setBusy(true)
     setError(null)
     try {
@@ -140,6 +137,21 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
   }
 
   const ready = mode === "file" ? file !== null : text.trim().length > 0
+
+  // A person changes the suggested label right here: stricter at once, looser with a sign-off.
+  const relabel = (level: Sensitivity, signOff?: LabelSignOff) => {
+    if (!added) return
+    setBusy(true)
+    api
+      .setSensitivity(added.doc_id, level, signOff)
+      .then((r) => {
+        const next = { ...added, ...r }
+        setAdded(next)
+        onAdded(next)
+      })
+      .catch((e: unknown) => toast.error("Could not change the label", { description: errorMessage(e) }))
+      .finally(() => setBusy(false))
+  }
   const t = added ? contractTitle(added.title) : null
 
   return (
@@ -183,18 +195,8 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
               c={added}
               policy={policy}
               busy={busy}
-              onRestore={(l) => {
-                setBusy(true)
-                api
-                  .setSensitivity(added.doc_id, l)
-                  .then((r) => {
-                    const next = { ...added, ...r }
-                    setAdded(next)
-                    onAdded(next)
-                  })
-                  .catch((e: unknown) => toast.error("Could not change the label", { description: errorMessage(e) }))
-                  .finally(() => setBusy(false))
-              }}
+              onRestore={(l) => relabel(l)}
+              onChange={relabel}
             />
             <p className="text-sm text-muted-foreground">
               If the clause count looks wrong, the text may need clearer numbering or paragraph breaks. You can change
@@ -320,13 +322,14 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
               />
             </div>
 
-            <SensitivityPicker value={sensitivity} onChange={setLevel} policy={policy} />
-            {sensitivity !== "auto" ? (
-              <p className="-mt-3 text-xs text-muted-foreground">
-                Mizan still reads the text. If it calls for a stricter label, you will see that once the contract is
-                added, recorded as your decision.
-              </p>
-            ) : null}
+            <p className="flex items-start gap-2 rounded-md border bg-background/60 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+              <ScanSearch className="mt-px size-4 shrink-0 text-primary" aria-hidden />
+              <span>
+                <span className="font-medium text-foreground">Mizan labels it for you.</span> It reads the text on this
+                server before any model sees it, and shows the label it suggests with what it found. You can then raise
+                it in one click, or lower it with a sign-off.
+              </span>
+            </p>
 
             {error ? (
               <Alert className="border-escalate/40 bg-escalate-soft text-escalate">

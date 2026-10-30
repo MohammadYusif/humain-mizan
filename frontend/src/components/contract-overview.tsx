@@ -1,4 +1,4 @@
-import { FileText, Play, ScanText } from "lucide-react"
+import { FileText, Lock, Play, ScanText } from "lucide-react"
 
 import { LangChips } from "@/components/new-review-panel"
 import { Button } from "@/components/ui/button"
@@ -28,6 +28,22 @@ export function ContractOverview({
   onReview: () => void
   onRead: () => void
 }) {
+  if (summary.readable === false) {
+    // Your role may not open it: nothing of the contract or its reviews reaches this screen.
+    return (
+      <Card className="gap-3 px-5 py-8 sm:px-8">
+        <span className="flex items-center gap-2 text-sm font-semibold text-escalate">
+          <Lock className="size-4" aria-hidden />
+          Restricted
+        </span>
+        <p className="font-mono text-xs text-muted-foreground">{summary.doc_id}</p>
+        <p className="max-w-prose text-sm leading-relaxed text-foreground/90">
+          Only Legal can open this contract and its reviews, whoever reviewed it. Its text, findings and outcome are
+          not sent to your account. Ask Legal if you need the outcome.
+        </p>
+      </Card>
+    )
+  }
   const title = contractTitle(summary.title)
   const opening = contract?.clauses.slice(0, 3) ?? null
   return (

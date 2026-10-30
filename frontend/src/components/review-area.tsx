@@ -178,14 +178,14 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
           onDocChange={(id) => void pickContract(id)}
           note={
             shownRunId && !live && review?.status === "done" && review.doc_id === docId
-              ? "Showing this contract's latest review. Review contract runs a new one."
+              ? `Showing the latest review${review.by ? `, by ${review.by}` : ""}. Nobody needs to review it again; Review again runs a new one.`
               : null
           }
           onReview={() => void startReview()}
           onUpload={() => setUploadOpen(true)}
           busy={posting}
-          onRelabel={(doc, level) => {
-            api.setSensitivity(doc, level).then(
+          onRelabel={(doc, level, signOff) => {
+            api.setSensitivity(doc, level, signOff).then(
               () => refreshContracts(),
               (e: unknown) => toast.error("Could not change the label", { description: errorMessage(e) })
             )

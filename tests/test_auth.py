@@ -41,7 +41,7 @@ def test_sign_in_sets_a_session_and_sign_out_ends_it(client):
     assert r.status_code == 401 and "don't match" in r.json()["detail"]
     r = client.post("/auth/login", json={"username": "lawyer", "password": "correct horse battery"})
     assert r.status_code == 200 and "httponly" in r.headers["set-cookie"].lower()
-    assert client.get("/auth/me").json() == {"user": "lawyer", "auth": True}
+    assert client.get("/auth/me").json() == {"user": "lawyer", "auth": True, "role": None}
     assert client.get("/runs").status_code == 200
     client.post("/auth/logout")
     assert client.get("/runs").status_code == 401

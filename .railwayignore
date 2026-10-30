@@ -1,0 +1,17 @@
+# Never uploaded to Railway's builders (on top of .gitignore). The image needs only the app,
+# the sample contracts, the demo and the eval results; see .dockerignore for what it copies.
+.env
+.env.*
+!.env.example
+CLAUDE.md
+CONTEXT.md
+docs/
+data/
+private/
+runs/
+evals/results/
+tests/
+web/
+.venv/
+frontend/node_modules/
+frontend/dist/

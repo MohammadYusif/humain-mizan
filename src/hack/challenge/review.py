@@ -7,7 +7,7 @@ unclear, no finding contradicts its clause's declared type, and no clause tries 
 
 from dataclasses import dataclass, field
 
-from .contracts import Contract, find_injection, paginate
+from .contracts import Contract, find_injection, injection_quote, paginate
 from .playbook import BY_ID, PLAYBOOK
 from .tripwires import Tripwire, scan
 
@@ -53,6 +53,17 @@ class Finding:
     issue: str
     redline: str
     confidence: float
+
+
+def injection_reasons(contract: Contract, ids: list[str]) -> list[str]:
+    """One reason per clause that tries to instruct the reviewer, quoting what it asked for."""
+    out = []
+    for cid in ids:
+        clause = next((c for c in contract.clauses if c.id == cid), None)
+        quote = injection_quote(clause.text) if clause else ""
+        said = f": “{quote}”" if quote else ""
+        out.append(f"{cid} tries to instruct the AI reviewer; not followed, a lawyer decides{said}")
+    return out
 
 
 @dataclass
@@ -191,11 +202,7 @@ def score(review: Review) -> dict:
             )
     if (doubt := ocr_doubt(review.contract.source)) is not None:
         escalate.append(doubt)
-    if review.injected:
-        escalate.append(
-            f"{_pl(len(review.injected), 'Clause')} with instructions aimed at an AI reviewer (untrusted): "
-            f"{_ls(review.injected)}"
-        )
+    escalate.extend(injection_reasons(review.contract, review.injected))
     if any(
         f.severity == "major" and (f.confidence < MIN_CONFIDENCE or not f.redline.strip())
         for f in fs

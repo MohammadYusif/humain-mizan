@@ -22,6 +22,7 @@ import ipaddress
 import json
 import re
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -43,13 +44,22 @@ def meta_path(contract_path: Path) -> Path:
 
 
 def write_label(
-    contract_path: Path, level: str, set_by: str = "person", detection: Detection | None = None
+    contract_path: Path,
+    level: str,
+    set_by: str = "person",
+    detection: Detection | None = None,
+    by: str | None = None,
+    reason: str | None = None,
 ) -> None:
-    """Store a label. set_by is "auto" (from detect_label) or "person"; what was detected is kept
-    when a person changes the label, so the audit shows both."""
+    """Store a label. set_by is "auto" (from detect_label) or "person"; a person's change records
+    who signed it off, when, and why. What was detected is kept, so the audit shows both."""
     if level not in LEVELS:
         raise ValueError(f"sensitivity must be one of {', '.join(LEVELS)}")
     meta: dict[str, Any] = {"sensitivity": level, "set_by": set_by}
+    if set_by == "person":
+        meta["by"] = by
+        meta["at"] = datetime.now(UTC).isoformat(timespec="seconds")
+        meta["reason"] = reason
     if detection is None:
         old = read_meta(contract_path)
         if old.get("detected") in LEVELS:
@@ -83,11 +93,20 @@ def label_info(settings: Settings, doc_id: str) -> dict[str, Any]:
         "label_set_by": set_by,
         "label_detected": meta.get("detected") if meta.get("detected") in LEVELS else None,
         "label_reasons": [str(r) for r in meta.get("reasons", [])][:6],
+        "label_set_by_name": meta.get("by") if set_by == "person" else None,
+        "label_set_at": meta.get("at") if set_by == "person" else None,
+        "label_change_reason": meta.get("reason") if set_by == "person" else None,
         "label_evidence": [
             {k: str(e.get(k, "")) for k in ("kind", "text", "level")}
             for e in meta.get("evidence", [])
             if isinstance(e, dict)
         ][:16],
+        # For each level below the detected one: the findings to answer, with fixed choices.
+        "label_lowering": {
+            lvl: grounds_needed(meta, lvl)
+            for lvl in LEVELS
+            if meta.get("detected") in LEVELS and RANK[lvl] < RANK[meta["detected"]]
+        },
     }
 
 
@@ -291,6 +310,139 @@ def detect_label(text: str, contract: Contract | None = None) -> Detection:
     return Detection(
         "internal", ["No names or account details found, but nothing shows the text is published"]
     )
+
+
+# --- who may read ------------------------------------------------------------------------------------
+# A Restricted contract, and every review of it, opens only for legal. Public and Internal open for
+# everyone signed in. Roles are set per account (HACK_AUTH_ROLES); with none set, roles are off.
+
+LEGAL = "legal"
+
+
+def parse_roles(spec: str | None) -> dict[str, str]:
+    """ "sara:legal, omar:procurement" -> {"sara": "legal", "omar": "procurement"}."""
+    out: dict[str, str] = {}
+    for part in (spec or "").split(","):
+        name, _, role = part.strip().partition(":")
+        if name.strip() and role.strip():
+            out[name.strip()] = role.strip().lower()
+    return out
+
+
+def role_for(roles: dict[str, str], user: str | None) -> str:
+    """Roles off (none set): everyone is legal. Roles on: an account with no role gets the least."""
+    if not roles:
+        return LEGAL
+    return roles.get(user or "", "none")
+
+
+def can_read(role: str, level: str) -> bool:
+    return role == LEGAL or level != "restricted"
+
+
+# --- grounds for lowering ---------------------------------------------------------------------------
+# Lowering a label below what the text calls for is answered finding by finding, from fixed choices,
+# never free text: each thing that raised the label needs its own answer for why it no longer
+# applies. The server checks the answers, so a typo or "asdf" cannot pass as a reason.
+
+GROUNDS: dict[str, dict[str, Any]] = {
+    "marking": {
+        "title": "Its classification marking",
+        "choices": {
+            "marking-released": "The owner has since released it at this level",
+            "marking-template": "The marking belongs to a template header, not to this contract",
+            "marking-wrong": "The marking was applied by mistake, confirmed with its owner",
+        },
+    },
+    "nda": {
+        "title": "The non-disclosure agreement",
+        "choices": {
+            "nda-ended": "The non-disclosure agreement has ended",
+            "nda-consent": "The other party agreed in writing to share it at this level",
+        },
+    },
+    "personal-data": {
+        "title": "Sensitive personal data",
+        "choices": {
+            "data-named-only": "A clause only names the kind of data; nobody's records are in it",
+            "data-removed": "The records were removed from this copy",
+        },
+    },
+    "card": {
+        "title": "The payment card number",
+        "choices": {
+            "card-not-card": "It is a reference or document number, not a payment card",
+            "card-test": "It is a published test card number",
+        },
+    },
+    "identifiers": {
+        "title": "Names, contact details and account numbers",
+        "choices": {
+            "ids-published": "The contract is already published, names included (e.g. a public filing)",
+            "ids-fictional": "The names and numbers are placeholders, not real ones",
+        },
+    },
+    "unpublished": {
+        "title": "Nothing shows the text is published",
+        "choices": {
+            "unpub-published": "Its owner has published it",
+            "unpub-template": "It is a blank model form with nothing filled in",
+        },
+    },
+}
+
+_GROUND_OF_KIND = {
+    "Marking": "marking",
+    "Classification": "marking",
+    "Says it is confidential": "marking",
+    "Non-disclosure agreement": "nda",
+    "Health records": "personal-data",
+    "Biometric or genetic data": "personal-data",
+    "Criminal records": "personal-data",
+    "Payment card number": "card",
+}
+
+
+def grounds_needed(meta: dict[str, Any], target: str) -> list[dict[str, Any]]:
+    """What a person must answer to set `target` below the detected label: one group per kind of
+    finding above `target`, each with what was found and the fixed choices. [] when not lower."""
+    detected = meta.get("detected")
+    if detected not in LEVELS or target not in LEVELS or RANK[target] >= RANK[detected]:
+        return []
+    found: dict[str, list[str]] = {}
+    for e in meta.get("evidence", []):
+        if isinstance(e, dict) and RANK.get(str(e.get("level")), 0) > RANK[target]:
+            group = _GROUND_OF_KIND.get(str(e.get("kind")), "identifiers")
+            found.setdefault(group, []).append(str(e.get("text", "")))
+    if not found:  # labelled by default, with nothing specific found
+        found["unpublished"] = []
+    return [
+        {
+            "id": g,
+            "title": GROUNDS[g]["title"],
+            "found": found[g][:6],
+            "choices": [{"id": k, "text": v} for k, v in GROUNDS[g]["choices"].items()],
+        }
+        for g in GROUNDS
+        if g in found
+    ]
+
+
+def check_grounds(meta: dict[str, Any], target: str, answers: dict[str, str] | None) -> str:
+    """The recorded reason built from the answers. Raises ValueError naming what is missing or not
+    one of the choices."""
+    needed = grounds_needed(meta, target)
+    answers = answers or {}
+    missing = [g["title"] for g in needed if g["id"] not in answers]
+    if missing:
+        raise ValueError(f"Answer for each finding: {_list(missing).lower()}")
+    parts = []
+    for g in needed:
+        choice = GROUNDS[g["id"]]["choices"].get(answers[g["id"]])
+        if choice is None:
+            raise ValueError(f"Not one of the choices for {g['title'].lower()}")
+        parts.append(f"{g['title']}: {choice[:1].lower()}{choice[1:]}")
+    return ". ".join(parts)
 
 
 def read_label(contract_path: Path) -> str | None:

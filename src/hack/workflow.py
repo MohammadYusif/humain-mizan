@@ -13,11 +13,14 @@ import time
 import uuid
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from .challenge import contracts as C
 from .challenge import policy as P
+from .challenge.messages import requested_changes
+from .challenge.review import injection_reasons
 from .challenge.tripwires import scan
 from .challenge.view import review_view
 from .config import Settings
@@ -46,6 +49,68 @@ def task_doc(trace_path: Path) -> str | None:
         return None
     m = _TASK_DOC.search(first.get("task", "")) if first.get("type") == "run_start" else None
     return m.group(1) if m else None
+
+
+def reviews_used(settings: Settings) -> int:
+    """Reviews run on this deployment that may have called the model: every run except evals and
+    demo replays (replays never call it)."""
+    base = settings.runs_dir
+    if not base.is_dir():
+        return 0
+    return sum(
+        1
+        for d in base.iterdir()
+        if (d / "trace.jsonl").is_file() and not d.name.startswith(("eval-", "demo-"))
+    )
+
+
+class QuotaReached(Exception):
+    """The deployment's review allowance (HACK_MAX_REVIEWS) would be exceeded."""
+
+
+def check_quota(settings: Settings, more: int, in_flight: int = 0) -> None:
+    """Refuse `more` new reviews when they would pass the allowance; nothing is started."""
+    cap = settings.max_reviews
+    if cap is None:
+        return
+    used = reviews_used(settings) + in_flight
+    if used + more > cap:
+        left = max(0, cap - used)
+        raise QuotaReached(
+            f"This demo allows {cap} reviews in total and {left} are left"
+            + (f", so a batch of {more} cannot start" if more > 1 else "")
+            + ". The guided demo, Proof and every finished review still work."
+        )
+
+
+def latest_reviews(settings: Settings) -> dict[str, dict[str, Any]]:
+    """For each contract, its newest finished review (not eval runs): who started it, when, and the
+    route. Lets a second person open that result instead of reviewing the contract again."""
+    base = settings.runs_dir
+    out: dict[str, dict[str, Any]] = {}
+    if not base.is_dir():
+        return out
+    for d in base.iterdir():
+        t = d / "trace.jsonl"
+        if d.name.startswith("eval-") or not t.is_file():
+            continue
+        doc = task_doc(t)
+        if doc is None:
+            continue
+        at = t.stat().st_mtime
+        if doc in out and out[doc]["at"] >= at:
+            continue
+        tr = read_trace(base, d.name)
+        if not any(e["type"] == "run_end" and e.get("stop_reason") != "error" for e in tr):
+            continue
+        start = tr[0] if tr and tr[0].get("type") == "run_start" else {}
+        out[doc] = {
+            "run_id": d.name,
+            "by": start.get("started_by"),
+            "route": final_route(tr),
+            "at": at,
+        }
+    return out
 
 
 class InvalidDecision(ValueError):
@@ -80,6 +145,24 @@ def run_state(settings: Settings, run_id: str) -> dict[str, Any]:
     # The model saw placeholders for names and numbers; people see the originals again.
     if (r := P.load_redactor(settings.runs_dir / run_id, view["doc_id"])) is not None:
         view = P.restore_view(view, r)
+    # Runs recorded before injected instructions were quoted: quote them now, from the contract.
+    old = [r for r in view["reasons"] if "with instructions aimed at an AI reviewer" in r]
+    if old and view["injected"] and view["doc_id"]:
+        try:
+            contract = C.load_contract(settings.contract_dirs(), view["doc_id"])
+        except (FileNotFoundError, ValueError):
+            contract = None
+        if contract is not None:
+            at = view["reasons"].index(old[0])
+            rest = [r for r in view["reasons"] if r not in old]
+            view["reasons"] = rest[:at] + injection_reasons(contract, view["injected"]) + rest[at:]
+    # What a review shows as sent is the message code builds from the redlines, the same as the
+    # one that leaves, also for runs recorded before messages were built this way.
+    if any(a["kind"] == "counterparty" for a in view["actions"]):
+        neat = draft_for(view, settings)
+        for a in view["actions"]:
+            if a["kind"] == "counterparty":
+                a["text"] = neat
     return {"run_id": run_id, "status": status, "route": route, "view": view, "end": end}
 
 
@@ -132,8 +215,10 @@ def pending_kind(state: dict[str, Any], decision: dict[str, Any] | None) -> str 
 
 def draft_for(view: dict[str, Any], settings: Settings | None = None) -> str:
     """The agent's drafted counterparty message, or one composed from the redlines if it wrote none."""
-    agent = next((a["text"] for a in view["actions"] if a["kind"] == "counterparty"), "")
-    return agent or requested_changes_message(view, settings)
+    # Built from the redlines whenever there are any: never the model's own wording or layout.
+    if any(f["severity"] in ("critical", "major") for f in view["findings"]):
+        return requested_changes_message(view, settings)
+    return next((a["text"] for a in view["actions"] if a["kind"] == "counterparty"), "")
 
 
 # --- Legal inbox ---------------------------------------------------------------------------------
@@ -177,27 +262,8 @@ def inbox(settings: Settings) -> list[dict[str, Any]]:
     return items
 
 
-_REF_AR = re.compile(r"^\s*((?:المادة|البند)\s+[^\s:،.\-–]+(?:\s+[^\s:،.\-–]+)?)")
-_REF_EN = re.compile(
-    r"^\s*((?:article|section|clause)\s+\d+(?:\.\d+)*|\d+(?:\.\d+)*)[.):]?\s*(?:[-–—]\s*)?([A-Z][^.:\n]{1,48}?)[.:]",
-    re.I,
-)
-
-
-def clause_ref(text: str, fallback: str) -> str:
-    """How the counterparty knows a clause: the contract's own number and heading ("Clause 3
-    (Termination)", "المادة الرابعة"), never our internal clause id."""
-    if m := _REF_AR.match(text):
-        return m.group(1).strip()
-    if m := _REF_EN.match(text):
-        num, heading = m.group(1).strip(), m.group(2).strip()
-        label = num[:1].upper() + num[1:] if num[0].isalpha() else f"Clause {num}"
-        return f"{label} ({heading})"
-    return fallback
-
-
 def requested_changes_message(view: dict[str, Any], settings: Settings | None = None) -> str:
-    """The counterparty message composed from the recorded redlines when the agent wrote none:
+    """The counterparty message, composed from the recorded redlines (see challenge/messages.py):
     an opening line, then one numbered change per finding, cited by the contract's own numbering."""
     title, texts = view["doc_id"], {}
     if settings is not None and view.get("doc_id"):
@@ -206,12 +272,7 @@ def requested_changes_message(view: dict[str, Any], settings: Settings | None = 
             title, texts = contract.title or title, {c.id: c.text for c in contract.clauses}
         except (FileNotFoundError, ValueError):
             pass
-    lines = [f"Requested changes to {title}", ""]
-    changes = [f for f in view["findings"] if f["severity"] in ("critical", "major")]
-    for n, f in enumerate(changes, 1):
-        ref = clause_ref(texts.get(f["clause_id"], ""), f.get("clause_type") or f["clause_id"])
-        lines.append(f"{n}. {ref}: {f['redline'].strip()}")
-    return "\n".join(lines)
+    return requested_changes(title, view["findings"], texts) or f"Requested changes to {title}"
 
 
 def decide(
@@ -267,6 +328,48 @@ def decide(
 # --- Batch queue ---------------------------------------------------------------------------------
 
 
+class ReviewBusy(Exception):
+    """The contract is already being reviewed; `holder` says by whom and since when."""
+
+    def __init__(self, doc_id: str, holder: dict[str, Any]):
+        self.doc_id, self.holder = doc_id, holder
+        who = holder.get("by") or "someone"
+        super().__init__(
+            f"{doc_id} is being reviewed by {who} since {holder.get('since', '')[11:16]} UTC"
+        )
+
+
+class ReviewLocks:
+    """One review at a time per contract. Two people pressing Review on the same contract, or a
+    batch that includes a contract someone is reviewing, get a clear refusal instead of two runs
+    racing on the same file. Held in the API process, across its threads; released when the run
+    ends however it ends."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._held: dict[str, dict[str, Any]] = {}
+
+    def acquire(self, doc_id: str, by: str | None, run_id: str) -> None:
+        with self._lock:
+            if (h := self._held.get(doc_id)) is not None:
+                raise ReviewBusy(doc_id, h)
+            self._held[doc_id] = {
+                "by": by,
+                "run_id": run_id,
+                "since": datetime.now(UTC).isoformat(timespec="seconds"),
+            }
+
+    def release(self, doc_id: str, run_id: str) -> None:
+        with self._lock:
+            if self._held.get(doc_id, {}).get("run_id") == run_id:
+                del self._held[doc_id]
+
+    def holder(self, doc_id: str) -> dict[str, Any] | None:
+        with self._lock:
+            h = self._held.get(doc_id)
+            return dict(h) if h else None
+
+
 class BatchRunner:
     """Runs many reviews in parallel in the API process. Manifests live in runs/batches/."""
 
@@ -275,30 +378,49 @@ class BatchRunner:
         settings: Settings,
         provider_factory: Callable[[], Provider] | None = None,
         workers: int = 3,
+        locks: ReviewLocks | None = None,
     ):
         self.settings = settings
         self.provider_factory = provider_factory
         self.pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="batch")
         self.lock = threading.Lock()
         self.pending: set[str] = set()  # run ids queued or running in this process
+        self.locks = locks or ReviewLocks()
 
     @property
     def dir(self) -> Path:
         return self.settings.runs_dir / "batches"
 
-    def start(self, doc_ids: list[str], auto_send: bool) -> dict[str, Any]:
+    def start(self, doc_ids: list[str], auto_send: bool, by: str | None = None) -> dict[str, Any]:
         if not doc_ids:
             raise ValueError("no contracts selected")
+        check_quota(self.settings, len(doc_ids), len(self.pending))
         if len(doc_ids) > 50:
             raise ValueError("max 50 contracts per batch")
+        if len(set(doc_ids)) != len(doc_ids):
+            raise ValueError("a contract appears twice in the batch")
         dirs = self.settings.contract_dirs()
         for d in doc_ids:
             C.load_contract(dirs, d)  # raises for unknown/unsafe ids before anything starts
         batch_id = "b" + time.strftime("%m%d%H%M%S") + uuid.uuid4().hex[:4]
         items = [
-            {"doc_id": d, "run_id": f"{batch_id}-{re.sub(r'[^A-Za-z0-9_-]', '', d)[:45]}-{i}"}
+            {
+                "doc_id": d,
+                "run_id": f"{batch_id}-{re.sub(r'[^A-Za-z0-9_-]', '', d)[:45]}-{i}",
+                "by": by,
+            }
             for i, d in enumerate(doc_ids)
         ]
+        # All or nothing: if any contract is already being reviewed, start none of them.
+        taken: list[dict[str, str]] = []
+        try:
+            for it in items:
+                self.locks.acquire(it["doc_id"], by, it["run_id"])
+                taken.append(it)
+        except ReviewBusy:
+            for it in taken:
+                self.locks.release(it["doc_id"], it["run_id"])
+            raise
         manifest = {
             "batch_id": batch_id,
             "created": time.time(),
@@ -322,6 +444,7 @@ class BatchRunner:
                 settings,
                 provider=provider,
                 run_id=item["run_id"],
+                started_by=item.get("by"),
             )
         except Exception:
             pass  # the agent wrote an error + run_end into the trace; the batch view shows it
@@ -341,6 +464,7 @@ class BatchRunner:
         finally:
             with self.lock:
                 self.pending.discard(item["run_id"])
+            self.locks.release(item["doc_id"], item["run_id"])
 
     def list(self) -> list[dict[str, Any]]:
         if not self.dir.is_dir():

@@ -1,6 +1,6 @@
-import { Building2, Globe, Lock, ScanSearch, ShieldCheck } from "lucide-react"
+import { ArrowDown, ArrowUp, Building2, Globe, Lock, ShieldCheck } from "lucide-react"
 import { cn } from "cn"
-import { useId } from "react"
+import { useEffect, useId, useState } from "react"
 
 import {
   AlertDialog,
@@ -14,9 +14,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import type { ContractSummary, DataPolicyConfig, DataPolicyRecord, LabelEvidence, Sensitivity } from "@/lib/api"
+import { api, type ContractSummary, type DataPolicyConfig, type DataPolicyRecord, type LabelEvidence, type LabelSignOff, type LoweringGround, type Sensitivity } from "@/lib/api"
 import { blocked, destination, LEVEL_LABEL, looserThan, reasonText } from "@/lib/data-policy"
 
 const ORDER: Sensitivity[] = ["public", "internal", "restricted"]
@@ -116,17 +115,25 @@ export function LabelSuggestion({
   busy,
   compact,
   bare,
+  onChange,
 }: {
-  c: Pick<ContractSummary, "sensitivity" | "label_set_by" | "label_detected" | "label_reasons" | "label_evidence">
+  c: SignedLabel & Pick<ContractSummary, "label_evidence" | "label_lowering">
   policy: DataPolicyConfig | null
   onRestore?: (level: Sensitivity) => void
   busy?: boolean
   compact?: boolean
   /** Inside another box: no border or padding of its own. */
   bare?: boolean
+  /** Lets a person change the label from the card: stricter at once, looser after a sign-off. */
+  onChange?: (level: Sensitivity, signOff?: LabelSignOff) => void
 }) {
+  const [pending, setPending] = useState<Sensitivity | null>(null)
   const level = c.sensitivity
   if (!level) return null
+  const change = (to: Sensitivity) => {
+    if (looserThan(to, c.label_detected ?? level)) setPending(to)
+    else onChange?.(to)
+  }
   const evidence = c.label_evidence ?? []
   const auto = c.label_set_by === "auto"
   const where = destination(level, policy)
@@ -158,7 +165,7 @@ export function LabelSuggestion({
       ) : c.label_reasons?.length ? (
         <p className="text-xs text-muted-foreground">{c.label_reasons.join("; ")}.</p>
       ) : null}
-      {c.label_set_by === "person" && c.label_detected && c.label_detected !== level ? (
+      {c.label_set_by === "person" ? (
         <LabelBasis c={c} onRestore={onRestore} busy={busy} />
       ) : null}
       {where ? (
@@ -166,7 +173,37 @@ export function LabelSuggestion({
           {where}
         </p>
       ) : null}
-      {!compact ? (
+      {onChange ? (
+        <div className="flex flex-col gap-1.5 border-t pt-2.5">
+          <div className="flex flex-wrap gap-1.5">
+            {ORDER.filter((l) => l !== level).map((l) => {
+              const up = ORDER.indexOf(l) > ORDER.indexOf(level)
+              const Icon = up ? ArrowUp : ArrowDown
+              return (
+                <Button key={l} type="button" variant="outline" size="xs" disabled={busy} onClick={() => change(l)}>
+                  <Icon data-icon="inline-start" aria-hidden />
+                  {up ? "Raise" : "Lower"} to {LEVEL_LABEL[l]}
+                </Button>
+              )
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Raising is one click. Lowering below what the text calls for needs an answer for each thing found, signed with your account.
+          </p>
+          <LoosenConfirm
+            pending={pending}
+            detected={c.label_detected ?? level}
+            reasons={c.label_reasons}
+            asks={pending ? (c.label_lowering?.[pending] ?? []) : []}
+            policy={policy}
+            onCancel={() => setPending(null)}
+            onConfirm={(signOff) => {
+              if (pending) onChange(pending, signOff)
+              setPending(null)
+            }}
+          />
+        </div>
+      ) : !compact ? (
         <p className="text-xs text-muted-foreground">
           Making it stricter is one click. Making it looser is recorded as a person’s decision.
         </p>
@@ -174,31 +211,6 @@ export function LabelSuggestion({
     </div>
   )
 }
-
-/** A label choice on upload: one of the levels, or let the server read the text and pick. */
-export type LabelChoice = Sensitivity | "auto"
-
-const LEVELS: { value: LabelChoice; label: string; icon: typeof Lock; hint: string }[] = [
-  {
-    value: "auto",
-    label: "Detect from the text",
-    icon: ScanSearch,
-    hint: "Mizan reads it on this server before any model sees it and suggests the label. Marked confidential, under an NDA or with health data: Restricted. Names or account details: Internal. A blank template: Public.",
-  },
-  { value: "public", label: "Public", icon: Globe, hint: "Published or synthetic text. Sent to the model as written." },
-  {
-    value: "internal",
-    label: "Internal",
-    icon: Building2,
-    hint: "Company business. Names, contact details, account and ID numbers are hidden from an external model.",
-  },
-  {
-    value: "restricted",
-    label: "Restricted",
-    icon: Lock,
-    hint: "Under NDA or otherwise confidential. Never sent to an external model; a lawyer signs off every outcome.",
-  },
-]
 
 export function SensitivityBadge({ level, className }: { level: Sensitivity; className?: string }) {
   const Icon = level === "restricted" ? Lock : level === "internal" ? Building2 : Globe
@@ -217,15 +229,32 @@ export function SensitivityBadge({ level, className }: { level: Sensitivity; cla
   )
 }
 
+type SignedLabel = Pick<
+  ContractSummary,
+  "sensitivity" | "label_set_by" | "label_detected" | "label_reasons" | "label_set_by_name" | "label_set_at" | "label_change_reason"
+>
+
+function day(iso: string | null | undefined) {
+  if (!iso) return ""
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+}
+
+/** "Set to Internal by Sara Ahmed on 30 Oct 2026" (no trailing full stop). */
+function signedText(c: Partial<SignedLabel>) {
+  const when = day(c.label_set_at)
+  return `Set to ${c.sensitivity ? LEVEL_LABEL[c.sensitivity] : ""} by ${c.label_set_by_name || "a person"}${when ? ` on ${when}` : ""}`
+}
+
 /** How a contract's label was set, and why. When a person set it looser than the text calls for,
- * says so plainly and offers the detected label back. */
+ * says so plainly, shows who signed it off and their reason, and offers the detected label back. */
 export function LabelBasis({
   c,
   onRestore,
   busy,
   className,
 }: {
-  c: Pick<ContractSummary, "sensitivity" | "label_set_by" | "label_detected" | "label_reasons">
+  c: SignedLabel
   onRestore?: (level: Sensitivity) => void
   busy?: boolean
   className?: string
@@ -242,16 +271,26 @@ export function LabelBasis({
   }
   if (c.label_set_by !== "person" || !c.sensitivity) return null
   if (!detected || detected === c.sensitivity) {
-    return <p className={cn("text-xs text-muted-foreground", className)}>Set by a person{detected ? ", as the text suggests" : ""}.</p>
+    return (
+      <p className={cn("text-xs text-muted-foreground", className)}>
+        {signedText(c)}
+        {detected ? ", as the text suggests." : "."}
+      </p>
+    )
   }
   const looser = looserThan(c.sensitivity, detected)
   return (
     <div className={cn("flex flex-col items-start gap-1.5", className)}>
       <p className={cn("text-xs", looser ? "font-medium text-escalate" : "text-muted-foreground")}>
         Detected: {LEVEL_LABEL[detected]}
-        {why ? ` (${why})` : ""}. Set to {LEVEL_LABEL[c.sensitivity]} by a person
+        {why ? ` (${why})` : ""}. {signedText(c)}
         {looser ? ", looser than the text calls for." : "."}
       </p>
+      {c.label_change_reason ? (
+        <p className="text-xs text-foreground">
+          <span className="text-muted-foreground">Reason given:</span> {c.label_change_reason}
+        </p>
+      ) : null}
       {looser && onRestore ? (
         <Button type="button" variant="outline" size="xs" disabled={busy} onClick={() => onRestore(detected)}>
           Use {LEVEL_LABEL[detected]}
@@ -261,11 +300,14 @@ export function LabelBasis({
   )
 }
 
-/** Before a person sets a label looser than the text calls for: say what changes, then let them decide. */
+/** Before a person sets a label looser than the text calls for: say what changes, then ask, for
+ * each thing that raised the label, why it no longer applies. Fixed choices only, checked by the
+ * server: nothing typed, so nothing mistyped or made up. */
 export function LoosenConfirm({
   pending,
   detected,
   reasons,
+  asks,
   policy,
   onConfirm,
   onCancel,
@@ -273,74 +315,117 @@ export function LoosenConfirm({
   pending: Sensitivity | null
   detected: Sensitivity | null | undefined
   reasons?: string[]
+  /** The findings to answer for `pending`, from the server. */
+  asks: LoweringGround[]
   policy: DataPolicyConfig | null
-  onConfirm: () => void
+  onConfirm: (signOff: LabelSignOff) => void
   onCancel: () => void
 }) {
+  const id = useId()
   const why = reasonText(reasons)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  // Who signs off comes from the account: undefined while checking, null when not signed in.
+  const [signedIn, setSignedIn] = useState<string | null | undefined>(undefined)
+  const [authOn, setAuthOn] = useState(true)
+  const open = pending !== null
+  const close = () => {
+    setAnswers({})
+    onCancel()
+  }
+  useEffect(() => {
+    if (!open) return
+    api.me().then(
+      (m) => {
+        setSignedIn(m.user ?? null)
+        setAuthOn(m.auth)
+      },
+      () => setSignedIn(null)
+    )
+  }, [open])
+  const answered = asks.filter((g) => answers[g.id]).length
+  const ready = asks.length > 0 && answered === asks.length && Boolean(signedIn)
   return (
-    <AlertDialog open={pending !== null} onOpenChange={(o) => (o ? null : onCancel())}>
-      <AlertDialogContent>
+    <AlertDialog open={open} onOpenChange={(o) => (o ? null : close())}>
+      <AlertDialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <AlertDialogHeader>
           <AlertDialogTitle>
             Set to {pending ? LEVEL_LABEL[pending] : ""} instead of {detected ? LEVEL_LABEL[detected] : ""}?
           </AlertDialogTitle>
           <AlertDialogDescription>
             The text reads as {detected ? LEVEL_LABEL[detected] : ""}
-            {why ? ` (${why})` : ""}. {pending ? destination(pending, policy) : null} This is recorded as your decision.
+            {why ? ` (${why})` : ""}. {pending ? destination(pending, policy) : null} For each thing Mizan found, pick
+            why it no longer applies. Your answers and your account go on the record.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        <div className="flex flex-col gap-4">
+          {asks.map((g, n) => (
+            <fieldset key={g.id} className="flex flex-col gap-2 rounded-md border p-3">
+              <legend className="px-1 text-sm font-medium">
+                {n + 1}. {g.title}
+              </legend>
+              {g.found.length ? (
+                <p className="flex flex-wrap gap-1">
+                  {g.found.map((f) => (
+                    <span
+                      key={f}
+                      dir="auto"
+                      className="rounded bg-highlight px-1.5 py-0.5 font-mono text-[0.7rem] text-foreground"
+                    >
+                      {f}
+                    </span>
+                  ))}
+                </p>
+              ) : null}
+              <RadioGroup
+                value={answers[g.id] ?? ""}
+                onValueChange={(v) => setAnswers((a) => ({ ...a, [g.id]: v }))}
+                className="gap-1.5"
+                aria-label={g.title}
+              >
+                {g.choices.map((ch) => (
+                  <label
+                    key={ch.id}
+                    htmlFor={`${id}-${ch.id}`}
+                    className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 text-sm hover:bg-muted/60"
+                  >
+                    <RadioGroupItem id={`${id}-${ch.id}`} value={ch.id} className="mt-0.5" />
+                    <span>{ch.text}</span>
+                  </label>
+                ))}
+              </RadioGroup>
+            </fieldset>
+          ))}
+          {asks.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Checking what needs an answer.</p>
+          ) : null}
+          {signedIn ? (
+            <p className="text-xs text-muted-foreground">
+              Signed off as <span className="font-medium text-foreground">{signedIn}</span>, the account you are signed in with.
+            </p>
+          ) : signedIn === null ? (
+            <p className="text-xs font-medium text-escalate">
+              {authOn
+                ? "Sign in to sign this off: the record shows the account that lowered the label."
+                : "Sign-in is off on this server, so nobody can lower a label. An administrator turns it on."}
+            </p>
+          ) : null}
+        </div>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={onCancel}>Keep {detected ? LEVEL_LABEL[detected] : ""}</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>Set to {pending ? LEVEL_LABEL[pending] : ""}</AlertDialogAction>
+          <AlertDialogCancel onClick={close}>Keep {detected ? LEVEL_LABEL[detected] : ""}</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={!ready}
+            onClick={() => {
+              onConfirm({ grounds: answers })
+              setAnswers({})
+            }}
+          >
+            {asks.length > 1 && answered < asks.length
+              ? `Answer all ${asks.length} (${answered} done)`
+              : `Sign off: set to ${pending ? LEVEL_LABEL[pending] : ""}`}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  )
-}
-
-/** Choose a contract's label, with what each one means for this server. */
-export function SensitivityPicker({
-  value,
-  onChange,
-  policy,
-}: {
-  value: LabelChoice
-  onChange: (v: LabelChoice) => void
-  policy: DataPolicyConfig | null
-}) {
-  const id = useId()
-  const where = value === "auto" ? "Picked when you add the contract, before it can reach any model." : destination(value, policy)
-  return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="mb-2 text-sm font-medium">Who may see it</legend>
-      <RadioGroup value={value} onValueChange={(v) => onChange(v as LabelChoice)} className="gap-1.5">
-        {LEVELS.map((l) => (
-          <Label
-            key={l.value}
-            htmlFor={`${id}-${l.value}`}
-            className={cn(
-              "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 font-normal transition-colors",
-              value === l.value ? "border-primary/50 bg-primary/5" : "bg-background hover:bg-muted/60"
-            )}
-          >
-            <RadioGroupItem id={`${id}-${l.value}`} value={l.value} className="mt-0.5" />
-            <span className="flex min-w-0 flex-col gap-0.5">
-              <span className="flex items-center gap-1.5 text-sm font-semibold">
-                <l.icon className="size-3.5 text-muted-foreground" aria-hidden />
-                {l.label}
-              </span>
-              <span className="text-xs leading-relaxed text-muted-foreground">{l.hint}</span>
-            </span>
-          </Label>
-        ))}
-      </RadioGroup>
-      {where ? (
-        <p className="text-xs text-muted-foreground">
-          On this server: <span className="text-foreground">{where}</span>
-        </p>
-      ) : null}
-    </fieldset>
   )
 }
 
@@ -356,8 +441,12 @@ export function DataLine({ policy }: { policy: DataPolicyRecord }) {
   if (policy.allowed && policy.sensitivity === "restricted") text += " A lawyer signs off every outcome."
   const why = reasonText(policy.label_reasons)
   if (policy.label_set_by === "auto") text += ` Label suggested from the text${why ? ` (${why})` : ""}.`
-  else if (policy.label_set_by === "person" && policy.label_detected && policy.label_detected !== policy.sensitivity)
-    text += ` Detected: ${LEVEL_LABEL[policy.label_detected]}${why ? ` (${why})` : ""}. Set to ${LEVEL_LABEL[policy.sensitivity]} by a person.`
+  else if (policy.label_set_by === "person") {
+    const reason = policy.label_change_reason ? `, reason: ${policy.label_change_reason}` : ""
+    if (policy.label_detected && policy.label_detected !== policy.sensitivity)
+      text += ` Detected: ${LEVEL_LABEL[policy.label_detected]}${why ? ` (${why})` : ""}. ${signedText(policy)}${reason}.`
+    else if (policy.label_set_by_name) text += ` ${signedText(policy)}${reason}.`
+  }
   return (
     <p className="flex items-start gap-2 text-xs text-muted-foreground">
       <ShieldCheck className="mt-px size-3.5 shrink-0" aria-hidden />

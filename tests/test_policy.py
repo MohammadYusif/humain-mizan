@@ -186,9 +186,14 @@ def test_internal_contract_is_redacted_for_the_model_and_restored_for_people(tmp
     assert start["data_policy"]["redact"] and start["data_policy"]["redacted"]["PARTY"] == 2
     view = W.run_state(s, "red-1")["view"]
     assert view["route"] == "negotiate"
-    assert view["actions"][0]["text"] == "Dear Meridian Advisory FZ-LLC, amend c3"
+    # The message is built by code from the redline, with the real names put back; the model's
+    # own wording ("Dear [PARTY-2], amend c3") is not what leaves.
+    sent = view["actions"][0]["text"]
+    assert sent.startswith("Requested changes to Consulting Services Agreement")
+    assert "Meridian Advisory FZ-LLC" in sent and "\n1. Clause 3 (Termination): " in sent
     outbox = (s.runs_dir / "red-1" / "outbox.jsonl").read_text(encoding="utf-8")
-    assert "Dear Meridian Advisory FZ-LLC" in outbox and "[PARTY-2]" not in outbox
+    assert "Meridian Advisory FZ-LLC" in outbox and "[PARTY-" not in outbox
+    assert "amend c3" not in outbox
     assert "replaced by placeholders" in data_line(view["data_policy"])
 
 
@@ -212,16 +217,20 @@ def test_restricted_on_a_local_model_never_approves_or_sends_by_itself(tmp_path)
 def test_api_labels_uploads_and_reports_the_policy(tmp_path):
     client = TestClient(create_app(settings(tmp_path)))
     assert client.get("/healthz").json()["data_policy"]["location"] == "local"  # fake provider
+    # The upload never takes a label: Mizan reads the text, and a person changes it afterwards.
     up = client.post(
         "/contracts",
         data={
             "text": "1. Fees. Net 60.\n\n2. Law. Saudi law.",
             "title": "Small",
-            "sensitivity": "restricted",
+            "sensitivity": "public",
         },
     )
-    assert up.status_code == 200 and up.json()["sensitivity"] == "restricted"
+    assert up.status_code == 200 and up.json()["sensitivity"] == "internal"
+    assert up.json()["label_set_by"] == "auto"
     doc = up.json()["doc_id"]
+    raised = client.put(f"/contracts/{doc}/sensitivity", json={"sensitivity": "restricted"})
+    assert raised.json()["sensitivity"] == "restricted"  # stricter: one click, no sign-off
     listed = {c["doc_id"]: c["sensitivity"] for c in client.get("/contracts").json()}
     assert listed[doc] == "restricted" and listed["nda-en-01"] == "public"
     relabelled = client.put(f"/contracts/{doc}/sensitivity", json={"sensitivity": "internal"})
@@ -233,8 +242,6 @@ def test_api_labels_uploads_and_reports_the_policy(tmp_path):
         client.put("/contracts/nda-en-01/sensitivity", json={"sensitivity": "public"}).status_code
         == 400
     )
-    bad = client.post("/contracts", data={"text": "1. Fees. Net 60.", "sensitivity": "secret"})
-    assert bad.status_code == 400
     plain = client.post("/contracts", data={"text": "1. Other text. Net 90.\n\n2. More."})
     assert plain.json()["sensitivity"] == "internal"  # detected: nothing shows it is published
     assert plain.json()["label_set_by"] == "auto"
@@ -329,16 +336,92 @@ def test_uploads_are_labelled_from_their_text_and_a_person_can_override(tmp_path
     assert ("IBAN", "SA03 8000 0000 6080 1016 7519") in shown
     assert ("Payment card number", "•••• 1111") in shown  # masked, never shown in full
     doc = up["doc_id"]
-    changed = client.put(f"/contracts/{doc}/sensitivity", json={"sensitivity": "internal"}).json()
+    url = f"/contracts/{doc}/sensitivity"
+    # Sign-in off: nobody can lower a label, whatever name the request claims.
+    off = client.put(
+        url, json={"sensitivity": "internal", "grounds": {"marking": "nda-ended"}, "by": "Sara"}
+    )
+    assert off.status_code == 403
+    signed_off_lowering_needs_a_signed_in_person(tmp_path, text)
+
+
+def signed_off_lowering_needs_a_signed_in_person(tmp_path, text):
+    """With sign-in on, the sign-off name is the session's account: a name in the request is
+    ignored, so nobody can sign as someone else."""
+    from hack.auth import hash_password
+
+    users = f"sara:{hash_password('sara-test-password')},omar:{hash_password('omar-test-password')}"
+    s = settings(tmp_path / "auth", auth_users=users, secret_key="test-secret")
+    client = TestClient(create_app(s))
+    assert (
+        client.post(
+            "/auth/login", json={"username": "sara", "password": "sara-test-password"}
+        ).status_code
+        == 200
+    )
+    doc = client.post("/contracts", data={"text": text}).json()["doc_id"]
+    url = f"/contracts/{doc}/sensitivity"
+    # Looser than the text calls for: one fixed answer per finding, never free text.
+    listed = {c["doc_id"]: c for c in client.get("/contracts").json()}
+    asks = listed[doc]["label_lowering"]["internal"]
+    assert [g["id"] for g in asks] == ["marking"]
+    assert asks[0]["found"] == ["STRICTLY CONFIDENTIAL"]
+    assert client.put(url, json={"sensitivity": "internal"}).status_code == 400
+    typed = client.put(url, json={"sensitivity": "internal", "reason": "asdf"})
+    assert typed.status_code == 400  # a typed reason is not an answer
+    made_up = client.put(url, json={"sensitivity": "internal", "grounds": {"marking": "asdf"}})
+    assert made_up.status_code == 400 and "not one of the choices" in made_up.text.lower()
+    changed = client.put(
+        url,
+        json={"sensitivity": "internal", "grounds": {"marking": "marking-released"}, "by": "omar"},
+    ).json()
     assert changed["sensitivity"] == "internal" and changed["label_set_by"] == "person"
     assert changed["label_detected"] == "restricted"  # what the text said is kept for the audit
+    assert changed["label_set_by_name"] == "sara"  # the session, not the claimed "omar"
+    assert changed["label_change_reason"] == (
+        "Its classification marking: the owner has since released it at this level"
+    )
+    assert changed["label_set_at"]
+    # Lower again to Public: the party names now need an answer as well as the marking.
+    to_public = changed["label_lowering"]["public"]
+    assert {g["id"] for g in to_public} == {"marking"}  # this text has no names or numbers
+    # Stricter needs only the click; the change is still recorded with the account.
+    raised = client.put(url, json={"sensitivity": "restricted"}).json()
+    assert raised["sensitivity"] == "restricted" and raised["label_change_reason"] is None
+    assert raised["label_set_by_name"] == "sara"
+    # Signed out: lowering is refused.
+    client.post("/auth/logout")
+    client.cookies.clear()
+    signed_out = client.put(
+        url, json={"sensitivity": "internal", "grounds": {"marking": "marking-released"}}
+    )
+    assert signed_out.status_code == 401
+    signed = data_line(
+        {
+            "sensitivity": "internal",
+            "allowed": True,
+            "location": "external",
+            "label_set_by": "person",
+            "label_detected": "restricted",
+            "label_reasons": ["Marked “Strictly confidential”"],
+            "label_set_by_name": "Sara Ahmed",
+            "label_set_at": "2026-10-30T18:00:00+00:00",
+            "label_change_reason": "NDA ended on 1 Oct",
+        }
+    )
+    assert signed.startswith(
+        "Detected: Restricted (marked “Strictly confidential”). Set to Internal by Sara Ahmed on "
+        "30 Oct 2026, reason: NDA ended on 1 Oct."
+    )
+    client.post("/auth/login", json={"username": "sara", "password": "sara-test-password"})
     listed = {c["doc_id"]: c for c in client.get("/contracts").json()}
     assert listed[doc]["label_set_by"] == "person" and listed["nda-en-01"]["label_set_by"] is None
     chosen = client.post(
         "/contracts",
         data={"text": "1. Other. Net 30.\n\n2. Law. Saudi law.", "sensitivity": "public"},
     ).json()
-    assert chosen["sensitivity"] == "public" and chosen["label_set_by"] == "person"
+    # Choosing a looser label at upload does not skip the sign-off: the detected label stands.
+    assert chosen["sensitivity"] == "internal" and chosen["label_set_by"] == "auto"
     assert chosen["label_detected"] == "internal"
     line = data_line(
         {
@@ -376,3 +459,85 @@ def test_medical_supplies_contract_is_restricted_for_its_patient_data():
     )
     assert found.level == "restricted"
     assert "Mentions sensitive personal data (health records)" in found.reasons
+
+
+def test_lowering_asks_one_fixed_answer_per_kind_of_finding():
+    text = (
+        'Between Nimbus Cloud Ltd ("Supplier") and Najd Retail LLC ("Customer").\n\n'
+        "1. Data. The Supplier processes patient records under the NDA between the parties.\n\n"
+        "2. Law. Saudi law."
+    )
+    found = P.detect_label(text, _contract(text))
+    meta = {"detected": found.level, "evidence": found.evidence}
+    assert found.level == "restricted"
+    to_internal = {g["id"] for g in P.grounds_needed(meta, "internal")}
+    assert to_internal == {"nda", "personal-data"}  # names do not stop Internal
+    to_public = {g["id"] for g in P.grounds_needed(meta, "public")}
+    assert to_public == {"nda", "personal-data", "identifiers"}
+    with pytest.raises(ValueError, match="sensitive personal data"):
+        P.check_grounds(meta, "internal", {"nda": "nda-ended"})
+    reason = P.check_grounds(
+        meta, "internal", {"nda": "nda-ended", "personal-data": "data-named-only"}
+    )
+    assert reason.startswith("The non-disclosure agreement: the non-disclosure agreement has ended")
+    assert P.grounds_needed(meta, "restricted") == []  # not lower: nothing to answer
+    # Internal by default, nothing specific found: one question about publication.
+    plain = {"detected": "internal", "evidence": []}
+    assert [g["id"] for g in P.grounds_needed(plain, "public")] == ["unpublished"]
+
+
+def test_roles_decide_who_opens_a_contract_and_a_finished_review(tmp_path):
+    """Omar (procurement) opens Sara's finished review of an Internal contract instead of running
+    it again; a Restricted contract and its reviews open only for legal, whatever the screen shows."""
+    from hack.auth import hash_password
+
+    users = f"sara:{hash_password('sara-test-password')},omar:{hash_password('omar-test-password')}"
+    s = settings(
+        tmp_path,
+        auth_users=users,
+        secret_key="test-secret",
+        auth_roles="sara:legal,omar:procurement",
+    )
+    app = create_app(s, provider_factory=lambda: FakeProvider())
+    sara, omar = TestClient(app), TestClient(app)
+    sara.post("/auth/login", json={"username": "sara", "password": "sara-test-password"})
+    omar.post("/auth/login", json={"username": "omar", "password": "omar-test-password"})
+    assert sara.get("/auth/me").json()["role"] == "legal"
+    assert omar.get("/auth/me").json()["role"] == "procurement"
+
+    two = "\n\n1. Fees. Net 60.\n\n2. Law. Saudi law."
+    secret = sara.post(
+        "/contracts", data={"text": "STRICTLY CONFIDENTIAL\n\nBoard deal" + two}
+    ).json()["doc_id"]
+    plain = sara.post("/contracts", data={"text": 'Between Nimbus Ltd ("Supplier").' + two}).json()[
+        "doc_id"
+    ]
+    for doc in (secret, plain):
+        run = sara.post(
+            "/run", json={"task": f"Review contract {doc} and route it.", "run_id": f"r-{doc}"}
+        )
+        assert run.status_code == 200
+
+    listed = {c["doc_id"]: c for c in omar.get("/contracts").json()}
+    assert listed[secret]["readable"] is False and listed[secret]["title"] == "Restricted contract"
+    assert listed[secret]["last_review"] is None  # not even who reviewed it
+    assert listed[plain]["readable"] is True
+    assert listed[plain]["last_review"]["by"] == "sara"  # open hers, no second review needed
+    mine = omar.get(f"/runs/r-{plain}/review")
+    assert mine.status_code == 200 and mine.json()["by"] == "sara"
+
+    # Restricted: refused on every path, not just hidden on screen.
+    for path in (f"/contracts/{secret}", f"/runs/r-{secret}/review", f"/runs/r-{secret}/trace"):
+        assert omar.get(path).status_code == 403, path
+    assert (
+        omar.post(
+            "/run", json={"task": f"Review contract {secret} and route it.", "run_id": "o-1"}
+        ).status_code
+        == 403
+    )
+    assert omar.post("/batches", json={"doc_ids": [secret]}).status_code == 403
+    assert f"r-{secret}" not in {r["run_id"] for r in omar.get("/runs").json()}
+    # Legal opens both.
+    assert sara.get(f"/runs/r-{secret}/review").status_code == 200
+    assert P.role_for({}, "anyone") == "legal"  # roles not set: nobody is locked out
+    assert P.role_for({"sara": "legal"}, "omar") == "none" and not P.can_read("none", "restricted")

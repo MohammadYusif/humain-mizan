@@ -34,6 +34,10 @@ def data_policy(task: str, settings: Settings, provider: Provider) -> dict[str, 
         rec["label_set_by"] = info["label_set_by"]
         rec["label_detected"] = info["label_detected"]
         rec["label_reasons"] = info["label_reasons"]
+        if info["label_set_by"] == "person":  # who signed it off, when and why
+            rec["label_set_by_name"] = info["label_set_by_name"]
+            rec["label_set_at"] = info["label_set_at"]
+            rec["label_change_reason"] = info["label_change_reason"]
     if d.allowed and d.redact:
         try:
             contract = C.load_contract(settings.contract_dirs(), d.doc_id)
@@ -51,6 +55,7 @@ def run_task(
     system: str | None = None,
     run_id: str | None = None,
     registry: ToolRegistry | None = None,
+    started_by: str | None = None,
 ) -> AgentResult:
     provider = provider or build_provider(settings)
     tracer = Tracer(settings.runs_dir, run_id)
@@ -58,7 +63,12 @@ def run_task(
     if policy is not None and not policy["allowed"]:
         # Not one model call: the contract goes to a lawyer as it is.
         tracer.event(
-            "run_start", task=task, model=provider.model, provider=provider.name, data_policy=policy
+            "run_start",
+            task=task,
+            model=provider.model,
+            provider=provider.name,
+            data_policy=policy,
+            started_by=started_by,
         )
         tracer.event("policy_block", **policy)
         tracer.event(
@@ -79,5 +89,7 @@ def run_task(
         system=system or SYSTEM_PROMPT,
         settings=settings,
         tracer=tracer,
-        start_meta={"data_policy": policy} if policy else None,
+        start_meta={"data_policy": policy, "started_by": started_by}
+        if policy
+        else {"started_by": started_by},
     )

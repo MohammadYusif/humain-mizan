@@ -23,7 +23,7 @@ from .challenge.view import review_view
 from .config import Settings, get_settings
 from .evals import final_route
 from .llm import Provider
-from .service import run_task
+from .service import TASK_DOC, run_task
 from .tracing import read_trace
 
 _ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -77,6 +77,10 @@ class ReplayRequest(BaseModel):
 
 class LabelRequest(BaseModel):
     sensitivity: str
+    # Required when the new label is looser than the text calls for: one fixed choice per finding,
+    # {group id: choice id} (see GET /contracts label_lowering). No free text. Who signs it off comes
+    # from the session, never from the request.
+    grounds: dict[str, str] | None = None
 
 
 class BatchRequest(BaseModel):
@@ -90,7 +94,8 @@ def create_app(
 ) -> FastAPI:
     app = FastAPI(title="Mizan: contract review agent")
     cfg = settings or get_settings()
-    batches = W.BatchRunner(cfg, provider_factory)
+    locks = W.ReviewLocks()  # one review at a time per contract, shared by single runs and batches
+    batches = W.BatchRunner(cfg, provider_factory, locks=locks)
     contract_dirs = cfg.contract_dirs()
     # Runs accepted but not yet traced: polling them answers "starting" instead of 404.
     inflight: set[str] = set()
@@ -105,6 +110,7 @@ def create_app(
 
     # --- sign-in -----------------------------------------------------------------------------------
     auth = A.Auth(A.parse_users(cfg.auth_users), cfg.secret_key, cfg.require_auth)
+    roles = P.parse_roles(cfg.auth_roles) if auth.enabled else {}
     public = {"/auth/login", "/auth/logout", "/auth/me", "/healthz", "/", "/index.html"}
 
     def is_ui_file(path: str) -> bool:
@@ -127,7 +133,7 @@ def create_app(
         user = auth.user_of(request.cookies.get(A.COOKIE))
         if user is None:
             raise HTTPException(401, "sign in required")
-        return {"user": user, "auth": True}
+        return {"user": user, "auth": True, "role": P.role_for(roles, user) if roles else None}
 
     @app.post("/auth/login")
     def login(req: SignInRequest, request: Request) -> Response:
@@ -167,6 +173,10 @@ def create_app(
             "approve_writes": cfg.approve_writes,
             "ocr": {"available": st["available"], "detail": st["detail"]},
             "data_policy": policy_info(),
+            # The review allowance on this deployment (None: no limit).
+            "reviews": {"max": cfg.max_reviews, "used": W.reviews_used(cfg)}
+            if cfg.max_reviews is not None
+            else None,
         }
 
     def policy_info() -> dict[str, Any]:
@@ -190,23 +200,62 @@ def create_app(
             "default_sensitivity": cfg.default_sensitivity,
         }
 
+    def signed_in(request: Request) -> str | None:
+        return auth.user_of(request.cookies.get(A.COOKIE)) if auth.enabled else None
+
+    def role(request: Request) -> str:
+        return P.role_for(roles, signed_in(request))
+
+    def may_read(request: Request, doc_id: str | None) -> bool:
+        return doc_id is None or P.can_read(role(request), P.level_of(cfg, doc_id))
+
+    def guard(request: Request, doc_id: str | None) -> None:
+        """Restricted contracts, and every review of one, open only for legal."""
+        if not may_read(request, doc_id):
+            raise HTTPException(
+                403,
+                f"{doc_id} is Restricted: only Legal can open it and its reviews. You are signed in "
+                f"as {signed_in(request)} ({role(request)}).",
+            )
+
+    def run_doc(run_id: str) -> str | None:
+        return W.task_doc(cfg.runs_dir / run_id / "trace.jsonl")
+
     @app.post("/run", response_model=RunResponse)
-    def run(req: RunRequest) -> RunResponse:  # sync def: FastAPI runs it in a worker thread
+    def run(req: RunRequest, request: Request) -> RunResponse:  # sync: runs in a worker thread
         if req.run_id is not None:
             checked(req.run_id)
             if (cfg.runs_dir / req.run_id).exists():
                 raise HTTPException(409, "run id already used")
         provider = provider_factory() if provider_factory else None
+        # One review at a time per contract: a second reviewer gets who has it and since when.
+        m = TASK_DOC.search(req.task)
+        doc = m.group(1) if m else None
+        lock_id = req.run_id or f"anon-{id(req)}"
+        guard(request, doc)
+        try:
+            W.check_quota(cfg, 1, len(inflight) + len(batches.pending))
+        except W.QuotaReached as e:
+            raise HTTPException(429, str(e)) from None
+        if doc:
+            try:
+                locks.acquire(doc, signed_in(request), lock_id)
+            except W.ReviewBusy as e:
+                raise HTTPException(409, str(e)) from None
         if req.run_id:
             inflight.add(req.run_id)
         try:
-            r = run_task(req.task, cfg, provider=provider, run_id=req.run_id)
+            r = run_task(
+                req.task, cfg, provider=provider, run_id=req.run_id, started_by=signed_in(request)
+            )
         except Exception as e:  # the model call failed; the trace already records the error
             raise HTTPException(
                 502, f"model call failed: {type(e).__name__}: {str(e)[:300]}"
             ) from None
         finally:
             inflight.discard(req.run_id or "")
+            if doc:
+                locks.release(doc, lock_id)
         return RunResponse(
             run_id=r.run_id,
             final_text=r.final_text,
@@ -222,7 +271,7 @@ def create_app(
         )
 
     @app.get("/runs")
-    def runs(limit: int = 30, doc_id: str | None = None) -> list[dict[str, Any]]:
+    def runs(request: Request, limit: int = 30, doc_id: str | None = None) -> list[dict[str, Any]]:
         """Newest first. status: running | done | error. needs_human: kind of pending decision.
         `doc_id` keeps only the runs of that contract (read from each run's first event)."""
         base = cfg.runs_dir
@@ -232,6 +281,7 @@ def create_app(
         if doc_id is not None:
             checked(doc_id)
             dirs = [d for d in dirs if W.task_doc(d / "trace.jsonl") == doc_id]
+        dirs = [d for d in dirs if may_read(request, W.task_doc(d / "trace.jsonl"))]
         dirs.sort(key=lambda d: (d / "trace.jsonl").stat().st_mtime, reverse=True)
         out = []
         for d in dirs[: max(1, min(limit, 100))]:
@@ -252,13 +302,15 @@ def create_app(
                     "latency_s": end.get("latency_s"),
                     "needs_human": W.pending_kind(st, W.read_decision(cfg, d.name)),
                     "replay_of": start.get("replay_of"),
+                    "by": start.get("started_by"),
                     "started": (d / "trace.jsonl").stat().st_ctime,
                 }
             )
         return out
 
     @app.get("/runs/{run_id}/trace")
-    def trace(run_id: str) -> list[dict]:
+    def trace(run_id: str, request: Request) -> list[dict]:
+        guard(request, run_doc(checked(run_id)))
         try:
             return read_trace(cfg.runs_dir, checked(run_id))
         except FileNotFoundError:
@@ -267,8 +319,9 @@ def create_app(
             raise HTTPException(404, "unknown run") from None
 
     @app.get("/runs/{run_id}/review")
-    def review(run_id: str) -> dict[str, Any]:
-        st = W.run_state(cfg, checked(run_id))
+    def review(run_id: str, request: Request) -> dict[str, Any]:
+        guard(request, run_doc(checked(run_id)))
+        st = W.run_state(cfg, run_id)
         if st["status"] == "queued":
             if not starting(run_id):
                 raise HTTPException(404, "unknown run")
@@ -289,17 +342,19 @@ def create_app(
             "decision": decision,
             "pending": W.pending_kind(st, decision),
             "replay_of": D.is_replay(tr),
+            "by": tr[0].get("started_by") if tr else None,
             "final_text": next(
                 (e["text"] for e in reversed(tr) if e["type"] == "llm_call" and e["text"]), ""
             ),
         }
 
     @app.get("/runs/{run_id}/export/{kind}")
-    def export(run_id: str, kind: str) -> Response:
+    def export(run_id: str, kind: str, request: Request) -> Response:
         """PDF exports: redline.pdf (struck quotes + proposed wording) or memo.pdf."""
         if kind not in ("redline.pdf", "memo.pdf"):
             raise HTTPException(404, "export must be redline.pdf or memo.pdf")
-        st = W.run_state(cfg, checked(run_id))
+        guard(request, run_doc(checked(run_id)))
+        st = W.run_state(cfg, run_id)
         if st["status"] in ("queued", "running") or not st["view"] or not st["view"]["doc_id"]:
             raise HTTPException(404, "no finished review for this run")
         view = {
@@ -329,7 +384,8 @@ def create_app(
         )
 
     @app.post("/runs/{run_id}/decision")
-    def decision(run_id: str, req: DecisionRequest) -> dict[str, Any]:
+    def decision(run_id: str, req: DecisionRequest, request: Request) -> dict[str, Any]:
+        guard(request, run_doc(checked(run_id)))
         try:
             return W.decide(cfg, checked(run_id), req.decision, req.note, req.message)
         except FileNotFoundError:
@@ -340,13 +396,20 @@ def create_app(
             raise HTTPException(409, str(e)) from None
 
     @app.get("/inbox")
-    def inbox() -> list[dict[str, Any]]:
-        return W.inbox(cfg)
+    def inbox(request: Request) -> list[dict[str, Any]]:
+        return [i for i in W.inbox(cfg) if may_read(request, i["doc_id"])]
 
     @app.post("/batches")
-    def start_batch(req: BatchRequest) -> dict[str, Any]:
+    def start_batch(req: BatchRequest, request: Request) -> dict[str, Any]:
+        for d in req.doc_ids:
+            if _ID.match(d):
+                guard(request, d)
         try:
-            return batches.start(req.doc_ids, req.auto_send)
+            return batches.start(req.doc_ids, req.auto_send, by=signed_in(request))
+        except W.ReviewBusy as e:
+            raise HTTPException(409, f"{e}. Nothing in this batch was started.") from None
+        except W.QuotaReached as e:
+            raise HTTPException(429, str(e)) from None
         except FileNotFoundError as e:
             raise HTTPException(404, f"unknown contract: {e}") from None
         except ValueError as e:
@@ -364,8 +427,9 @@ def create_app(
             raise HTTPException(404, "unknown batch") from None
 
     @app.get("/contracts")
-    def contracts() -> list[dict[str, Any]]:
+    def contracts(request: Request) -> list[dict[str, Any]]:
         out = []
+        latest = W.latest_reviews(cfg)
         sources = (
             ("sample", cfg.contracts_dir),
             ("held-out", cfg.heldout_dir),
@@ -378,6 +442,23 @@ def create_app(
             for p in sorted([*d.glob("*.md"), *d.glob("*.txt")]):
                 if not _ID.match(p.stem):
                     continue
+                if not may_read(request, p.stem):
+                    # Listed so people know it exists and who to ask; nothing of its text.
+                    out.append(
+                        {
+                            "doc_id": p.stem,
+                            "title": "Restricted contract",
+                            "clauses": 0,
+                            "languages": [],
+                            "source": source,
+                            "ocr": None,
+                            "sensitivity": "restricted",
+                            "readable": False,
+                            "in_review": None,
+                            "last_review": None,
+                        }
+                    )
+                    continue
                 c = C.load_contract(d, p.stem)
                 out.append(
                     {
@@ -388,23 +469,26 @@ def create_app(
                         "source": source,
                         "ocr": ocr_info(c.source),
                         **P.label_info(cfg, c.doc_id),
+                        # Who is reviewing it right now (None when nobody is), for the UI's lock.
+                        "in_review": locks.holder(c.doc_id),
+                        "readable": True,
+                        # The newest finished review: open it rather than reviewing again.
+                        "last_review": latest.get(c.doc_id),
                     }
                 )
         return out
 
     @app.post("/contracts")
     async def upload_contract(
+        request: Request,
         file: UploadFile | None = File(None),
         text: str | None = Form(None),
         title: str | None = Form(None),
-        sensitivity: str | None = Form(None),
     ) -> dict[str, Any]:
         """Upload a .pdf/.docx/.txt/.md file or a scan (.png/.jpg/.tif), or paste text. Scans and
-        Arabic PDFs are read by local OCR. Stored under data/uploads (git-ignored)."""
+        Arabic PDFs are read by local OCR. Stored under data/uploads (git-ignored). The label is
+        always read from the text here; a person changes it afterwards (PUT .../sensitivity)."""
         source: dict | None = None
-        level = sensitivity or "auto"  # no choice: read the text and pick the label here
-        if level != "auto" and level not in P.LEVELS:
-            raise HTTPException(400, f"sensitivity must be auto or one of {', '.join(P.LEVELS)}")
         try:
             if file is not None and file.filename:
                 data = await file.read(C.MAX_UPLOAD_BYTES + 1)
@@ -438,10 +522,7 @@ def create_app(
         # with the label even when a person chooses one, so the audit shows both.
         # The raw text, not the stored one: a marking line is dropped from the clauses.
         found = P.detect_label(f"{title or ''}\n{raw}", c)
-        if level == "auto":
-            P.write_label(path, found.level, "auto", found)
-        else:
-            P.write_label(path, level, "person", found)
+        P.write_label(path, found.level, "auto", found)
         return {
             "doc_id": c.doc_id,
             "title": c.title,
@@ -453,23 +534,50 @@ def create_app(
         }
 
     @app.put("/contracts/{doc_id}/sensitivity")
-    def set_label(doc_id: str, req: LabelRequest) -> dict[str, Any]:
-        """Change an uploaded contract's label. The bundled samples keep theirs."""
+    def set_label(doc_id: str, req: LabelRequest, request: Request) -> dict[str, Any]:
+        """Change an uploaded contract's label, signed off by the signed-in person. Stricter needs
+        only a click; looser than the text calls for needs a reason, and the name always comes from
+        the session, never from the request, so nobody can sign as someone else."""
         path = P.contract_path(cfg, checked(doc_id))
         if path is None:
             raise HTTPException(404, "unknown contract")
         if path.parent.resolve() != cfg.uploads_dir.resolve():
             raise HTTPException(400, "only uploaded contracts can be relabelled")
+        guard(request, doc_id)
+        if (h := locks.holder(doc_id)) is not None:
+            who = h.get("by") or "someone"
+            raise HTTPException(
+                409, f"{doc_id} is being reviewed by {who}; change its label once the review ends."
+            )
+        by = signed_in(request)
+        reason = None
+        meta = P.read_meta(path)
+        detected = meta.get("detected")
+        if detected in P.LEVELS and req.sensitivity in P.LEVELS:
+            if P.RANK[req.sensitivity] < P.RANK[detected]:
+                if not by:
+                    raise HTTPException(
+                        403,
+                        "Sign in to lower a label: the sign-off records who you are."
+                        if auth.enabled
+                        else "Lowering a label needs a signed-in person, and sign-in is off on "
+                        "this server (set HACK_AUTH_USERS).",
+                    )
+                try:
+                    reason = P.check_grounds(meta, req.sensitivity, req.grounds)
+                except ValueError as e:
+                    raise HTTPException(400, str(e)) from None
         try:
-            P.write_label(path, req.sensitivity, "person")
+            P.write_label(path, req.sensitivity, "person", by=by, reason=reason)
         except ValueError as e:
             raise HTTPException(400, str(e)) from None
         return {"doc_id": doc_id, **P.label_info(cfg, doc_id)}
 
     @app.get("/contracts/{doc_id}")
-    def contract(doc_id: str) -> dict[str, Any]:
+    def contract(doc_id: str, request: Request) -> dict[str, Any]:
+        guard(request, checked(doc_id))
         try:
-            c = C.load_contract(contract_dirs, checked(doc_id))
+            c = C.load_contract(contract_dirs, doc_id)
         except FileNotFoundError:
             raise HTTPException(404, "unknown contract") from None
         return {

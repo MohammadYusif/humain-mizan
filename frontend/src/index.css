@@ -68,6 +68,9 @@
   --color-minor: var(--minor);
   --color-minor-soft: var(--minor-soft);
   --color-highlight: var(--highlight);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-ink-muted: var(--ink-muted);
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -86,6 +89,10 @@
   --background: oklch(0.968 0.013 84);
   --foreground: oklch(0.235 0.018 62);
   --paper: oklch(0.987 0.008 86);
+  /* The brand panel (sign-in): deep ink green with parchment text, in both themes. */
+  --ink: oklch(0.3 0.045 166);
+  --ink-foreground: oklch(0.96 0.016 86);
+  --ink-muted: oklch(0.8 0.03 140);
   --card: oklch(0.987 0.008 86);
   --card-foreground: oklch(0.235 0.018 62);
   --popover: oklch(0.99 0.007 86);
@@ -136,6 +143,9 @@
   --background: oklch(0.175 0.011 70);
   --foreground: oklch(0.93 0.016 84);
   --paper: oklch(0.212 0.012 70);
+  --ink: oklch(0.25 0.04 166);
+  --ink-foreground: oklch(0.94 0.016 86);
+  --ink-muted: oklch(0.76 0.03 140);
   --card: oklch(0.212 0.012 70);
   --card-foreground: oklch(0.93 0.016 84);
   --popover: oklch(0.235 0.013 70);

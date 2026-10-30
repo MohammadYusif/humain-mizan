@@ -126,6 +126,14 @@ def test_upload_endpoint_then_review_the_uploaded_contract(tmp_path):
 
 
 def run_batch(s, script_fn, docs, auto_send):
+    if len(set(docs)) != len(docs):
+        # The same contract twice cannot be in one batch (one review at a time per contract), so
+        # run it as batches one after the other and return their items together.
+        items, runner = [], None
+        for d in docs:
+            runner, st = run_batch(s, script_fn, [d], auto_send)
+            items += st["items"]
+        return runner, {"items": items}
     runner = W.BatchRunner(s, provider_factory=lambda: FakeProvider(script_fn()), workers=2)
     manifest = runner.start(docs, auto_send=auto_send)
     runner.pool.shutdown(wait=True)
@@ -134,22 +142,92 @@ def run_batch(s, script_fn, docs, auto_send):
 
 def test_batch_with_human_approval_of_sends(tmp_path):
     s = settings(tmp_path)
-    _, st = run_batch(s, lambda: scripted_review("services-en-01"), ["services-en-01"] * 2, False)
-    assert st["done"] == 2 and st["routes"]["negotiate"] == 2 and st["errors"] == 0
-    assert st["needs_human"] == 2 and all(i["pending"] == "approve_send" for i in st["items"])
-    assert st["estimate"]["hours_saved"] == 2.0 and "60 min" in st["estimate"]["assumptions"]
+    # The same contract twice, one batch after the other (one batch may not hold it twice).
+    for _ in range(2):
+        _, st = run_batch(s, lambda: scripted_review("services-en-01"), ["services-en-01"], False)
+        assert st["done"] == 1 and st["routes"]["negotiate"] == 1 and st["errors"] == 0
+        assert st["needs_human"] == 1 and st["items"][0]["pending"] == "approve_send"
+        assert st["estimate"]["hours_saved"] == 1.0 and "60 min" in st["estimate"]["assumptions"]
     items = W.inbox(s)
     assert {i["kind"] for i in items} == {"approve_send"} and len(items) == 2
     rid = items[0]["run_id"]
     with pytest.raises(ValueError, match="must be one of"):
         W.decide(s, rid, "approve_contract")
     rec = W.decide(s, rid, "send", note="ok")
-    assert rec["message"] == "amend c3"
+    # Built from the recorded redline, one numbered line per change; not the model's "amend c3".
+    assert rec["message"].startswith("Requested changes to ")
+    assert "\n1. Clause 3 (Termination): " in rec["message"]
     out = [json.loads(x) for x in (s.runs_dir / rid / "outbox.jsonl").read_text().splitlines()]
     assert out[-1]["by"] == "human" and out[-1]["kind"] == "counterparty"
     with pytest.raises(ValueError, match="already decided"):
         W.decide(s, rid, "send")
     assert len(W.inbox(s)) == 1
+
+
+def test_one_review_at_a_time_per_contract():
+    """Two people (or a person and a batch) cannot review the same contract at once; the second
+    is told who has it. Releasing takes the right run's hold only."""
+    locks = W.ReviewLocks()
+    locks.acquire("services-en-01", "mohammad", "r1")
+    with pytest.raises(W.ReviewBusy, match="being reviewed by mohammad"):
+        locks.acquire("services-en-01", "sara", "r2")
+    locks.acquire("nda-en-01", "sara", "r3")  # another contract is free
+    locks.release("services-en-01", "r2")  # not the holder: no effect
+    assert locks.holder("services-en-01")["by"] == "mohammad"
+    locks.release("services-en-01", "r1")
+    assert locks.holder("services-en-01") is None
+    locks.acquire("services-en-01", "sara", "r4")
+
+
+def test_batch_refuses_a_contract_someone_is_reviewing_and_starts_nothing(tmp_path):
+    locks = W.ReviewLocks()
+    runner = W.BatchRunner(settings(tmp_path), locks=locks)
+    locks.acquire("services-en-01", "mohammad", "live-1")
+    with pytest.raises(W.ReviewBusy, match="mohammad"):
+        runner.start(["nda-en-01", "services-en-01"], False, by="sara")
+    assert locks.holder("nda-en-01") is None  # all or nothing: the free one was not kept
+    with pytest.raises(ValueError, match="twice"):
+        runner.start(["nda-en-01", "nda-en-01"], False)
+
+
+def test_api_refuses_a_second_review_and_a_relabel_while_one_runs(tmp_path):
+    """Through the API: while a review holds a contract, another review of it is refused with who
+    has it, its label cannot change, and the contract list shows who is reviewing it."""
+    import threading
+
+    started, release = threading.Event(), threading.Event()
+
+    class Slow(FakeProvider):
+        def complete(self, *a, **kw):
+            started.set()
+            release.wait(5)
+            return super().complete(*a, **kw)
+
+    s = settings(tmp_path)
+    client = TestClient(
+        create_app(s, provider_factory=lambda: Slow(scripted_review("services-en-01")))
+    )
+    up = client.post("/contracts", data={"text": "1. Fees. Net 60.\n\n2. Law. Saudi law."}).json()
+    doc = up["doc_id"]
+    first = threading.Thread(
+        target=lambda: client.post(
+            "/run", json={"task": f"Review contract {doc} and route it.", "run_id": "first-1"}
+        )
+    )
+    first.start()
+    assert started.wait(5)
+    second = client.post(
+        "/run", json={"task": f"Review contract {doc} and route it.", "run_id": "second-1"}
+    )
+    assert second.status_code == 409 and "being reviewed" in second.json()["detail"]
+    listed = {c["doc_id"]: c for c in client.get("/contracts").json()}
+    assert listed[doc]["in_review"]["run_id"] == "first-1"
+    relabel = client.put(f"/contracts/{doc}/sensitivity", json={"sensitivity": "restricted"})
+    assert relabel.status_code == 409
+    release.set()
+    first.join(10)
+    listed = {c["doc_id"]: c for c in client.get("/contracts").json()}
+    assert listed[doc]["in_review"] is None  # released when the run ends
 
 
 def test_batch_auto_send_needs_no_human_and_escalations_reach_legal(tmp_path):
@@ -553,3 +631,40 @@ def test_index_is_revalidated_and_assets_are_immutable(tmp_path):
     client = TestClient(create_app(s))
     assert client.get("/").headers["cache-control"] == "no-cache"
     assert "immutable" in client.get("/assets/index-abc.js").headers["cache-control"]
+
+
+def test_counterparty_message_is_built_by_code_in_the_contract_language():
+    from hack.challenge.messages import requested_changes
+
+    f = [
+        {"severity": "major", "clause_id": "c4", "clause_type": "payment", "redline": " Fee 1%. "},
+        {"severity": "minor", "clause_id": "c5", "clause_type": "notices", "redline": "x"},
+    ]
+    ar = requested_changes("اتفاقية خدمات", f, {"c4": "المادة الرابعة: الدفع"})
+    assert ar == "التعديلات المطلوبة على اتفاقية خدمات\n\n1. المادة الرابعة: Fee 1%."
+    en = requested_changes("Services agreement", f, {"c4": "4. Payment. Net 30."})
+    assert en == "Requested changes to Services agreement\n\n1. Clause 4 (Payment): Fee 1%."
+    assert requested_changes("x", f[1:], {}) == ""  # minor only: nothing to ask for
+
+
+def test_review_allowance_caps_single_runs_and_batches(tmp_path):
+    """A shared demo sets HACK_MAX_REVIEWS so its API key cannot be used up: a batch that would
+    pass the allowance starts nothing, and single runs stop at the cap. Replays do not count."""
+    s = settings(tmp_path, max_reviews=3)
+    client = TestClient(create_app(s, provider_factory=lambda: FakeProvider()))
+    (s.runs_dir / "demo-x").mkdir(parents=True)
+    (s.runs_dir / "demo-x" / "trace.jsonl").write_text("{}\n")  # a replay: free
+    big = client.post(
+        "/batches", json={"doc_ids": ["nda-en-01", "ar-data-01", "services-en-01", "ar-saas-01"]}
+    )
+    assert big.status_code == 429 and "3 are left" in big.json()["detail"]
+    for i in range(3):
+        r = client.post(
+            "/run", json={"task": "Review contract nda-en-01 and route it.", "run_id": f"q-{i}"}
+        )
+        assert r.status_code == 200, r.text
+    over = client.post(
+        "/run", json={"task": "Review contract nda-en-01 and route it.", "run_id": "q-9"}
+    )
+    assert over.status_code == 429 and "0 are left" in over.json()["detail"]
+    assert client.get("/healthz").json()["reviews"] == {"max": 3, "used": 3}

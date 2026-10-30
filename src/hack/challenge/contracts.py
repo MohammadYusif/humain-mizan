@@ -401,6 +401,21 @@ def find_injection(contract: Contract) -> list[str]:
     return [c.id for c in contract.clauses if _INJECTION.search(c.text)]
 
 
+def injection_quote(text: str) -> str:
+    """The sentence that speaks to an AI reviewer, so a lawyer reads what it asked for. A clause
+    the model reported (no pattern match) is quoted whole, up to 300 characters."""
+    m = _INJECTION.search(text)
+    if m is None:
+        t = re.sub(r"\s+", " ", text).strip()
+        return t if len(t) <= 300 else t[:299].rstrip() + "…"
+    cut = [text.rfind(sep, 0, m.start()) for sep in (". ", "\n", "؛ ", ": ")]
+    start = max(cut)
+    start = 0 if start < 0 else start + 1
+    ends = [i for i in (text.find(sep, m.end()) for sep in (".", "\n")) if i >= 0]
+    end = min(ends) + 1 if ends else len(text)
+    return re.sub(r"\s+", " ", text[start:end]).strip()
+
+
 def normalize(text: str) -> str:
     text = text.translate(_DIGITS)
     text = _TASHKEEL.sub("", text)
