@@ -18,6 +18,7 @@ _STOP = {
 
 class AnthropicProvider:
     name = "anthropic"
+    location = "external"  # a third-party API (see challenge/policy.py)
 
     def __init__(self, model: str, effort: str = "", api_key: str | None = None) -> None:
         self.model = model

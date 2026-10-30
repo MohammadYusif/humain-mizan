@@ -22,6 +22,7 @@ Private deployment (Railway) behind Mizan's own sign-in page: see [docs/DEPLOY.m
 - **Real contracts**: 15 public contracts we did not write (CUAD SEC filings, Zoom/Dropbox terms, Saudi-law SEC exhibits, Ministry of Finance and EXPRO contracts in Arabic up to 101 pages). The first run approved 5 that should go to a lawyer; after adding the liability-cap evidence check, 0 of 14. See `evals/real/` and `docs/RESULTS.md`.
 - **Second blind batch**: 8 more contracts in new industries, labels committed before the only run: 8/8 routes, 0/6 wrong approvals.
 - **Another company's rules**: a different buyer's playbook loaded from a file (`HACK_PLAYBOOK`), no code change: 8/8, both expected route changes, 0/5 wrong approvals.
+- **Confidential contracts**: every contract is labelled Public, Internal or Restricted. Restricted contracts never reach an external model: with one configured they go straight to a lawyer with no model call; with a model inside the network they are reviewed but never approved or sent automatically. Internal contracts reach an external model with party names, emails, phone numbers, IBANs and ID/CR/VAT numbers replaced by placeholders, which are put back in everything people read and send. Enforced before the run and again in the tool that serves contract text; each review and memo PDF records the label, where the model ran and what was hidden. Measured: the main suite with names hidden still routes 12/12 with 0/9 wrong approvals (`src/hack/challenge/policy.py`).
 - **Guided demo**: four recorded runs replay as if live, with no API key or network (demo-safe).
 - **Insights (learning loop)**: lawyers' decisions become proposed playbook amendments; a human approves them; red flags and critical rules never relax.
 - **PDF exports**: a redline (offending text struck through, playbook wording proposed under each clause with the rule and reason) and a decision memo, typeset with Typst; Arabic is right-to-left.
@@ -35,7 +36,7 @@ Private deployment (Railway) behind Mizan's own sign-in page: see [docs/DEPLOY.m
 
 ## Develop
 ```bash
-uv run pytest                                  # 82 tests, no API calls (the real-OCR test runs where Tesseract is installed, e.g. in Docker)
+uv run pytest                                  # 99 tests, no API calls (the real-OCR test runs where Tesseract is installed, e.g. in Docker)
 uv run hack run "Review contract saas-en-01 and route it."
 uv run hack eval --model claude-sonnet-5-5     # 12 labelled contracts -> evals/results/
 uv run hack rescore evals/results/<file>.json  # re-grade saved traces against current labels

@@ -37,6 +37,13 @@
   text(size: 9pt, d.action)
 }
 
+#if d.data != "" {
+  v(0.3em)
+  label("Data handling")
+  linebreak()
+  text(size: 9pt, d.data)
+}
+
 #if d.source != "" {
   v(0.3em)
   label("Source text")

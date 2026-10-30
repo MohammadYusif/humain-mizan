@@ -16,6 +16,7 @@ from . import exports as X
 from . import learning as L
 from . import workflow as W
 from .challenge import contracts as C
+from .challenge import policy as P
 from .challenge.playbook import as_dicts
 from .challenge.review import ocr_doubt
 from .challenge.view import review_view
@@ -72,6 +73,10 @@ class ProposalDecision(BaseModel):
 class ReplayRequest(BaseModel):
     scene_id: str
     speed: float = 3.0  # 1 = recorded pace; higher is faster (gaps are capped at 2 s anyway)
+
+
+class LabelRequest(BaseModel):
+    sensitivity: str
 
 
 class BatchRequest(BaseModel):
@@ -161,6 +166,28 @@ def create_app(
             "model": cfg.model,
             "approve_writes": cfg.approve_writes,
             "ocr": {"available": st["available"], "detail": st["detail"]},
+            "data_policy": policy_info(),
+        }
+
+    def policy_info() -> dict[str, Any]:
+        """What the UI needs to say where a contract will go before anyone presses Review."""
+        from .llm import build_provider
+
+        try:
+            location = P.provider_location(
+                provider_factory() if provider_factory else build_provider(cfg), cfg
+            )
+        except Exception:  # e.g. no API key yet: describe the configured provider, fail closed
+            location = cfg.provider_location or (
+                P.url_location(cfg.openai_base_url)
+                if cfg.provider == "openai_compat"
+                else "external"
+            )
+        return {
+            "location": location,
+            "max_external": cfg.max_external,
+            "redact_external": cfg.redact_external,
+            "default_sensitivity": cfg.default_sensitivity,
         }
 
     @app.post("/run", response_model=RunResponse)
@@ -360,6 +387,7 @@ def create_app(
                         "languages": sorted({cl.lang for cl in c.clauses}),
                         "source": source,
                         "ocr": ocr_info(c.source),
+                        "sensitivity": P.level_of(cfg, c.doc_id),
                     }
                 )
         return out
@@ -369,10 +397,14 @@ def create_app(
         file: UploadFile | None = File(None),
         text: str | None = Form(None),
         title: str | None = Form(None),
+        sensitivity: str | None = Form(None),
     ) -> dict[str, Any]:
         """Upload a .pdf/.docx/.txt/.md file or a scan (.png/.jpg/.tif), or paste text. Scans and
         Arabic PDFs are read by local OCR. Stored under data/uploads (git-ignored)."""
         source: dict | None = None
+        level = sensitivity or cfg.default_sensitivity
+        if level not in P.LEVELS:
+            raise HTTPException(400, f"sensitivity must be one of {', '.join(P.LEVELS)}")
         try:
             if file is not None and file.filename:
                 data = await file.read(C.MAX_UPLOAD_BYTES + 1)
@@ -401,6 +433,7 @@ def create_app(
             sidecar.write_text(json.dumps(source, ensure_ascii=False), encoding="utf-8")
         else:
             sidecar.unlink(missing_ok=True)
+        P.write_label(path, level)
         c = C.load_contract(cfg.uploads_dir, doc_id)
         return {
             "doc_id": c.doc_id,
@@ -409,7 +442,22 @@ def create_app(
             "languages": sorted({cl.lang for cl in c.clauses}),
             "source": "upload",
             "ocr": ocr_info(c.source),
+            "sensitivity": level,
         }
+
+    @app.put("/contracts/{doc_id}/sensitivity")
+    def set_label(doc_id: str, req: LabelRequest) -> dict[str, Any]:
+        """Change an uploaded contract's label. The bundled samples keep theirs."""
+        path = P.contract_path(cfg, checked(doc_id))
+        if path is None:
+            raise HTTPException(404, "unknown contract")
+        if path.parent.resolve() != cfg.uploads_dir.resolve():
+            raise HTTPException(400, "only uploaded contracts can be relabelled")
+        try:
+            P.write_label(path, req.sensitivity)
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from None
+        return {"doc_id": doc_id, "sensitivity": req.sensitivity}
 
     @app.get("/contracts/{doc_id}")
     def contract(doc_id: str) -> dict[str, Any]:
@@ -422,6 +470,7 @@ def create_app(
             "title": c.title,
             "clauses": [{"id": cl.id, "lang": cl.lang, "text": cl.text} for cl in c.clauses],
             "ocr": ocr_info(c.source),
+            "sensitivity": P.level_of(cfg, c.doc_id),
         }
 
     @app.get("/demo/scenes")

@@ -184,6 +184,12 @@ export function ReviewArea({ runId, contracts, refreshContracts, runs, refreshRu
           onReview={() => void startReview()}
           onUpload={() => setUploadOpen(true)}
           busy={posting}
+          onRelabel={(doc, level) => {
+            api.setSensitivity(doc, level).then(
+              () => refreshContracts(),
+              (e: unknown) => toast.error("Could not change the label", { description: errorMessage(e) })
+            )
+          }}
         />
         <RunHistory runs={runs} selectedId={runId} onSelect={selectRun} className="lg:flex-1" />
         </CollapsibleContent>

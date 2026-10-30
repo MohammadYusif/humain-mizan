@@ -11,6 +11,8 @@
 
 #let author = "Mohammad Albeladi"
 #let role = "AI trainer, SDAIA Academy and KAUST"
+#let demo-url = "Demo video link"
+#let redaction-result = "12/12 routes right and 0/9 risky contracts approved on the main suite, the same as with names shown"
 
 #set document(title: "Mizan", author: author)
 #set page(width: 33.867cm, height: 19.05cm, margin: (x: 2.2cm, top: 1.7cm, bottom: 1.5cm), fill: paper,
@@ -23,10 +25,11 @@
 #set list(indent: 0.4em, body-indent: 0.6em, spacing: 0.75em)
 
 #let mono(s) = text(font: "IBM Plex Mono", size: 0.85em, s)
+#let kicker(s) = block(below: 0.4em, text(size: 14pt, fill: primary, weight: "medium", s))
 
 // Every content slide: a short kicker and a title at the top, the body centred in the space below.
-#let slide(kicker, title, body) = {
-  block(below: 0.4em, text(size: 14pt, fill: primary, weight: "medium", kicker))
+#let slide(kicker-text, title, body) = {
+  kicker(kicker-text)
   block(below: 0pt, text(size: 34pt, weight: "semibold", title))
   v(1fr)
   body
@@ -49,7 +52,22 @@
   note(label, size: 15pt),
 )
 
-// 1. Title
+// Flow diagram pieces: a box with a heading, a horizontal arrow, an upward arrow.
+#let fbox(title, body, h: auto) = block(width: 100%, height: h, fill: card, stroke: 0.6pt + line-c, radius: 6pt, inset: 12pt, {
+  block(below: 0.35em, text(size: 16pt, weight: "semibold", title))
+  text(size: 15pt, fill: muted, body)
+})
+#let harrow = box(width: 100%, height: 12pt, {
+  place(horizon + left, line(length: 100%, stroke: 1.2pt + muted))
+  place(horizon + right, polygon(fill: muted, (0pt, 0pt), (9pt, 6pt), (0pt, 12pt)))
+})
+#let uarrow(h) = box(width: 100%, height: h, {
+  place(top + center, polygon(fill: muted, (6pt, 0pt), (12pt, 9pt), (0pt, 9pt)))
+  place(top + center, dy: 6pt, line(angle: 90deg, length: h - 6pt, stroke: 1.2pt + muted))
+})
+
+// 1. Project overview (title slide)
+#kicker[Project overview · Challenge 3: Autonomous Enterprise]
 #v(1fr)
 #grid(columns: (auto, 1fr), column-gutter: 30pt, align: horizon,
   image("../../src/hack/assets/logo.svg", width: 4.4cm),
@@ -67,60 +85,83 @@
 #v(0.3fr)
 #pagebreak()
 
-// 2. The issue
-#slide[The issue][Legal reads every contract by hand, and most of them are routine][
+// 2. Problem statement
+#slide[Problem statement][Legal reads every contract by hand, and most of them are routine][
   #grid(columns: (1fr, 1fr), column-gutter: 1.4cm, align: horizon,
     [
       - Supplier contracts arrive in Arabic, English or both, often as scans.
       - Lawyers spend their time confirming that routine contracts are routine.
-      - The risky ones look like the routine ones: an uncapped liability, a monthly late charge, data sent abroad.
+      - The risky ones look like the routine ones: an uncapped liability, a monthly late charge, personal data sent abroad.
     ],
     card-box(inset: 24pt)[
       #head[The expensive mistake is a confident approval.]
       #note[Automating review is easy. Automating it so that nothing risky is signed without a lawyer
-      is the problem we set out to solve, and the number we measure first.]
+      is the problem we set out to solve, and the number we measure first. Most tools leave that
+      decision to the model.]
     ])
 ]
 
-// 3. Solution
-#slide[Our solution][Every contract ends in one of three routes, decided by code][
+// 3. Proposed solution
+#slide[Proposed solution][Every contract ends in one of three routes, decided by code][
   #grid(columns: (1fr, 1fr, 1fr), column-gutter: 0.7cm,
     route("Approve", approve)[Meets the playbook, and the evidence is on record: every clause read, the cap on our liability quoted. No one touches it.],
     route("Negotiate", negotiate)[Major deviations. Mizan writes the redline and the message to the counterparty, citing the contract's own article numbers.],
     route("Escalate", escalate)[Critical risk, a missing clause, an injected instruction, a doubtful scan. A lawyer gets it with the exact question.],
   )
   #v(0.9cm)
-  #note(size: 20pt)[The model reads, types clauses and records findings with verbatim quotes. It never chooses the route.]
+  #note(size: 20pt)[The model reads, types clauses and records findings with verbatim quotes. It never chooses the route. Only escalations reach the lawyers' inbox.]
 ]
 
-// 4. How it works
-#slide[How it works][Upload, check every clause, route][
+// 4. Technical approach
+#slide[Technical approach][The model reads; code decides][
+  #let h1 = 5.4cm
+  #let h3 = 3.3cm
+  #let routes = stack(dir: ltr, spacing: 8pt,
+    text(size: 15pt, weight: "semibold", fill: approve)[Approve],
+    text(size: 15pt, weight: "semibold", fill: negotiate)[Negotiate],
+    text(size: 15pt, weight: "semibold", fill: escalate)[Escalate])
+  #grid(columns: (1fr, 0.6cm, 0.9fr, 0.6cm, 1.9fr, 0.6cm, 1.5fr), column-gutter: 3pt, row-gutter: 0pt, align: horizon,
+    fbox("Upload", h: h1)[PDF, Word, text, scan or photo. Local OCR in Arabic and English, confidence kept.],
+    harrow,
+    fbox("Clauses", h: h1)[Split by clause, each with its page and source.],
+    harrow,
+    fbox("Agent loop", h: h1)[Claude Sonnet 5.5. Tools: type each clause against the playbook, record findings with verbatim quotes, confirm our liability cap, send the redline.],
+    harrow,
+    fbox("Routing in code", h: h1)[Severity and route from findings, red flags, coverage and OCR confidence. A critical finding never approves. #v(0.5em) #routes],
+    [], [], [], [], uarrow(0.8cm), [], uarrow(0.8cm),
+    [], [], [], [],
+    fbox("Data policy gate", h: h3)[Label and model location checked before any call; identifiers hidden from external models.],
+    [],
+    fbox("Red-flag patterns", h: h3)[Arabic and English, with no model. A critical flag always escalates.],
+  )
+  #v(0.6cm)
+  #note(size: 15pt)[Models: Claude Sonnet 5.5, effort medium, through the Anthropic SDK; or a local model through an OpenAI-compatible server (qwen3:14b measured).
+  Every run has a turn cap, a USD budget and a JSONL trace. Python 3.12, FastAPI, React with Tailwind and shadcn/ui, Tesseract OCR, Typst PDFs, one Docker image.]
+]
+
+// 5. Implementation
+#slide[Implementation][Upload, check every clause, route][
   #grid(columns: (1fr, 1fr, 1fr), column-gutter: 0.9cm,
     ..(("1", "Bring any contract", "PDF, Word, text, scan or photo. Scans are read by local OCR and the confidence is kept.", "step-1-upload.png"),
        ("2", "Every clause checked", "Findings quote the contract word for word, with the playbook's wording as a redline.", "step-2-findings.png"),
        ("3", "Code routes it", "Severity and route come from code. A critical finding never approves.", "step-3-route.png"),
     ).map(((n, t, d, img)) => [
-      #block(below: 0.6em, align(center, image(img, height: 7.4cm)))
+      #block(below: 0.6em, align(center, image(img, height: 6.8cm)))
       #head[#text(fill: primary, n) #h(6pt) #t]
       #note(d, size: 16pt)
     ]))
+  #v(0.7cm)
+  #note(size: 16pt)[Also built: a lawyers' inbox that holds only escalations, a batch queue with an auto-send policy, redline and memo PDFs typeset from data, a Proof screen with every result, Mizan's own sign-in, and a guided demo that replays recorded runs.]
 ]
 
-// 5. Trust
-#slide[Why the route can be trusted][Approval needs evidence, not just no findings][
-  #grid(columns: (1fr, 1fr), column-gutter: 1.4cm, row-gutter: 1cm,
-    point[Code owns the decision.][A critical finding never approves or negotiates, whatever the model writes.],
-    point[Two detectors.][Arabic and English red-flag patterns run without the model. Critical flags always escalate; others must be recorded or cleared with a quote.],
-    point[Evidence of coverage.][Every page read, every clause typed, liability and governing law present, the words capping our liability quoted and verified.],
-    point[Doubt goes to a lawyer.][Low OCR confidence, an unclear clause, an instruction aimed at the reviewer, or a run that never finished.],
-  )
-]
-
-// 6. Results
-#slide[Task performance on unseen cases][No risky contract approved, on any suite][
+// 6. Testing and results
+#slide[Testing and results][No risky contract approved, on any unseen suite][
   #let th(s) = text(size: 14pt, fill: muted, s)
   #let what(s) = text(size: 16pt, s)
-  #table(columns: (2.1fr, 3.6fr, 1fr, 1.2fr, 1.1fr), stroke: none, inset: (x: 8pt, y: 10pt), align: (x, y) => if x >= 2 and y > 0 { horizon } else { horizon + left },
+  #note(size: 16pt)[Method: labels written before each suite's first run, by reviewers who never saw model output. Blind suites by a
+  separate agent, real public contracts, and saved traces re-graded against changed labels with no model calls.]
+  #v(0.4cm)
+  #table(columns: (2.1fr, 3.6fr, 1fr, 1.2fr, 1.1fr), stroke: none, inset: (x: 8pt, y: 8pt), align: (x, y) => if x >= 2 and y > 0 { horizon } else { horizon + left },
     table.hline(stroke: 0.6pt + line-c),
     th[Suite], th[What it is], th[Routes right], th[Wrongly approved], th[Per contract],
     table.hline(stroke: 0.6pt + line-c),
@@ -130,66 +171,97 @@
     [Real contracts], what[15 public: SEC filings, Zoom and Dropbox terms, Saudi government contracts in Arabic up to 101 pages], [14/14], [*0/14*], [\$0.23],
     table.hline(stroke: 0.6pt + line-c),
   )
-  #v(0.5cm)
+  #v(0.4cm)
   #note(size: 15pt)[Claude Sonnet 5.5, effort medium. All 7 issues marked by outside annotators (CUAD, CLAUDETTE) found. About 17 s per typical contract.]
 ]
 
-// 7. Iteration
-#slide[Evaluation and iteration][Real contracts, first run: 5 wrongly approved][
-  #grid(columns: (1fr, 1.25fr), column-gutter: 1.6cm, align: horizon,
-    grid(columns: (1fr, 1fr), row-gutter: 1cm, column-gutter: 0.8cm,
-      big("5/14", "wrongly approved on the blind first run", color: escalate),
-      big("0/14", "after one general fix", color: approve),
-      big("57%", "routes right on the first run"),
-      big("100%", "after, with the other suites re-checked"),
+// 7. Innovation and value
+#slide[Innovation and value][Approval needs evidence, not just no findings][
+  #grid(columns: (1.35fr, 1fr), column-gutter: 1.6cm, align: horizon,
+    grid(columns: (1fr, 1fr), column-gutter: 0.8cm, row-gutter: 0.9cm,
+      point[Code decides.][A critical finding never approves or negotiates, whatever the model writes.],
+      point[Two detectors.][Arabic and English red-flag patterns run without the model. A critical flag cannot be argued away.],
+      point[Coverage, proven.][Every page read, every clause typed, the words capping our liability quoted and verified.],
+      point[Doubt escalates.][Low OCR confidence, an unclear clause, an instruction aimed at the reviewer, an unfinished run.],
     ),
-    [
-      On Saudi buyer-side contracts the agent read the *supplier's* uncapped liability as the liability clause,
-      so nothing capped *ours*, and code approved.
-
-      *The fix is a rule, not a patch to the wording:* approval now needs the words that cap our liability,
-      quoted and verified by code. Without them the contract escalates.
-
-      #note(size: 16pt)[Labels came first on every suite. Our red-flag patterns catch 12/12 on the suite they were
-      written for and 1/13 blind; we reported that rather than tune them to the test.]
+    card-box(inset: 22pt)[
+      #head[What it is worth]
+      #set text(size: 16pt, fill: muted)
+      #set list(spacing: 0.6em)
+      - Lawyers see only what needs them; routine contracts are approved with the evidence on record.
+      - About 5 cents and 17 seconds for a typical contract.
+      - Arabic and bilingual contracts, and scans read by local OCR with the confidence kept.
+      - Another buyer's rules load from a file; lawyers' decisions become proposed amendments a person accepts.
     ])
 ]
 
-// 8. Robustness
-#slide[Robustness and adaptation][Another company's rules, Arabic scans, weaker models][
-  #grid(columns: (1fr, 1fr, 1fr), column-gutter: 0.7cm,
-    card-box[#head[A new playbook from a file] #note[A different buyer's payment and termination rules, no code change: 8/8, both expected route changes, 0/5 wrong approvals.]],
-    card-box[#head[Scans and photos] #note[A clean Arabic scan (87% OCR confidence) routes like the typed original. A blurry photo (64%) goes to a lawyer.]],
-    card-box[#head[A local model] #note[qwen3:14b went from 3/9 wrong approvals to 0/9 with the safeguards. Blind, it still approved 2/8, so local mode needs a lawyer on every contract. We say so.]],
+// 10. Data policy (placed after Innovation and value)
+#slide[Innovation and value · data policy][Confidential contracts never leave][
+  #let th(s) = text(size: 14pt, fill: muted, s)
+  #let lbl(s) = text(weight: "semibold", s)
+  #let cell(s) = text(size: 16pt, s)
+  #table(columns: (1.3fr, 2.3fr, 2.3fr), stroke: none, inset: (x: 10pt, y: 9pt), align: horizon + left,
+    table.hline(stroke: 0.6pt + line-c),
+    th[Label], th[External model (API outside the network)], th[Model in the network (local or HUMAIN-hosted)],
+    table.hline(stroke: 0.6pt + line-c),
+    [#lbl[Public] #note(size: 14pt)[the samples]], cell[Reviewed as is.], cell[Reviewed as is.],
+    [#lbl[Internal] #note(size: 14pt)[default for uploads]], cell[Identifiers become placeholders before sending, and are put back in everything people read and send out.], cell[Reviewed as is.],
+    [#lbl[Restricted]], cell[No model call at all. The contract goes straight to a lawyer, with the reason.], cell[Reviewed, but never approved or sent automatically. A lawyer signs off.],
+    table.hline(stroke: 0.6pt + line-c),
   )
-  #v(0.9cm)
-  #note(size: 20pt)[Lawyers' decisions become proposed playbook amendments a human accepts; critical rules never relax.]
+  #v(0.6cm)
+  #grid(columns: (1fr, 1fr), column-gutter: 1.4cm,
+    note(size: 16pt)[Hidden: party names, emails, phone numbers, IBANs, ID, CR and VAT numbers. Kept: amounts, dates and durations, because the review needs them.],
+    note(size: 16pt)[Enforced twice in code: before the run starts and in the tool that serves contract text. Every review and memo PDF records the label, where the model ran and what was hidden.],
+  )
+  #v(0.5cm)
+  #note(size: 16pt)[Review quality with identifiers hidden: #text(fill: ink, weight: "medium", redaction-result)]
 ]
 
-// 9. Engineering
-#slide[Engineering][Built to be checked][
-  #grid(columns: (1fr, 1fr), column-gutter: 1.6cm,
+// 8. Challenges and future improvements
+#slide[Challenges and future improvements][The first real run approved 5 of 14. One rule fixed it.][
+  #grid(columns: (1fr, 1.3fr), column-gutter: 1.6cm, align: horizon,
     [
-      - FastAPI and a tool loop with a turn cap, USD budget and a JSONL trace per run
-      - React, Tailwind and shadcn/ui; one Docker image with the API, UI and Arabic OCR
-      - Redline and memo PDFs typeset from data, never markup, so contract text cannot inject
-      - Private by default: Mizan's own sign-in; secrets only in the environment
+      #grid(columns: (1fr, 1fr), column-gutter: 0.8cm, align: top,
+        big("5/14", "wrongly approved on the blind first run", color: escalate),
+        big("0/14", "after one general rule", color: approve),
+      )
+      #v(0.5cm)
+      #note(size: 16pt)[On Saudi buyer-side paper the agent read the *supplier's* uncapped liability as the liability clause, so
+      nothing capped *ours*. Approval now needs the words that cap our liability, quoted and verified by code; without them
+      the contract escalates. The earlier suites were re-run afterwards and held.]
     ],
     [
-      - 82 tests with no API calls; every routing guarantee has one
-      - CI on a fresh clone: lint, tests, licence check, UI build, Docker smoke test with sign-in
-      - #mono("hack eval --model A --model B") compares models; #mono("hack rescore") re-grades saved traces for free
-      - Every number on these slides is in the repo and on the Proof screen
+      #head[Limits we state rather than hide]
+      #set text(size: 15pt, fill: muted)
+      #set list(spacing: 0.5em)
+      - Playbook rules are illustrative, not legal advice; most labels are ours, 7 come from outside annotators.
+      - The real Saudi contracts are all buyer paper, so approving a real compliant contract is untested.
+      - Red-flag patterns catch 1/13 blind; a local model still approved 2/8, so local mode needs a lawyer on every contract.
+      - The OCR gate is calibrated on three sample scans; handwriting, stamps and signatures are not read.
+      #v(0.5cm)
+      #text(size: 20pt, fill: ink, weight: "semibold")[Next]
+      #v(0.2cm)
+      - Lawyer-validated labels, including risky Arabic contracts, where no public labelled source exists.
+      - Real compliant contracts in the suite, so approvals are exercised and not only refused.
+      - Review quality with identifiers hidden, measured the same blind way.
     ])
 ]
 
-// 10. Limits
-#slide[What it does not do yet][Stated, not hidden][
-  - Playbook rules are illustrative, not legal advice; most labels are ours (7 real-contract labels come from outside annotators).
-  - The real Saudi contracts are all buyer paper, so approving a real compliant contract is untested.
-  - Risky Arabic contracts are measured only on our synthetic suites: no public labelled source exists.
-  - The OCR gate is calibrated on three sample scans; handwriting, stamps and signatures are not read.
-  - Suites are 8 to 15 contracts: strong signals, not a benchmark.
-  #v(1cm)
-  #text(size: 22pt, weight: "semibold")[The model reads. Code decides. Anything uncertain goes to a lawyer.]
+// 9. Conclusion and demo
+#slide[Conclusion and demo][The model reads. Code decides. Anything uncertain goes to a lawyer.][
+  #grid(columns: (1.3fr, 1fr), column-gutter: 1.6cm, align: horizon,
+    [
+      #set text(size: 17pt)
+      - On 35 contracts it was not tuned on, 15 of them real and public: every labelled route right, and 0/8, 0/6 and 0/14 risky contracts approved.
+      - Arabic, English and bilingual, typed or scanned, up to 101 pages read by OCR.
+      - Another buyer's rules from a file, a local model option, and confidential contracts that never leave.
+      - 99 tests with no API calls, CI on a fresh clone, every number on these slides reproducible from the repo and shown on the Proof screen.
+    ],
+    card-box(inset: 22pt)[
+      #head[Demo]
+      #block(below: 0.6em, text(font: "IBM Plex Mono", size: 15pt, fill: primary, demo-url))
+      #note(size: 16pt)[About four minutes: upload, the findings with their quotes, the route, the lawyers' inbox and Proof.
+      The guided demo replays four recorded runs, labelled Replay, with no key and no network.]
+    ])
 ]

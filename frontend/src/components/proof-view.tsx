@@ -821,6 +821,7 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
   const real = data.filter((m) => m.suite === "real")
   const blind2 = data.filter((m) => m.suite === "held-out-2")
   const policy = data.filter((m) => m.suite === "policy-change")
+  const redaction = data.filter((m) => m.suite === "redaction")
   const local = models.filter(isLocal)
   const anyRegraded = models.some((m) => m.summary.rescored_from)
 
@@ -867,6 +868,16 @@ export function ProofView({ contracts }: { contracts: ContractSummary[] | null }
           title="Another company's rules"
           description="The same contracts reviewed under a different buyer's playbook, loaded from a file with no code change: payment no sooner than 60 days, and a supplier exit on 30 days' notice accepted for 12-month terms. Labels were written from the policy before the run. One contract should move from approve to negotiate and one from negotiate to approve."
           models={policy}
+          contracts={contracts}
+        />
+      ) : null}
+      {redaction.length ? (
+        <SuiteSection
+          id="redaction-h"
+          icon={ShieldCheck}
+          title="Reviewed with names hidden"
+          description="The main contracts reviewed as Internal: party names, contact details, account and ID numbers replaced by placeholders before the model saw them, and put back for people afterwards. Measures what hiding identifiers costs in review quality. Product names and places are not replaced; places matter for governing law."
+          models={redaction}
           contracts={contracts}
         />
       ) : null}

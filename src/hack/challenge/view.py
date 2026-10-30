@@ -22,7 +22,14 @@ def review_view(trace: list[dict[str, Any]]) -> dict[str, Any]:
     actions: list[dict[str, Any]] = []
     cleared: list[dict[str, Any]] = []
     memo = ""
+    policy: dict[str, Any] | None = None
+    blocked: dict[str, Any] | None = None
     for e in trace:
+        if e["type"] == "run_start":
+            policy = e.get("data_policy")
+        elif e["type"] == "policy_block":
+            blocked = e
+            doc_id = e.get("doc_id")
         if e["type"] != "tool_call" or e["is_error"]:
             continue
         name, inp = e["name"], e["input"]
@@ -64,6 +71,13 @@ def review_view(trace: list[dict[str, Any]]) -> dict[str, Any]:
             memo = inp.get("memo", "")
     order = {"critical": 0, "major": 1, "minor": 2}
     fs = sorted(findings.values(), key=lambda f: (order.get(f["severity"], 3), f["clause_id"]))
+    if blocked is not None and score is None:
+        score = {
+            "route": "escalate",
+            "risk_score": None,
+            "counts": None,
+            "reasons": [blocked["reason"]],
+        }
     return {
         "doc_id": doc_id,
         "route": score["route"] if score else None,
@@ -79,4 +93,6 @@ def review_view(trace: list[dict[str, Any]]) -> dict[str, Any]:
         "clause_map": clause_map,
         "actions": actions,
         "memo": memo,
+        # Which contracts this model may see, and what was done to the text before it did.
+        "data_policy": policy,
     }

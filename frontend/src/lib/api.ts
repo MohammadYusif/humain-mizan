@@ -16,6 +16,32 @@ export interface Health {
   model: string
   approve_writes?: boolean
   ocr?: { available: boolean; detail: string }
+  data_policy?: DataPolicyConfig
+}
+
+/** Who may see a contract: public (samples), internal (default for uploads), restricted. */
+export type Sensitivity = "public" | "internal" | "restricted"
+
+/** Where the configured model runs, and what the server's data policy allows. */
+export interface DataPolicyConfig {
+  location: "local" | "external"
+  max_external: "public" | "internal"
+  redact_external: boolean
+  default_sensitivity: Sensitivity
+}
+
+/** The data-policy decision recorded on a run: what the model was allowed to see. */
+export interface DataPolicyRecord {
+  doc_id: string
+  sensitivity: Sensitivity
+  location: "local" | "external"
+  allowed: boolean
+  redact: boolean
+  reason: string
+  provider?: string
+  model?: string
+  /** Placeholders used, by kind (PARTY, EMAIL, PHONE, IBAN, VAT, ID). */
+  redacted?: Record<string, number>
 }
 
 /** How a contract's text was obtained when it was read from a scan (local OCR). */
@@ -40,6 +66,7 @@ export interface ContractSummary {
   languages: Lang[]
   source: "sample" | "held-out" | "real" | "upload"
   ocr?: OcrSource | null
+  sensitivity?: Sensitivity
 }
 
 export interface Clause {
@@ -53,6 +80,7 @@ export interface Contract {
   title: string
   clauses: Clause[]
   ocr?: OcrSource | null
+  sensitivity?: Sensitivity
 }
 
 export interface PlaybookRule {
@@ -160,6 +188,7 @@ export interface ReviewView {
   clause_map: Record<string, string[]> | null
   actions: WriteAction[]
   memo: string
+  data_policy?: DataPolicyRecord | null
   status: ReviewStatus
   stats: RunEndEvent | null
   decision: DecisionRecord | null
@@ -325,7 +354,7 @@ export interface EvalModel {
   /** null = the current agent (with red-flag checks); otherwise e.g. "before red-flag tripwires". */
   variant: string | null
   /** main: the suite the patterns were developed on; held-out: blind contracts written separately. */
-  suite?: "main" | "held-out" | "held-out-2" | "real" | "policy-change"
+  suite?: "main" | "held-out" | "held-out-2" | "real" | "policy-change" | "redaction"
   file: string
   date: number
   summary: EvalSummary
@@ -436,6 +465,11 @@ export const api = {
   contracts: () => request<ContractSummary[]>("/contracts"),
   contract: (docId: string) => request<Contract>(`/contracts/${enc(docId)}`),
   uploadContract: (form: FormData) => request<ContractSummary>("/contracts", { method: "POST", body: form }),
+  setSensitivity: (docId: string, sensitivity: Sensitivity) =>
+    request<{ doc_id: string; sensitivity: Sensitivity }>(`/contracts/${enc(docId)}/sensitivity`, {
+      method: "PUT",
+      body: JSON.stringify({ sensitivity }),
+    }),
   playbook: () => request<PlaybookRule[]>("/playbook"),
   runs: (limit = 40) => request<RunSummary[]>(`/runs?limit=${limit}`),
   /** The reviews of one contract, newest first. */

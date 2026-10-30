@@ -72,6 +72,8 @@ class Review:
     acted: bool = False  # the route's follow-up action (send / escalate) passed its gate
     # {"clause_id", "quote"}: the verified words that cap OUR liability (required to approve/negotiate)
     cap_evidence: dict[str, str] | None = None
+    # Data-policy label (challenge/policy.py): a restricted contract never approves automatically.
+    sensitivity: str = "public"
 
     def confirm_cap(self, clause_id: str, quote: str) -> None:
         self.cap_evidence = {"clause_id": clause_id, "quote": quote}
@@ -219,6 +221,11 @@ def score(review: Review) -> dict:
         route, reasons = "negotiate", [f"{n} major {_pl(n, 'finding')} with playbook redlines"]
     else:
         route, reasons = "approve", ["Full coverage and no findings above minor"]
+    if route == "approve" and review.sensitivity == "restricted":
+        route, reasons = (
+            "escalate",
+            ["Restricted contract: a lawyer signs off every outcome, even a clean review"],
+        )
     review.route = route
     review.risk_score = min(100, sum(WEIGHT[f.severity] for f in fs))
     return {

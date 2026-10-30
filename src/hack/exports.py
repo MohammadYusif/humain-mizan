@@ -104,6 +104,29 @@ def _source_line(source: dict | None) -> str:
     )
 
 
+def data_line(policy: dict[str, Any] | None) -> str:
+    """Who saw the contract: the sensitivity label, where the model ran, and what was hidden."""
+    if not policy:
+        return ""
+    label = str(policy.get("sensitivity", "")).capitalize()
+    if not policy.get("allowed", True):
+        return f"{label}. Not sent to any model: {policy.get('reason', '')}"
+    where = (
+        "a model inside your network" if policy.get("location") == "local" else "an external model"
+    )
+    model = f" ({policy['model']})" if policy.get("model") else ""
+    line = f"{label}. Reviewed by {where}{model}."
+    if red := policy.get("redacted"):
+        n = sum(red.values())
+        line += (
+            f" {n} {'identifier' if n == 1 else 'identifiers'} (names, contact details, account and"
+            " ID numbers) were replaced by placeholders before sending."
+        )
+    if policy.get("sensitivity") == "restricted":
+        line += " Restricted: a lawyer signs off every outcome."
+    return line
+
+
 def _counts(counts: dict[str, int] | None) -> str:
     if not counts:
         return "No score"
@@ -230,6 +253,7 @@ def memo_pdf(settings: Settings, view: dict[str, Any], run_id: str) -> bytes:
         "reasons": list(view.get("reasons") or []),
         "action": _action(view),
         "source": _source_line(source),
+        "data": data_line(view.get("data_policy")),
         "meta": _meta(view, run_id),
         "disclaimer": DISCLAIMER,
         "memo": _memo_paragraphs(view.get("memo") or ""),

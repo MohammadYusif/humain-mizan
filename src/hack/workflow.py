@@ -17,11 +17,13 @@ from pathlib import Path
 from typing import Any
 
 from .challenge import contracts as C
+from .challenge import policy as P
 from .challenge.tripwires import scan
 from .challenge.view import review_view
 from .config import Settings
 from .evals import final_route, load_cases
 from .llm import Provider
+from .service import TASK_DOC as _TASK_DOC
 from .service import run_task
 from .tracing import read_trace
 
@@ -32,7 +34,6 @@ DECISIONS = {
     "unrouted": ("approve_contract", "request_changes", "reject"),
 }
 UNROUTED_REASON = "The agent stopped before computing a route; a lawyer must review this contract"
-_TASK_DOC = re.compile(r"contract\s+([A-Za-z0-9_-]{1,64})")
 
 
 def task_doc(trace_path: Path) -> str | None:
@@ -67,8 +68,18 @@ def run_state(settings: Settings, run_id: str) -> dict[str, Any]:
         start = next((e for e in tr if e["type"] == "run_start"), {})
         if m := _TASK_DOC.search(start.get("task", "")):
             view["doc_id"] = m.group(1)
-    if route is None and status == "done" and not view["tripwires"] and view["doc_id"]:
+    kept_from_model = (view.get("data_policy") or {}).get("allowed") is False
+    # Pattern checks run here, without a model, so a lawyer sees the red flags either way.
+    if (
+        (route is None or kept_from_model)
+        and status == "done"
+        and not view["tripwires"]
+        and view["doc_id"]
+    ):
         view["tripwires"] = _tripwires_without_score(settings, view)
+    # The model saw placeholders for names and numbers; people see the originals again.
+    if (r := P.load_redactor(settings.runs_dir / run_id, view["doc_id"])) is not None:
+        view = P.restore_view(view, r)
     return {"run_id": run_id, "status": status, "route": route, "view": view, "end": end}
 
 
@@ -318,7 +329,14 @@ class BatchRunner:
             # Auto-send policy: if the route says negotiate but the model never sent the redline,
             # the workflow sends it (composed from the recorded redlines) and records that it did.
             state = run_state(settings, item["run_id"])
-            if settings.approve_writes and pending_kind(state, None) == "approve_send":
+            restricted = ((state["view"] or {}).get("data_policy") or {}).get(
+                "sensitivity"
+            ) == "restricted"
+            if (
+                settings.approve_writes
+                and not restricted
+                and pending_kind(state, None) == "approve_send"
+            ):
                 decide(settings, item["run_id"], "send", by="workflow (auto-send policy)")
         finally:
             with self.lock:

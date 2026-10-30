@@ -1,5 +1,6 @@
 import { CircleX, Clapperboard, LoaderCircle } from "lucide-react"
 
+import { DataLine } from "@/components/data-policy"
 import { RouteBadge } from "@/components/tone-badges"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -68,6 +69,7 @@ export function RunHeader({ runId, phase, review, contract, task }: Props) {
       ) : (
         <Skeleton className="h-9 w-3/4" />
       )}
+      {review?.data_policy ? <DataLine policy={review.data_policy} /> : null}
     </div>
   )
 }

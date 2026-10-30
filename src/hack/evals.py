@@ -185,6 +185,8 @@ def recorded_findings(trace: list[dict[str, Any]]) -> set[tuple[str, str]]:
 
 def final_route(trace: list[dict[str, Any]]) -> str | None:
     """The route in force at the end: the last score_contract, voided by any finding recorded after it."""
+    if any(e["type"] == "policy_block" for e in trace):
+        return "escalate"  # the data policy kept the contract from the model: a lawyer reviews it
     route = None
     for e in _calls(trace):
         if e["name"] in ("record_finding", "clear_tripwire", "submit_clause_map"):

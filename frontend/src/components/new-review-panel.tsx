@@ -1,4 +1,8 @@
-import { LoaderCircle, Play, ScanText, Upload } from "lucide-react"
+import { LoaderCircle, Play, ScanText, Send, Upload } from "lucide-react"
+
+import { SensitivityBadge } from "@/components/data-policy"
+import { useDataPolicy } from "@/hooks/use-data-policy"
+import { blocked, destination, LEVEL_LABEL } from "@/lib/data-policy"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import type { ContractSummary, Lang } from "@/lib/api"
+import type { ContractSummary, Lang, Sensitivity } from "@/lib/api"
 import { contractTitle, langOf, plural } from "@/lib/format"
 
 export function LangChips({ languages }: { languages: Lang[] }) {
@@ -42,6 +46,8 @@ interface Props {
   busy: boolean
   /** What the workspace is showing for the picked contract, e.g. its latest review. */
   note?: string | null
+  /** Change an uploaded contract's label. */
+  onRelabel: (docId: string, level: Sensitivity) => void
 }
 
 function ContractOption({ c }: { c: ContractSummary }) {
@@ -52,17 +58,21 @@ function ContractOption({ c }: { c: ContractSummary }) {
         <LangChips languages={c.languages} />
         {c.ocr ? <ScanText className="size-3.5 text-muted-foreground" aria-label="Scan read by OCR" /> : null}
         <span className="text-xs text-muted-foreground tabular">{c.clauses} cl.</span>
+        {c.sensitivity && c.sensitivity !== "public" ? <SensitivityBadge level={c.sensitivity} /> : null}
       </span>
     </SelectItem>
   )
 }
 
-export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUpload, busy, note }: Props) {
+export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUpload, busy, note, onRelabel }: Props) {
+  const policy = useDataPolicy()
   const samples = contracts?.filter((c) => c.source === "sample" || c.source === "held-out") ?? []
   const real = contracts?.filter((c) => c.source === "real") ?? []
   const uploads = contracts?.filter((c) => c.source === "upload") ?? []
   const selected = contracts?.find((c) => c.doc_id === docId) ?? null
   const title = selected ? contractTitle(selected.title) : null
+  const level = selected?.sensitivity
+  const toLawyer = blocked(level, policy)
 
   return (
     <Card className="shrink-0 gap-5">
@@ -134,6 +144,34 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
               ) : null}
             </div>
             {selected.ocr?.doubt ? <p className="text-xs font-medium text-escalate">{selected.ocr.doubt}.</p> : null}
+            {level ? (
+              <div className="mt-1 flex flex-col gap-1.5 rounded-md border bg-background/60 px-2.5 py-2">
+                <div className="flex items-center gap-2">
+                  {selected.source === "upload" ? (
+                    <Select value={level} onValueChange={(v) => onRelabel(selected.doc_id, v as Sensitivity)} disabled={busy}>
+                      <SelectTrigger size="sm" aria-label="Who may see this contract" className="h-7 w-auto gap-1.5 bg-background text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent position="popper">
+                        {(["public", "internal", "restricted"] as const).map((l) => (
+                          <SelectItem key={l} value={l} className="text-xs">
+                            {LEVEL_LABEL[l]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <SensitivityBadge level={level} />
+                  )}
+                  <span className="text-xs text-muted-foreground">{selected.source === "upload" ? "Who may see it" : "Sample label"}</span>
+                </div>
+                {destination(level, policy) ? (
+                  <p className={toLawyer ? "text-xs font-medium text-escalate" : "text-xs text-muted-foreground"}>
+                    {destination(level, policy)}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <p dir="auto" lang={langOf(title.primary)} className="line-clamp-3 text-sm text-foreground">
               {title.primary}
             </p>
@@ -148,8 +186,8 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
         )}
 
         <Button size="lg" className="h-10 w-full text-sm" disabled={!docId || busy} onClick={onReview}>
-          {busy ? <LoaderCircle className="animate-spin" aria-hidden /> : <Play aria-hidden />}
-          {busy ? "Reviewing…" : "Review contract"}
+          {busy ? <LoaderCircle className="animate-spin" aria-hidden /> : toLawyer ? <Send aria-hidden /> : <Play aria-hidden />}
+          {busy ? "Reviewing…" : toLawyer ? "Send to a lawyer" : "Review contract"}
         </Button>
         <p className="text-xs leading-relaxed text-muted-foreground">
           {note ?? "Nothing is sent to the counterparty without approval."}

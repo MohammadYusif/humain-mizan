@@ -25,7 +25,12 @@ class OpenAICompatProvider:
     def __init__(self, model: str, base_url: str, api_key: str = "none") -> None:
         from openai import OpenAI
 
+        from ..challenge.policy import url_location
+
         self.model = model
+        self.base_url = base_url
+        # local for a server on this machine or network (e.g. Ollama), else external
+        self.location = url_location(base_url)
         self.client = OpenAI(base_url=base_url, api_key=api_key)
 
     def user_message(self, text: str) -> dict[str, Any]:

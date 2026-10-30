@@ -43,6 +43,23 @@ class Settings(BaseSettings):
     price_input_per_mtok: float | None = None
     price_output_per_mtok: float | None = None
 
+    # Data policy (see challenge/policy.py): which contracts may reach which model.
+    # Label given to uploads that do not choose one: public | internal | restricted.
+    default_sensitivity: str = "internal"
+    # Label of the bundled samples and eval suites (synthetic or published by their owners). Set
+    # it to "internal" to measure a review with redaction on, or "restricted" to see the block.
+    sample_sensitivity: str = "public"
+    # The most sensitive label an external provider may receive: public | internal. Restricted
+    # contracts never go to an external provider, whatever this says.
+    max_external: str = "internal"
+    # Replace names, contact details, account and ID numbers before an external provider sees
+    # a non-public contract.
+    redact_external: bool = True
+    # "" detects where the provider runs (Anthropic API: external; an OpenAI-compatible server on
+    # localhost, a private address or a compose service: local). Set "local" for a model hosted
+    # inside the organisation under a public host name.
+    provider_location: str = ""
+
     # Sign-in (see auth.py): off when no users are set; a deployment sets require_auth so it fails closed.
     auth_users: str = ""
     secret_key: str | None = None

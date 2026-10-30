@@ -38,9 +38,12 @@ class FakeProvider:
     name = "fake"
 
     def __init__(
-        self, script: list[Completion | Callable[[list[Any]], Completion]] | None = None
+        self,
+        script: list[Completion | Callable[[list[Any]], Completion]] | None = None,
+        location: str = "local",
     ) -> None:
         self.model = "fake"
+        self.location = location  # tests can stand in for an external API
         self._script = list(script or [text("fake provider: no script given")])
         self.calls: list[dict[str, Any]] = []
 

@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 from ..config import Settings
 from ..tools import ToolRegistry
 from . import contracts as C
+from . import policy as P
 from .playbook import BY_ID, as_dicts
 from .review import VALID_TYPES, Finding, Review, score, severity_of
 
@@ -143,15 +144,32 @@ RED_FLAGS_NOTE = (
 )
 
 
-def build_registry(settings: Settings, run_dir: Path | None = None) -> ToolRegistry:
-    """`run_dir`: where outputs/outbox go (the run's own folder, so parallel runs never collide)."""
-    # escalate_to_legal is internal (it creates a legal-inbox item) and always runs; outward
-    # sends to the counterparty need approval (HACK_APPROVE_WRITES or the batch auto-send policy).
-    registry = ToolRegistry(
-        approve=lambda name, _args: name == "escalate_to_legal" or settings.approve_writes
-    )
+def build_registry(
+    settings: Settings, run_dir: Path | None = None, location: str = "external"
+) -> ToolRegistry:
+    """`run_dir`: where outputs/outbox go (the run's own folder, so parallel runs never collide).
+    `location`: where the model behind this run runs (local | external); the data policy decides
+    from it which contracts the model may read, and whether identifiers are replaced first. Unknown
+    callers get "external": the strict reading."""
     reviews: dict[str, Review] = {}
+    redactors: dict[str, P.Redactor] = {}
+
+    def may_send(name: str, args: dict) -> bool:
+        # escalate_to_legal is internal (it creates a legal-inbox item) and always runs; outward
+        # sends need approval (HACK_APPROVE_WRITES or the batch auto-send policy), and never go
+        # out on their own for a restricted contract.
+        if name == "escalate_to_legal":
+            return True
+        r = reviews.get(str(args.get("doc_id", "")))
+        return settings.approve_writes and not (r and r.sensitivity == "restricted")
+
+    registry = ToolRegistry(approve=may_send)
     out_root = Path(run_dir or settings.runs_dir)
+
+    def restored(doc_id: str, text: str) -> str:
+        """What leaves the system carries the real names, not the placeholders the model saw."""
+        r = redactors.get(doc_id)
+        return r.restore(text) if r else text
 
     def review_of(doc_id: str) -> Review:
         if doc_id not in reviews:
@@ -195,6 +213,7 @@ def build_registry(settings: Settings, run_dir: Path | None = None) -> ToolRegis
             "clause_count": len(review.contract.clauses),
             "notice": NOTICE,
             "source_note": _source_note(review.contract.source),
+            "data_note": P.NOTE if review.contract.doc_id in redactors else "",
             "red_flags": flags,
             "red_flags_note": RED_FLAGS_NOTE if flags else "",
             "clauses": [
@@ -213,7 +232,19 @@ def build_registry(settings: Settings, run_dir: Path | None = None) -> ToolRegis
     def load_contract(a: DocArgs) -> dict:
         if a.doc_id not in reviews:
             contract = C.load_contract(settings.contract_dirs(), a.doc_id)
+            d = P.decide(settings, a.doc_id, location)
+            if not d.allowed:
+                raise ValueError(
+                    f"Blocked by the data policy: {d.reason} Do not load other contracts; stop here."
+                )
+            if d.redact:
+                r = P.Redactor.for_contract(contract)
+                redactors[a.doc_id] = r
+                contract = r.contract(contract)
+                out_root.mkdir(parents=True, exist_ok=True)
+                P.save_mappings(out_root, {k: v.mapping for k, v in redactors.items()})
             reviews[a.doc_id] = Review.start(contract)
+            reviews[a.doc_id].sensitivity = d.sensitivity
         return page_payload(reviews[a.doc_id], 1)
 
     @registry.register(
@@ -412,7 +443,7 @@ def build_registry(settings: Settings, run_dir: Path | None = None) -> ToolRegis
         precheck=lambda a: act(a.doc_id, "negotiate", "sending to the counterparty"),
     )
     def send_to_counterparty(a: SendArgs) -> str:
-        outbox("counterparty", {"doc_id": a.doc_id, "message": a.message})
+        outbox("counterparty", {"doc_id": a.doc_id, "message": restored(a.doc_id, a.message)})
         return "sent to counterparty"
 
     @registry.register(
@@ -423,7 +454,7 @@ def build_registry(settings: Settings, run_dir: Path | None = None) -> ToolRegis
         precheck=lambda a: act(a.doc_id, "escalate", "escalation"),
     )
     def escalate_to_legal(a: EscalateArgs) -> str:
-        outbox("legal", {"doc_id": a.doc_id, "question": a.question})
+        outbox("legal", {"doc_id": a.doc_id, "question": restored(a.doc_id, a.question)})
         return "escalated to legal"
 
     def act(doc_id: str, allowed: str, action: str) -> None:

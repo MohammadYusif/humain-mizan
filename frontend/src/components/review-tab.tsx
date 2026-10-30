@@ -67,6 +67,24 @@ function RouteCard({ review, runId }: { review: ReviewView; runId: string }) {
     )
   }
 
+  if (review.data_policy && !review.data_policy.allowed) {
+    return (
+      <Card className="p-0">
+        <div className="flex flex-col gap-3 p-5 sm:p-6">
+          <span className="text-xs text-muted-foreground">Route, set by the data policy</span>
+          <p className={cn("font-heading text-4xl font-semibold", ROUTE_TONE.escalate.text)}>{ROUTE_LABEL.escalate}</p>
+          <p className="max-w-prose text-sm text-muted-foreground">{review.data_policy.reason}</p>
+          <div>
+            <Button variant="outline" size="sm" onClick={() => go({ area: "inbox" })}>
+              <Inbox aria-hidden />
+              Open the Inbox
+            </Button>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
   if (!route || risk_score == null || !counts) {
     if (review.status === "done") {
       return (

@@ -39,6 +39,7 @@ def run_agent(
     settings: Settings,
     tracer: Tracer,
     max_turns: int | None = None,
+    start_meta: dict[str, Any] | None = None,
 ) -> AgentResult:
     """Manual tool-use loop: model -> tools -> model, with a turn cap, a USD budget and a full trace."""
     max_turns = max_turns or settings.max_turns
@@ -53,7 +54,9 @@ def run_agent(
     seen: dict[str, int] = {}  # tool-call signature -> times called
     stuck_turns = 0
     t0 = time.perf_counter()
-    tracer.event("run_start", task=task, model=provider.model, provider=provider.name)
+    tracer.event(
+        "run_start", task=task, model=provider.model, provider=provider.name, **(start_meta or {})
+    )
 
     while turns < max_turns:
         if cost >= settings.budget_usd:

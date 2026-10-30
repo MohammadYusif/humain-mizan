@@ -43,6 +43,11 @@ annotations, CLAUDETTE's unfair-clause tags). The first run on them was blind an
 - **Weaker models.** A local model (qwen3:14b) goes from 3/9 wrong approvals with no safeguards to 0/9
   with them, on the main suite. On the blind set it still approved 2 of 8 risky contracts, so we say
   plainly: local ("sovereign") mode needs a lawyer on every contract.
+- **Confidential contracts.** Every contract carries a label (Public, Internal, Restricted). Restricted
+  contracts never reach an external model: with one configured they go to a lawyer with no model call; with
+  a model inside the network they are reviewed but never approved or sent automatically. Internal contracts
+  reach an external model with names, contact details, account and ID numbers replaced by placeholders.
+  Measured on the main suite with names hidden: 12/12 routes, 0/9 wrong approvals, the same as with them.
 - **Learning from lawyers.** Lawyers' decisions in the Inbox become proposed playbook amendments that a
   human accepts or rejects. Critical rules and red flags never relax; demo replays never teach it.
 
@@ -101,6 +106,9 @@ Decisions and their trade-offs:
   escalates instead of guessing. The gate is calibrated on three sample scans only (stated in 6).
 - **Injection-safe exports.** Redline and memo PDFs are typeset with Typst from data passed as JSON,
   never as markup, so contract text can't inject formatting or code.
+- **Where a contract may go is code, not a setting people must remember.** The label is checked before
+  the run starts and again in the tool that hands contract text to the model, and every review records
+  the label, where the model ran and what it did not see.
 - **Demo-safe by design.** Four recorded runs replay as if live with no key or network; they are
   labelled "Replay" and kept out of the learning loop.
 
@@ -108,7 +116,7 @@ Decisions and their trade-offs:
 
 - Python 3.12 (uv, ruff), FastAPI, React 19 + Vite + Tailwind + shadcn/ui, Docker. One container
   serves the API and the built UI.
-- 82 tests with no API calls (scripted fake model): every routing guarantee in 2 and 4 has a test.
+- 99 tests with no API calls (scripted fake model): every routing guarantee in 2 and 4 has a test.
 - CI on every push (`.github/workflows/ci.yml`), on a fresh clone: lint and format, tests, licence
   check (no GPL/AGPL/LGPL/SSPL), the Proof results load, UI typecheck, lint and build, then a Docker
   build and smoke test with sign-in required (401 before login, 200 after), Arabic OCR present and the
@@ -146,6 +154,7 @@ uv run hack eval evals/heldout/cases-batch2.jsonl --suite held-out-2
 HACK_PLAYBOOK=evals/policy/other-buyer.json uv run hack eval evals/policy/cases.jsonl --suite policy-change
 uv run python scripts/fetch_real_contracts.py                                  # texts, checksum-verified
 HACK_BUDGET_USD=4 uv run hack eval evals/real/cases.jsonl --suite real
+HACK_SAMPLE_SENSITIVITY=internal uv run hack eval --suite redaction            # names hidden
 uv run hack rescore evals/proof/<file>.json --cases <cases.jsonl>              # re-grade, no model calls
 ```
 

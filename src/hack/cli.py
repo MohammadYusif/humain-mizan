@@ -34,6 +34,8 @@ def _cmd_eval(args: argparse.Namespace) -> int:
         extra = {"max_turns": s.max_turns, "budget_usd": s.budget_usd, "effort": s.effort}
         if os.environ.get("HACK_PLAYBOOK"):
             extra["playbook"] = os.environ["HACK_PLAYBOOK"]  # a policy other than the default
+        if s.sample_sensitivity != "public":  # e.g. "internal": reviewed with identifiers redacted
+            extra["sample_sensitivity"] = s.sample_sensitivity
         if args.suite:
             extra["suite"] = args.suite
         path = save_report(rep, Path(args.out), extra)
