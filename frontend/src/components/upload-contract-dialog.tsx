@@ -3,9 +3,9 @@ import { cn } from "cn"
 import { useId, useState, type DragEvent, type FormEvent } from "react"
 import { toast } from "sonner"
 
-import { LabelBasis, SensitivityBadge, SensitivityPicker, type LabelChoice } from "@/components/data-policy"
+import { LabelSuggestion, SensitivityBadge, SensitivityPicker, type LabelChoice } from "@/components/data-policy"
 import { useDataPolicy } from "@/hooks/use-data-policy"
-import { blocked, destination } from "@/lib/data-policy"
+import { blocked } from "@/lib/data-policy"
 import { LangChips } from "@/components/new-review-panel"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -178,35 +178,24 @@ export function UploadContractDialog({ open, onOpenChange, onAdded, onReviewNow,
                 {added.sensitivity ? <SensitivityBadge level={added.sensitivity} /> : null}
               </div>
               {added.ocr ? <OcrNote ocr={added.ocr} /> : null}
-              <div className="flex flex-col gap-1">
-                <LabelBasis
-                  c={added}
-                  busy={busy}
-                  onRestore={(l) => {
-                    setBusy(true)
-                    api
-                      .setSensitivity(added.doc_id, l)
-                      .then((r) => {
-                        const next = { ...added, ...r }
-                        setAdded(next)
-                        onAdded(next)
-                      })
-                      .catch((e: unknown) => toast.error("Could not change the label", { description: errorMessage(e) }))
-                      .finally(() => setBusy(false))
-                  }}
-                />
-                {destination(added.sensitivity, policy) ? (
-                  <p
-                    className={cn(
-                      "text-xs",
-                      blocked(added.sensitivity, policy) ? "font-medium text-escalate" : "text-muted-foreground"
-                    )}
-                  >
-                    {destination(added.sensitivity, policy)}
-                  </p>
-                ) : null}
-              </div>
             </div>
+            <LabelSuggestion
+              c={added}
+              policy={policy}
+              busy={busy}
+              onRestore={(l) => {
+                setBusy(true)
+                api
+                  .setSensitivity(added.doc_id, l)
+                  .then((r) => {
+                    const next = { ...added, ...r }
+                    setAdded(next)
+                    onAdded(next)
+                  })
+                  .catch((e: unknown) => toast.error("Could not change the label", { description: errorMessage(e) }))
+                  .finally(() => setBusy(false))
+              }}
+            />
             <p className="text-sm text-muted-foreground">
               If the clause count looks wrong, the text may need clearer numbering or paragraph breaks. You can change
               the label from the contract panel.

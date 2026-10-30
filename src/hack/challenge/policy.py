@@ -54,8 +54,10 @@ def write_label(
         old = read_meta(contract_path)
         if old.get("detected") in LEVELS:
             meta["detected"], meta["reasons"] = old["detected"], old.get("reasons", [])
+            meta["evidence"] = old.get("evidence", [])
     else:
         meta["detected"], meta["reasons"] = detection.level, detection.reasons
+        meta["evidence"] = detection.evidence
     meta_path(contract_path).write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
 
 
@@ -81,6 +83,11 @@ def label_info(settings: Settings, doc_id: str) -> dict[str, Any]:
         "label_set_by": set_by,
         "label_detected": meta.get("detected") if meta.get("detected") in LEVELS else None,
         "label_reasons": [str(r) for r in meta.get("reasons", [])][:6],
+        "label_evidence": [
+            {k: str(e.get(k, "")) for k in ("kind", "text", "level")}
+            for e in meta.get("evidence", [])
+            if isinstance(e, dict)
+        ][:16],
     }
 
 
@@ -93,6 +100,9 @@ def label_info(settings: Settings, doc_id: str) -> dict[str, Any]:
 class Detection:
     level: str
     reasons: list[str]
+    # What was found, item by item, so people can check it: {"kind", "text", "level"}. Shown only
+    # on this server, next to the contract it came from; card numbers are masked.
+    evidence: list[dict[str, str]] = field(default_factory=list)
 
 
 # A classification marking: a line that is only the marking ("CONFIDENTIAL", "سري للغاية"),
@@ -219,41 +229,64 @@ def detect_label(text: str, contract: Contract | None = None) -> Detection:
     blank template with no identifiers at all."""
     restricted: list[str] = []
     internal: list[str] = []
+    evidence: list[dict[str, str]] = []
+
+    def ev(kind: str, found_text: str, level: str) -> None:
+        item = {"kind": kind, "text": re.sub(r"\s+", " ", found_text).strip()[:80], "level": level}
+        if item not in evidence:
+            evidence.append(item)
+
     for line in text.splitlines():
         if is_marking(line):
             ln = _plain(line)
-            (restricted if re.fullmatch(_MARK_RESTRICTED, ln, re.I) else internal).append(
-                f"Marked {_quote(ln)}"
-            )
+            hit = re.fullmatch(_MARK_RESTRICTED, ln, re.I)
+            (restricted if hit else internal).append(f"Marked {_quote(ln)}")
+            ev("Marking", ln, "restricted" if hit else "internal")
     for m in _MARK_FIELD.finditer(text):
         value = m.group(1)
         if re.fullmatch(_MARK_RESTRICTED, value, re.I):
             restricted.append(f"Classified {_quote(value)}")
+            ev("Classification", m.group(0), "restricted")
         elif re.fullmatch(_MARK_INTERNAL, value, re.I):
             internal.append(f"Classified {_quote(value)}")
-    if _SAYS_CONFIDENTIAL.search(text):
+            ev("Classification", m.group(0), "internal")
+    if m := _SAYS_CONFIDENTIAL.search(text):
         restricted.append("Says the document itself is confidential")
-    if _UNDER_NDA.search(text):
+        ev("Says it is confidential", m.group(0), "restricted")
+    if m := _UNDER_NDA.search(text):
         restricted.append("Shared under a non-disclosure agreement")
+        ev("Non-disclosure agreement", m.group(0), "restricted")
     for what, pat in _SENSITIVE:
-        if pat.search(text):
+        if m := pat.search(text):
             restricted.append(f"Mentions sensitive personal data ({what})")
+            ev(what[:1].upper() + what[1:], m.group(0), "restricted")
     for m in _CARD.finditer(text):
-        if _card(re.sub(r"\D", "", m.group(0))):
+        digits = re.sub(r"\D", "", m.group(0))
+        if _card(digits):
             restricted.append("Has a payment card number")
+            ev("Payment card number", f"•••• {digits[-4:]}", "restricted")
             break
-    if restricted:
-        return Detection("restricted", list(dict.fromkeys(restricted)))
 
-    found = Redactor.for_contract(contract).summary() if contract is not None else {}
+    red = Redactor.for_contract(contract) if contract is not None else Redactor()
+    names = {"PARTY": "Party name", "EMAIL": "Email address", "PHONE": "Phone number"}
+    names |= {"IBAN": "IBAN", "VAT": "VAT number", "ID": "ID or registration number"}
+    for orig, ph in red.mapping.items():
+        kind, num = ph.strip("[]").rsplit("-", 1)
+        if "." not in num and kind in names:  # a party's short form is not a second party
+            ev(names[kind], orig, "internal")
+    if restricted:
+        return Detection("restricted", list(dict.fromkeys(restricted)), evidence)
+
+    found = red.summary()
     parts = [f"{found[k]} {_KIND[k][found[k] != 1]}" for k in _KIND if found.get(k)]
     if parts:
         internal.append(f"Has {_list(parts)}")
     if internal:
-        return Detection("internal", list(dict.fromkeys(internal)))
-    if _TEMPLATE.search(text):
+        return Detection("internal", list(dict.fromkeys(internal)), evidence)
+    if m := _TEMPLATE.search(text):
+        ev("Blank to fill in", m.group(0), "public")
         return Detection(
-            "public", ["A blank template: no names, contact details or account numbers"]
+            "public", ["A blank template: no names, contact details or account numbers"], evidence
         )
     return Detection(
         "internal", ["No names or account details found, but nothing shows the text is published"]

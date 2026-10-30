@@ -314,6 +314,20 @@ def test_uploads_are_labelled_from_their_text_and_a_person_can_override(tmp_path
     assert up["sensitivity"] == "restricted" and up["label_set_by"] == "auto"
     assert up["label_reasons"] == ["Marked “Strictly confidential”"]
     assert up["title"] == "Supply agreement" and up["clauses"] == 2  # the marking is neither
+    assert {"kind": "Marking", "text": "STRICTLY CONFIDENTIAL", "level": "restricted"} in up[
+        "label_evidence"
+    ]
+    named = client.post(
+        "/contracts",
+        data={
+            "text": 'Between Nimbus Cloud Ltd ("Supplier") and the Customer.\n\n'
+            "1. Pay to IBAN SA03 8000 0000 6080 1016 7519.\n\n2. Card 4111 1111 1111 1111."
+        },
+    ).json()
+    shown = {(e["kind"], e["text"]) for e in named["label_evidence"]}
+    assert ("Party name", "Nimbus Cloud Ltd") in shown
+    assert ("IBAN", "SA03 8000 0000 6080 1016 7519") in shown
+    assert ("Payment card number", "•••• 1111") in shown  # masked, never shown in full
     doc = up["doc_id"]
     changed = client.put(f"/contracts/{doc}/sensitivity", json={"sensitivity": "internal"}).json()
     assert changed["sensitivity"] == "internal" and changed["label_set_by"] == "person"

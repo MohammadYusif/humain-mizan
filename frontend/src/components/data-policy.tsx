@@ -16,8 +16,164 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import type { ContractSummary, DataPolicyConfig, DataPolicyRecord, Sensitivity } from "@/lib/api"
-import { destination, LEVEL_LABEL, looserThan, reasonText } from "@/lib/data-policy"
+import type { ContractSummary, DataPolicyConfig, DataPolicyRecord, LabelEvidence, Sensitivity } from "@/lib/api"
+import { blocked, destination, LEVEL_LABEL, looserThan, reasonText } from "@/lib/data-policy"
+
+const ORDER: Sensitivity[] = ["public", "internal", "restricted"]
+const LEVEL_ICON: Record<Sensitivity, typeof Lock> = { public: Globe, internal: Building2, restricted: Lock }
+/** Text, fill and tint classes per level: public green, internal brass, restricted red. */
+const LEVEL_TONE: Record<Sensitivity, { text: string; fill: string; soft: string; border: string }> = {
+  public: { text: "text-approve", fill: "bg-approve", soft: "bg-approve-soft", border: "border-approve/30" },
+  internal: { text: "text-brass-ink", fill: "bg-brass", soft: "bg-brass-soft", border: "border-brass/40" },
+  restricted: { text: "text-escalate", fill: "bg-escalate", soft: "bg-escalate-soft", border: "border-escalate/30" },
+}
+
+/** Public, Internal, Restricted on one rail; the rail fills up to the level, like a gauge. */
+function LevelMeter({ level, compact }: { level: Sensitivity; compact?: boolean }) {
+  const at = ORDER.indexOf(level)
+  return (
+    <div className="grid grid-cols-3 gap-1.5" role="img" aria-label={`Label: ${LEVEL_LABEL[level]}`}>
+      {ORDER.map((l, i) => {
+        const Icon = LEVEL_ICON[l]
+        const on = i <= at
+        return (
+          <div key={l} className="flex flex-col gap-1.5">
+            <div className={cn("h-1.5 rounded-full", on ? LEVEL_TONE[level].fill : "bg-muted")} />
+            <span
+              className={cn(
+                "flex items-center gap-1",
+                compact ? "text-[0.7rem]" : "text-xs",
+                i === at ? cn("font-semibold", LEVEL_TONE[level].text) : "text-muted-foreground"
+              )}
+            >
+              <Icon className="size-3.5 shrink-0" aria-hidden />
+              {LEVEL_LABEL[l]}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function pluralKind(kind: string) {
+  if (kind.endsWith("ss")) return `${kind}es`
+  return kind.endsWith("s") ? kind : `${kind}s`
+}
+
+/** What the detector found, grouped by kind: "Party name: Wadi Freight Co., Ramla Retail Co." */
+function Evidence({ items, limit, compact }: { items: LabelEvidence[]; limit?: number; compact?: boolean }) {
+  const groups = new Map<string, LabelEvidence[]>()
+  for (const e of items) groups.set(e.kind, [...(groups.get(e.kind) ?? []), e])
+  // What set the level first (restricted findings), then the identifiers.
+  const sorted = [...groups.entries()].sort(
+    ([, a], [, b]) => ORDER.indexOf(b[0].level) - ORDER.indexOf(a[0].level)
+  )
+  const rows: { kind: string; list: LabelEvidence[]; more: number }[] = []
+  for (const [kind, list] of sorted) {
+    const used = rows.reduce((n, r) => n + r.list.length, 0)
+    if (limit !== undefined && used >= limit) break
+    const take = limit === undefined ? list : list.slice(0, Math.max(1, limit - used))
+    rows.push({ kind, list: take, more: list.length - take.length })
+  }
+  const hidden = items.length - rows.reduce((n, r) => n + r.list.length + r.more, 0)
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {rows.map(({ kind, list, more }) => (
+        <li key={kind} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs">
+          <span className={cn("shrink-0 text-muted-foreground", compact ? "basis-full text-[0.7rem]" : "w-28")}>
+            {list.length > 1 ? pluralKind(kind) : kind}
+          </span>
+          {list.map((e) => (
+            <span
+              key={e.text}
+              dir="auto"
+              className={cn(
+                "min-w-0 rounded-md border px-1.5 py-0.5 font-medium [overflow-wrap:anywhere]",
+                LEVEL_TONE[e.level].soft,
+                LEVEL_TONE[e.level].border
+              )}
+            >
+              {e.text}
+            </span>
+          ))}
+          {more > 0 ? <span className="text-muted-foreground">+{more}</span> : null}
+        </li>
+      ))}
+      {hidden > 0 ? <li className="text-xs text-muted-foreground">and {hidden} more</li> : null}
+    </ul>
+  )
+}
+
+/**
+ * The label Mizan suggested from the contract's own text, shown the way people check it: where it
+ * sits on the scale, exactly what in the text put it there, and what that means for the contract.
+ */
+export function LabelSuggestion({
+  c,
+  policy,
+  onRestore,
+  busy,
+  compact,
+  bare,
+}: {
+  c: Pick<ContractSummary, "sensitivity" | "label_set_by" | "label_detected" | "label_reasons" | "label_evidence">
+  policy: DataPolicyConfig | null
+  onRestore?: (level: Sensitivity) => void
+  busy?: boolean
+  compact?: boolean
+  /** Inside another box: no border or padding of its own. */
+  bare?: boolean
+}) {
+  const level = c.sensitivity
+  if (!level) return null
+  const evidence = c.label_evidence ?? []
+  const auto = c.label_set_by === "auto"
+  const where = destination(level, policy)
+  return (
+    <div
+      className={cn(
+        "flex flex-col",
+        compact ? "gap-2.5" : "gap-3.5",
+        bare ? "pt-1" : cn("rounded-lg border bg-card", compact ? "p-3" : "p-4")
+      )}
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <span className={cn("font-semibold", compact ? "text-sm" : "text-base")}>
+          {auto ? "Mizan suggests " : "Label "}
+          <span className={LEVEL_TONE[level].text}>{LEVEL_LABEL[level]}</span>
+        </span>
+        {!compact ? (
+          <span className="text-[0.7rem] text-muted-foreground">
+            {auto ? "Read on this server, before any model" : c.label_set_by === "person" ? "Set by a person" : "Sample label"}
+          </span>
+        ) : null}
+      </div>
+      <LevelMeter level={level} compact={compact} />
+      {evidence.length ? (
+        <div className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium">Found in the text</span>
+          <Evidence items={evidence} limit={compact ? 5 : undefined} compact={compact} />
+        </div>
+      ) : c.label_reasons?.length ? (
+        <p className="text-xs text-muted-foreground">{c.label_reasons.join("; ")}.</p>
+      ) : null}
+      {c.label_set_by === "person" && c.label_detected && c.label_detected !== level ? (
+        <LabelBasis c={c} onRestore={onRestore} busy={busy} />
+      ) : null}
+      {where ? (
+        <p className={cn("text-xs", blocked(level, policy) ? "font-medium text-escalate" : "text-muted-foreground")}>
+          {where}
+        </p>
+      ) : null}
+      {!compact ? (
+        <p className="text-xs text-muted-foreground">
+          Making it stricter is one click. Making it looser is recorded as a person’s decision.
+        </p>
+      ) : null}
+    </div>
+  )
+}
 
 /** A label choice on upload: one of the levels, or let the server read the text and pick. */
 export type LabelChoice = Sensitivity | "auto"

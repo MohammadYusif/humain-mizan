@@ -1,7 +1,7 @@
 import { LoaderCircle, Play, ScanText, Send, Upload } from "lucide-react"
 import { useState } from "react"
 
-import { LabelBasis, LoosenConfirm, SensitivityBadge } from "@/components/data-policy"
+import { LabelSuggestion, LoosenConfirm, SensitivityBadge } from "@/components/data-policy"
 import { useDataPolicy } from "@/hooks/use-data-policy"
 import { blocked, destination, LEVEL_LABEL, looserThan } from "@/lib/data-policy"
 
@@ -175,7 +175,14 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
                 </div>
                 {selected.source === "upload" ? (
                   <>
-                    <LabelBasis c={selected} busy={busy} onRestore={(l) => onRelabel(selected.doc_id, l)} />
+                    <LabelSuggestion
+                      c={selected}
+                      policy={policy}
+                      busy={busy}
+                      compact
+                      bare
+                      onRestore={(l) => onRelabel(selected.doc_id, l)}
+                    />
                     <p className="text-xs text-muted-foreground">
                       Making it stricter is one click. Making it looser is recorded as a person’s decision.
                     </p>
@@ -191,8 +198,7 @@ export function NewReviewPanel({ contracts, docId, onDocChange, onReview, onUplo
                       }}
                     />
                   </>
-                ) : null}
-                {destination(level, policy) ? (
+                ) : destination(level, policy) ? (
                   <p className={toLawyer ? "text-xs font-medium text-escalate" : "text-xs text-muted-foreground"}>
                     {destination(level, policy)}
                   </p>

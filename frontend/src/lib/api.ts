@@ -75,6 +75,14 @@ export interface ContractSummary {
   /** What the server's detector found, kept when a person changes the label. */
   label_detected?: Sensitivity | null
   label_reasons?: string[]
+  /** What the detector found, item by item (shown only on this server; card numbers masked). */
+  label_evidence?: LabelEvidence[]
+}
+
+export interface LabelEvidence {
+  kind: string
+  text: string
+  level: Sensitivity
 }
 
 export interface Clause {
@@ -475,7 +483,7 @@ export const api = {
   uploadContract: (form: FormData) => request<ContractSummary>("/contracts", { method: "POST", body: form }),
   setSensitivity: (docId: string, sensitivity: Sensitivity) =>
     request<
-      Pick<ContractSummary, "doc_id" | "sensitivity" | "label_set_by" | "label_detected" | "label_reasons">
+      Pick<ContractSummary, "doc_id" | "sensitivity" | "label_set_by" | "label_detected" | "label_reasons" | "label_evidence">
     >(`/contracts/${enc(docId)}/sensitivity`, {
       method: "PUT",
       body: JSON.stringify({ sensitivity }),
