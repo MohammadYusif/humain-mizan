@@ -1,9 +1,9 @@
 # Private deployment (Railway)
 
 Mizan is deployed behind its own sign-in page: without a session the only thing anyone sees is the
-sign-in screen, and every data endpoint answers 401. Nothing is public, which keeps to the hackathon
-terms (no publishing without 15 business days' notice to HUMAIN). Invite people by creating a user for
-each; share the address and their password privately.
+sign-in screen, and every data endpoint answers 401. The code is public (with the organisers'
+approval); the running app, its API key and anything uploaded to it are not. Invite people by creating a
+user for each; share the address and their password privately.
 
 What is and is not in the deployment:
 - In it: the app, the sample and held-out contracts, the recorded demo, the eval results (Proof).

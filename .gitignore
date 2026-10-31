@@ -31,3 +31,6 @@ docs/submission/motion/frames/
 
 # The deck with the demo sign-in, for the judges only (docs/submission/build.py)
 docs/submission/mizan-deck-judges.pdf
+
+# Personal prep notes from before the event: kept locally, not published
+CONTEXT.md

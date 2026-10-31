@@ -117,7 +117,7 @@
     route("Escalate", escalate)[Critical risk, a missing clause, an injected instruction, a doubtful scan. A lawyer gets it with the exact question.],
   )
   #v(0.9cm)
-  #note(size: 20pt)[The model reads, types clauses and records findings with verbatim quotes. It never chooses the route. Only escalations reach the lawyers' inbox.]
+  #note(size: 19pt)[#text(fill: ink, weight: "medium")[Claude does the reading:] it types every clause, judges each deviation, quotes the evidence and drafts the redline. On unseen contracts, fixed patterns caught 1 of 13 issues; Claude found 12. Code checks its quotes and picks the route; only escalations reach the lawyers' inbox.]
 ]
 
 // 4. Technical approach

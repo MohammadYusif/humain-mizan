@@ -39,7 +39,9 @@ Mizan reviews the contract end to end and ends every review in one of three rout
 - **Negotiate**: Mizan writes the redline and a message to the supplier, one numbered change per article, built by code from the redlines.
 - **Escalate**: critical risk, a missing clause, an instruction hidden in the contract, or a scan it could not read with confidence. A lawyer gets it with the exact question.
 
-The model reads, types each clause and records findings with verbatim quotes. Code computes the route, and approval needs evidence, not only the absence of findings. A second detector, Arabic and English red-flag patterns that run without the model, must agree.
+The AI (Claude Sonnet 5.5) does the reading and the judgement: it types every clause against the playbook, decides how serious each deviation is, quotes the evidence word for word, finds the words that cap our liability, drafts the redline and notices instructions hidden in the contract. On contracts they were not written for, fixed patterns caught 1 of 13 issues; Claude found 12 of 13.
+
+Code checks every quote against the contract and computes the route, so approval needs evidence, not only the absence of findings. A second detector, Arabic and English red-flag patterns that run without the model, must agree.
 
 Before any model sees a contract, Mizan reads it on the server and suggests who may see it: Public, Internal (names and account numbers hidden from an external model) or Restricted (never sent to an external model). Raising a label is one click; lowering it takes a signed-in person and an answer, from fixed choices, for each thing Mizan found. One review runs at a time per contract, the next reader opens the finished review instead of running it again, and Restricted contracts and their reviews open only for Legal.
 
@@ -112,4 +114,4 @@ Record with Loom following `docs/DEMO.md` (about 3 minutes; the guided demo repl
 
 The live demo link goes in the platform's own field. Give the judges the user name `judge` and its password privately (not in a public field). The site is private: without signing in, nothing but the sign-in page is visible.
 
-The repository is private (hackathon terms). Give the judges access in the way the platform asks: add their GitHub accounts as collaborators on `MohammadYusif/humain-mizan`, or upload a zip of the repository without `.env` and `data/`.
+The repository is public, with the organisers' approval: https://github.com/MohammadYusif/humain-mizan
