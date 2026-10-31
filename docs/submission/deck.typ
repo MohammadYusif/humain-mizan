@@ -10,6 +10,8 @@
 #let escalate = oklch(49%, 0.145, 33deg)
 
 #let author = "Mohammad Albeladi"
+#let title = "DGExams AI builder"
+#let site = "dgexams.com"
 #let role = "AI trainer, SDAIA Academy and KAUST"
 #let redaction-result = "12/12 routes right and 0/9 risky contracts approved on the main suite, the same as with names shown"
 
@@ -80,7 +82,9 @@
   buyer's playbook. Approves, negotiates with a redline, or escalates to a lawyer with the exact question.
 ]
 #v(0.8cm)
-#note(size: 16pt)[#text(fill: ink, weight: "medium", author) · #role · 30–31 October 2026]
+#note(size: 18pt)[#text(fill: ink, weight: "medium", author) · #text(fill: ink)[#title] · #text(fill: primary, site)]
+#v(0.15cm)
+#note(size: 15pt)[#role · 30–31 October 2026]
 #v(0.3fr)
 #pagebreak()
 
@@ -195,6 +199,8 @@
       - Arabic and bilingual contracts, and scans read by local OCR with the confidence kept.
       - Another buyer's rules load from a file; lawyers' decisions become proposed amendments a person accepts.
     ])
+  #v(0.55cm)
+  #note(size: 14.5pt)[*The same rule already runs in my other systems.* My SDAIA Academy capstone grader (421 trainees passed) checks every AI citation against the student's files: when a cheaper model cited quotes that did not exist in 22 of 61 submissions, none became a wrong grade. #text(fill: ink, weight: "medium")[DGExams] (#text(fill: primary)[dgexams.com]) re-answers every exam question and flags each disagreement.]
 ]
 
 // 10. Data policy (placed after Innovation and value)
@@ -263,7 +269,14 @@
     ],
     card-box(inset: 22pt)[
       #head[In the app]
-      #note(size: 16pt)[Sign in with your own account. Guided demo replays four recorded runs, labelled Replay, with no key and no network.
+      // The judges' copy only (build.py, HACK_DECK_USER / HACK_DECK_PASSWORD): never in the committed deck.
+      #if "user" in sys.inputs [
+        #block(below: 0.8em, inset: (x: 14pt, y: 10pt), radius: 5pt, fill: rgb("#efe4c8"), width: 100%,
+          grid(columns: (auto, 1fr), column-gutter: 12pt, row-gutter: 7pt,
+            text(size: 15pt)[User name], text(font: "IBM Plex Mono", size: 15pt, weight: "semibold", sys.inputs.user),
+            text(size: 15pt)[Password], text(font: "IBM Plex Mono", size: 15pt, weight: "semibold", sys.inputs.password)))
+      ]
+      #note(size: 16pt)[#if not ("user" in sys.inputs) [Sign in with your own account. ]Guided demo replays four recorded runs, labelled Replay, with no key and no network.
       Proof shows every result above, run by run. Upload your own contract to see its label, its findings and its route.]
     ])
 ]

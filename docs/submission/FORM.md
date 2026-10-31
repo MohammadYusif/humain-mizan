@@ -9,7 +9,7 @@ number here matches docs/RESULTS.md, the deck and the Proof screen.
 |---|---|
 | Background image | `background.png` (1920×1080; from `cover.html`, render with `render-cover.mjs`) |
 | Project logo | `logo-100.png` (100×100) or `logo-512.png` |
-| How it works, step 1 / 2 / 3 | `step-1-upload.png`, `step-2-findings.png`, `step-3-route.png` (1200×1200, square) |
+| How it works, steps 1 to 5 | `step-1-upload.png`, `step-2-label.png`, `step-2-findings.png`, `step-3-route.png`, `step-5-signoff.png` (1200×1200, square) |
 | Presentation | `mizan-deck.pdf` (10 slides) |
 | The issue / Our solution, "Upload file" | optional; leave empty or attach `mizan-deck.pdf` |
 
@@ -41,36 +41,68 @@ Mizan reviews the contract end to end and ends every review in one of three rout
 
 The model reads, types each clause and records findings with verbatim quotes. Code computes the route, and approval needs evidence, not only the absence of findings. A second detector, Arabic and English red-flag patterns that run without the model, must agree.
 
-Before any model sees a contract, Mizan reads it on the server and suggests who may see it: Public, Internal (names and account numbers hidden from an external model) or Restricted (never sent to an external model). Raising a label is one click; lowering it takes a signed-in person and an answer, from fixed choices, for each thing Mizan found. Each person signs in with their own account: one review runs at a time per contract, a second person opens the first one's result instead of reviewing again, and Restricted contracts and their reviews open only for Legal.
+Before any model sees a contract, Mizan reads it on the server and suggests who may see it: Public, Internal (names and account numbers hidden from an external model) or Restricted (never sent to an external model). Raising a label is one click; lowering it takes a signed-in person and an answer, from fixed choices, for each thing Mizan found. One review runs at a time per contract, the next reader opens the finished review instead of running it again, and Restricted contracts and their reviews open only for Legal.
 
-How we tested it: every answer key was written before Mizan saw the contract, committed to git before the run, graded by code, and every result is kept, failures included.
-
-- Main suite, run 4 times: 48/48 routes, 0/36 risky contracts approved, the same result every run.
-- Blind sets written by another agent: 20/20 routes, 0/14 approved.
-- Real contracts (SEC filings, terms of service, Saudi government contracts in Arabic up to 101 pages): 14/14 routes, 0/14 approved.
-- A second real batch of 12, picked by a fixed rule and run once, blind: 11/12 routes, 0/12 approved.
-- Another company's playbook from a file, no code change: 8/8 routes.
-
-The first run on real contracts approved 5 it should not have. That led to one general rule, approval needs the words that cap our own liability, quoted and verified by code; every suite was re-run after it. Where it is weakest: on real contracts it finds about two thirds of the labelled issues (liability, interest, indemnity and non-compete almost all; termination and payment terms less often).
+Tested on 59 contracts, 27 of them real contracts we did not write, with every answer key written before the run: Mizan approved none that should have gone to negotiation or a lawyer.
 
 ## How it works
 
-**Step 1: Bring any contract**
-Upload a PDF, Word file, text, scan or phone photo, in Arabic, English or both. Mizan reads it on the server first and suggests its label with what it found. Scans are read by OCR inside the container and the confidence is kept: a doubtful reading goes to a lawyer.
+Five steps (the form allows more than three). Step title 45 characters max, description 200.
 
-**Step 2: Every clause checked**
-The agent types every clause and checks it against the playbook. Each finding quotes the contract word for word and proposes the playbook's wording as a redline. Pattern checks run alongside, without the model, and any instruction hidden in the contract is quoted and escalated, never followed.
+**Step 1: Bring any contract** (image `step-1-upload.png`)
+PDF, Word, text, scan or phone photo, in Arabic, English or both. Scans are read by OCR on the server, and a doubtful reading always goes to a lawyer.
 
-**Step 3: Code decides the route**
-Severity and route are computed by code. A critical finding never approves. Negotiations go out with a numbered redline message; escalations reach a lawyer's inbox with the question to answer.
+**Step 2: Mizan labels it before any model sees it** (image `step-2-label.png`)
+It reads the contract on the server and suggests Public, Internal or Restricted, showing what it found. Restricted contracts never reach an external model.
+
+**Step 3: Every clause checked against the playbook** (image `step-2-findings.png`)
+Each finding quotes the contract word for word and proposes the playbook's wording as a redline. Red-flag checks run alongside, without the model.
+
+**Step 4: Code decides the route** (image `step-3-route.png`)
+Approve, negotiate or escalate is computed by code from the findings. A critical finding never approves; an instruction hidden in the contract is escalated.
+
+**Step 5: People stay in charge** (image `step-5-signoff.png`)
+Lowering a label needs a signed-in person and a fixed answer per finding. One review at a time per contract; Restricted contracts open only for Legal.
+
+## How we tested it (custom field, 5000 characters max)
+
+Every number below comes from a run anyone can repeat from the repository, and every result is on the app's Proof screen.
+
+How we test
+1. The answer key is written first, before Mizan sees the contract, by reviewers that never saw its output.
+2. The key is committed to git before the run, so it cannot drift towards the result.
+3. The run is graded by code: the route, every finding, and above all whether a risky contract was approved.
+4. Every result is kept, failures included. Nothing is re-run until it passes.
+
+What we tested (Claude Sonnet 5.5, effort medium)
+- Main suite, 12 contracts in Arabic, English and both, run 4 times: 48/48 routes right, 0 of 36 risky contracts approved, the same result every run.
+- Blind sets written by another agent that never saw Mizan's rules or output, 20 contracts: 20/20 routes, 0 of 14 approved.
+- Real contracts we did not write, 15: company contracts filed with the US Securities and Exchange Commission (most from CUAD, with lawyer-reviewed annotations; two are Saudi-law contracts of Saudi Aramco and Lucid), the Zoom and Dropbox terms of service, and five Saudi government contracts in Arabic (Ministry of Finance Etimad templates and EXPRO), up to 101 pages read by OCR: 14/14 routes, 0 of 14 approved.
+- A second real batch, 12 more US SEC contracts picked by a fixed rule (ordered by a hash of the file name, so nobody chose them), labelled and committed before the only run: 11/12 routes, 0 of 12 approved.
+- The main suite with names, contacts and account numbers hidden from the model: 12/12 routes, 0 of 9 approved, so the privacy layer costs nothing in safety.
+- Another company's playbook loaded from a file, no code change: 8/8 routes, including both contracts that should change route under the new rules.
+- 126 automated tests that make no API calls check every guarantee in code: routing, quotes, sign-off, roles, locks and the data policy.
+
+What failed, and what we did
+- The first run on the real contracts approved 5 of 14 that a lawyer should have seen. On buyer-friendly paper the model read the supplier's liability clause as ours and accepted that nothing capped our own. We did not patch the wording: we added one general rule. Approval now needs the words that cap our own liability, quoted and verified by code; without them the contract escalates. Result: 0 of 14. Every earlier suite was re-run and held. The 12 new real contracts were run after the fix, once, blind: 0 of 12 approved.
+- The one route miss in the second batch: a hosting agreement whose liability cap carves out our own indemnity, so our liability there is uncapped. Mizan routed it to negotiate instead of escalate. Negotiate still means a person sends the redline: nothing was approved.
+- Completeness on real contracts is the weak spot. Mizan finds about two thirds of the labelled issues: almost all liability, late-interest, indemnity and non-compete problems, and fewer termination, payment-term and confidentiality-term ones. Precision stays at 96-97%.
+- Our red-flag patterns catch known wording but only 1 of 13 issues on the blind set, so the model is the real detector and we say so in the app. A local model approved 2 of 8 risky contracts, so local mode always needs a lawyer.
+
+What the tests cannot show yet
+No real contract in our sets should be approved, so approving a real compliant contract is untested. No public source labels risky Arabic contracts, so Arabic recall is measured on our own contracts. The playbook rules are illustrative, not legal advice. Next: lawyer-validated labels, including risky Arabic contracts, and real compliant ones.
 
 ## Why should HUMAIN hire you? What makes you and your project stand out?
 
-> I am Mohammad Albeladi, an AI trainer at SDAIA Academy and KAUST. I teach people to build with these models and see every week where the gap is: demos that work on stage and systems that can be trusted with a decision. Mizan is my attempt at the second kind, and HUMAIN is where I want to build more of them.
+> I am Mohammad Albeladi, DGExams AI builder and AI trainer at SDAIA Academy and KAUST. I teach people to build with these models and see every week where the gap is: demos that work on stage and systems that can be trusted with a decision. Mizan is my attempt at the second kind, and HUMAIN is where I want to build more of them.
 >
-> I measure before I claim. Every answer key in Mizan was written before the model saw the contract, and when the first run on real contracts approved 5 of 14 it should not have, I published that number next to the fix. The fix was a general rule, not a patch to the test wording: approval now needs the words that cap our liability, quoted and verified by code. The result went to 0 of 14, the earlier suites were re-run, and then 12 new real contracts it had never seen, picked by a fixed rule and run once, came out at 0 of 12 approved. I also report what does not work: it misses about a third of the issues on real contracts, and our pattern checks catch almost nothing on contracts they were not written for.
+> It is not my first system built this way. At SDAIA Academy I wrote the engine that grades every capstone I set (https://84-8-103-122.sslip.io): it reads each submission's syntax tree instead of searching for keywords, keeps the rubric as data, and holds anything borderline for me. 421 trainees across 20 cohorts have passed capstones graded this way. It also taught me the rule Mizan is built on. When I moved its AI pass from Claude to DeepSeek to cut cost, 22 of the 61 submissions DeepSeek graded (36%) cited quotes that were not in the student's files. None became a wrong grade, because the model only proposes: code checks every citation against the files and holds anything unconfirmed for a human. Mizan checks every quote against the contract for the same reason. I also built DGExams (dgexams.com), a preparation platform for the Saudi Medical Licensing Exam that re-answers every question independently and flags each place where the source and the model disagree.
 >
-> What makes Mizan stand out is where it puts the decision. The model reads; code decides; anything uncertain goes to a lawyer. It handles Arabic contracts and scans, which most contract tools do not. It decides who may see each contract before any model does, runs privately with its own sign-in, roles and local OCR, and every number in the submission can be reproduced from the repository, with continuous integration checking it on a fresh clone. That is how I would want to build agents at HUMAIN: useful on day one, and honest about where they stop.
+> I measure before I claim. Every answer key in Mizan was written before the model saw the contract, and when the first run on real contracts approved 5 of 14 it should not have, I published that number next to the fix: approval now needs the words that cap our liability, quoted and verified by code. The result went to 0 of 14, the earlier suites were re-run, and 12 new real contracts, picked by a fixed rule and run once, came out at 0 of 12 approved. I also report what does not work: it misses about a third of the issues on real contracts.
+>
+> Before building, I looked at what exists. Spellbook and LegalOn work inside Word and suggest playbook redlines for a lawyer to accept. Luminance and Harvey read Arabic and are used by firms in the region, and Saudi startups such as Clauze.AI and Wathiq review Arabic and English contracts. So reading Arabic is not what sets Mizan apart. These tools help a lawyer review; Mizan is built to take routine contracts off the lawyer's desk, which means it has to prove when an approval is safe. Code decides the route from quoted evidence, every contract is labelled before any model sees it, and the results are measured on contracts it never saw, failures included. I could not find a vendor that publishes its accuracy that way.
+>
+> That is how I would want to build agents at HUMAIN: useful on day one, measured in the open, and honest about where they stop.
 
 ## Demo video
 

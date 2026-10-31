@@ -28,3 +28,6 @@ web/
 
 # Motion video frames (render.mjs output)
 docs/submission/motion/frames/
+
+# The deck with the demo sign-in, for the judges only (docs/submission/build.py)
+docs/submission/mizan-deck-judges.pdf
