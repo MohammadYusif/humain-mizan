@@ -12,6 +12,9 @@
 #let author = "Mohammad Albeladi"
 #let title = "DGExams AI builder"
 #let site = "dgexams.com"
+#let demo-video = "https://drive.google.com/file/d/1yabBq7JDDt5jCNAI5LyUffKdqcBwGB2B/view?usp=sharing"
+#let demo-link(size: 16pt) = link(demo-video, box(fill: primary, radius: 5pt, inset: (x: 14pt, y: 8pt),
+  text(size: size, fill: rgb("#f7f2e8"), weight: "semibold")[Press here for demo video #sym.arrow.r]))
 #let role = "AI trainer, SDAIA Academy and KAUST"
 #let redaction-result = "12/12 routes right and 0/9 risky contracts approved on the main suite, the same as with names shown"
 
@@ -85,6 +88,8 @@
 #note(size: 18pt)[#text(fill: ink, weight: "medium", author) · #text(fill: ink)[#title] · #text(fill: primary, site)]
 #v(0.15cm)
 #note(size: 15pt)[#role · 30–31 October 2026]
+#v(0.35cm)
+#demo-link(size: 15pt)
 #v(0.3fr)
 #pagebreak()
 
@@ -268,6 +273,8 @@
       - The main suite gives the same result in 4 runs; 126 tests with no API calls; every number here is reproducible from the repo and on the Proof screen.
     ],
     card-box(inset: 22pt)[
+      #demo-link()
+      #v(0.5em)
       #head[In the app]
       // The judges' copy only (build.py, HACK_DECK_USER / HACK_DECK_PASSWORD): never in the committed deck.
       #if "user" in sys.inputs [
