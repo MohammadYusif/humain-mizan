@@ -29,7 +29,7 @@ Challenge 3: Autonomous Enterprise
 
 Legal teams read every supplier contract by hand, and most of them are routine. Lawyers spend their time confirming that routine contracts are routine, while the risky ones look the same at a glance: an uncapped liability, a monthly late charge, personal data sent abroad. In Saudi Arabia these contracts arrive in Arabic, English or both, and often as scans.
 
-Automating review is easy. The hard part is automating it without the one mistake that costs the most: a confident approval of a contract a lawyer should have seen. Most tools leave that decision to the model.
+Automating review is easy. The hard part is automating it without the one mistake that costs the most: a confident approval of a contract a lawyer should have seen. Most tools leave that decision to the model. I have seen this first-hand: when my SDAIA Academy capstone grader moved to a cheaper model, it cited quotes that did not exist in the student's files in 22 of 61 submissions.
 
 ## Our solution
 

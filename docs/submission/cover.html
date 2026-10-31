@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- The submission's background image (1920×1080). Render: node docs/submission/render-cover.mjs -->
+<!-- The submission's background image (1920×900, short enough to show whole on the form). Render: node docs/submission/render-cover.mjs -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -23,19 +23,19 @@
   --negotiate-soft: oklch(0.94 0.05 80);
 }
 * { box-sizing: border-box; margin: 0; }
-html, body { width: 1920px; height: 1080px; overflow: hidden; }
+html, body { width: 1920px; height: 900px; overflow: hidden; }
 body { background: var(--ink); color: var(--ink-fg); font-family: "DM Sans", "Plex Arabic", sans-serif; position: relative; }
-.mark { position: absolute; right: -170px; bottom: -150px; width: 980px; height: 980px; opacity: 0.07; }
-.left { position: absolute; left: 140px; top: 150px; width: 820px; }
+.mark { position: absolute; right: -170px; bottom: -220px; width: 900px; height: 900px; opacity: 0.07; }
+.left { position: absolute; left: 140px; top: 110px; width: 820px; }
 .brand { display: flex; align-items: center; gap: 26px; }
 .brand .name { font-size: 76px; font-weight: 650; letter-spacing: -0.02em; line-height: 1; }
 .brand .ar { font-family: "Plex Arabic"; font-size: 44px; color: var(--brass); line-height: 1; margin-left: 4px; }
-h1 { max-width: 780px; margin-top: 84px; font-size: 76px; line-height: 1.08; font-weight: 650; letter-spacing: -0.025em; }
-.routes { margin-top: 64px; display: flex; gap: 44px; font-size: 28px; }
+h1 { max-width: 780px; margin-top: 64px; font-size: 76px; line-height: 1.08; font-weight: 650; letter-spacing: -0.025em; }
+.routes { margin-top: 48px; display: flex; gap: 44px; font-size: 28px; }
 .routes li { list-style: none; display: flex; align-items: center; gap: 14px; font-weight: 600; }
 .routes i { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
-.foot { position: absolute; left: 140px; bottom: 90px; font-size: 24px; color: var(--ink-muted); }
-.card { position: absolute; right: 140px; top: 250px; width: 760px; background: var(--paper); color: var(--fg);
+.foot { margin-top: 64px; font-size: 24px; color: var(--ink-muted); line-height: 1.5; }
+.card { position: absolute; right: 140px; top: 190px; width: 760px; background: var(--paper); color: var(--fg);
   border-radius: 14px; overflow: hidden; }
 .card .top, .card .bot { display: flex; justify-content: space-between; align-items: center; padding: 22px 34px;
   font-size: 22px; color: var(--muted-fg); }
@@ -79,6 +79,7 @@ dt { color: var(--muted-fg); }
       <li><i style="background:oklch(0.83 0.12 78)"></i>Negotiate</li>
       <li><i style="background:oklch(0.75 0.13 35)"></i>Escalate</li>
     </ul>
+    <div class="foot"><span style="color:var(--ink-fg); font-weight:600">Mohammad Albeladi</span> · DGExams AI builder<br>HUMAIN Future AI Builders Hackathon, Challenge 3</div>
   </div>
 
   <div class="card">
@@ -93,6 +94,6 @@ dt { color: var(--muted-fg); }
     <div class="bot"><span>Route, computed by code from the findings</span><span class="stamp mono">NEGOTIATE</span></div>
   </div>
 
-  <div class="foot">HUMAIN Future AI Builders Hackathon · Challenge 3</div>
+
 </body>
 </html>
